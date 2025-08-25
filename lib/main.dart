@@ -1,12 +1,13 @@
 import 'package:admin/constants.dart';
 import 'package:admin/controllers/menu_app_controller.dart';
-import 'package:admin/screens/main/main_screen.dart';
+import 'package:admin/features/main_menu/main_menu_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as pv;
 
 void main() {
-  runApp(MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -22,13 +23,13 @@ class MyApp extends StatelessWidget {
             .apply(bodyColor: Colors.white),
         canvasColor: secondaryColor,
       ),
-      home: MultiProvider(
+      home: pv.MultiProvider(
         providers: [
-          ChangeNotifierProvider(
+          pv.ChangeNotifierProvider(
             create: (context) => MenuAppController(),
           ),
         ],
-        child: MainScreen(),
+        child: const MainMenuPage(),
       ),
     );
   }

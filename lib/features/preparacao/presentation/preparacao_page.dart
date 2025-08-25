@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 
 import 'package:admin/features/preparacao/data/models.dart';
 import 'package:admin/features/operador/data/repository_provider.dart';
+import 'package:admin/screens/main/components/side_menu.dart';
 
 /// Mesmo base URL usado no Operador
 const String kBaseUrl = 'http://192.168.0.241:5005';
@@ -255,6 +256,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
           )
         ],
       ),
+      drawer: const SideMenu(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
