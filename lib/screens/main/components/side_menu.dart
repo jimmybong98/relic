@@ -35,11 +35,11 @@ class SideMenu extends StatelessWidget {
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
           ),
-          DrawerListTile(
-            title: "Supervisão",
-            svgSrc: "assets/icons/menu_dashboard.svg",
-            press: () => _go(context, const MainScreen()),
-          ),
+            DrawerListTile(
+              title: "Supervisão",
+              svgSrc: "assets/icons/menu_dashboard.svg",
+              press: () => _go(context, MainScreen()),
+            ),
 
           // ====== SEÇÕES DO SEU SISTEMA ======
           DrawerListTile(

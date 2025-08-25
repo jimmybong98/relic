@@ -43,7 +43,8 @@ class MainMenuPage extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const MainScreen(),
+                    builder: (_) => MainScreen(),
+
                   ),
                 );
               },
