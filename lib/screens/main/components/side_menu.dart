@@ -3,18 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 // Ajuste estes imports para o caminho correto no seu app:
-import '../../../features/preparacao/presentation/preparacao_page.dart';
-import '../../../features/operador/presentation/operador_page.dart';
+import 'package:admin/features/preparacao/presentation/preparacao_page.dart';
+import 'package:admin/features/operador/presentation/operador_page.dart';
+import 'package:admin/screens/main/main_screen.dart';
 
 class SideMenu extends StatelessWidget {
   const SideMenu({Key? key}) : super(key: key);
 
   void _go(BuildContext context, Widget page) {
-    // Fecha o Drawer (se estiver aberto) e navega
-    if (Scaffold.of(context).isDrawerOpen) {
-      Navigator.of(context).pop();
-    }
-    Navigator.of(context).push(
+    // Captura o estado do Navigator antes de fechar o Drawer para
+    // evitar usar um BuildContext já desmontado após o pop.
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    navigator.push(
       MaterialPageRoute(builder: (_) => page),
     );
   }
@@ -28,17 +29,21 @@ class SideMenu extends StatelessWidget {
             child: Image.asset("assets/images/logo.png"),
           ),
           DrawerListTile(
-            title: "Dashboard",
+            title: "Menu Principal",
             svgSrc: "assets/icons/menu_dashboard.svg",
             press: () {
-              // Volta para a rota raiz (onde está seu dashboard)
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
           ),
+            DrawerListTile(
+              title: "Supervisão",
+              svgSrc: "assets/icons/menu_dashboard.svg",
+              press: () => _go(context, MainScreen()),
+            ),
 
           // ====== SEÇÕES DO SEU SISTEMA ======
           DrawerListTile(
-            title: "Preparação",
+            title: "Preparador",
             svgSrc: "assets/icons/menu_task.svg",
             press: () => _go(context, const PreparacaoPage()),
           ),
