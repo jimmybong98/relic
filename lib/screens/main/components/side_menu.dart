@@ -51,6 +51,11 @@ class SideMenu extends StatelessWidget {
             svgSrc: "assets/icons/menu_dashboard.svg",
             press: () => _go(context, MainScreen()),
           ),
+            DrawerListTile(
+              title: "Supervisão",
+              svgSrc: "assets/icons/menu_dashboard.svg",
+              press: () => _go(context, MainScreen()),
+            ),
 
           // ====== SEÇÕES DO SEU SISTEMA ======
           DrawerListTile(
