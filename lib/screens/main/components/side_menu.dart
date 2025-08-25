@@ -11,13 +11,12 @@ class SideMenu extends StatelessWidget {
   const SideMenu({Key? key}) : super(key: key);
 
   void _go(BuildContext context, Widget page) {
-    // Captura o Navigator antes de fechar o Drawer
-    final navigator = Navigator.of(context);
+    // Usa o Navigator raiz para evitar travamentos ao fechar o Drawer
+    final navigator = Navigator.of(context, rootNavigator: true);
     // Fecha o Drawer
     navigator.pop();
-    // Agenda a navegação para o próximo microtask, evitando usar
-    // um BuildContext já desmontado e travamentos no push.
-    Future.microtask(() {
+    // Aguarda o próximo frame antes de navegar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       navigator.push(
         MaterialPageRoute(builder: (_) => page),
       );
@@ -25,10 +24,25 @@ class SideMenu extends StatelessWidget {
   }
 
   void _goHome(BuildContext context) {
-    final navigator = Navigator.of(context);
+    final navigator = Navigator.of(context, rootNavigator: true);
     navigator.pop();
     // Após fechar o Drawer, volta à primeira rota (Menu Principal)
-    Future.microtask(() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      navigator.popUntil((route) => route.isFirst);
+    });
+      navigator.push(
+        MaterialPageRoute(builder: (_) => page),
+      );
+    });
+  }
+
+  void _goHome(BuildContext context) {
+            press: () => _goHome(context),
+          ),
+          DrawerListTile(
+            title: "Supervisão",
+            svgSrc: "assets/icons/menu_dashboard.svg",
+            press: () => _go(context, MainScreen()),
       navigator.popUntil((route) => route.isFirst);
     });
   }
@@ -45,6 +59,13 @@ class SideMenu extends StatelessWidget {
             title: "Menu Principal",
             svgSrc: "assets/icons/menu_dashboard.svg",
             press: () => _goHome(context),
+
+          ),
+          DrawerListTile(
+            title: "Supervisão",
+            svgSrc: "assets/icons/menu_dashboard.svg",
+            press: () => _go(context, MainScreen()),
+
           ),
           DrawerListTile(
             title: "Supervisão",
