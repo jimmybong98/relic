@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 
 import '../../preparacao/data/models.dart';
 import '../data/repository_provider.dart';
+import 'package:admin/screens/main/components/side_menu.dart';
 
 /// >>>>> Ajuste para o endereço/porta do seu Flask <<<<<
 const String kBaseUrl = 'http://192.168.0.241:5005';
@@ -221,6 +222,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           )
         ],
       ),
+      drawer: const SideMenu(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
