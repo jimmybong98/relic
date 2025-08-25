@@ -11,13 +11,26 @@ class SideMenu extends StatelessWidget {
   const SideMenu({Key? key}) : super(key: key);
 
   void _go(BuildContext context, Widget page) {
-    // Captura o estado do Navigator antes de fechar o Drawer para
-    // evitar usar um BuildContext já desmontado após o pop.
+    // Captura o Navigator antes de fechar o Drawer
+    final navigator = Navigator.of(context);
+    // Fecha o Drawer
+    navigator.pop();
+    // Agenda a navegação para o próximo microtask, evitando usar
+    // um BuildContext já desmontado e travamentos no push.
+    Future.microtask(() {
+      navigator.push(
+        MaterialPageRoute(builder: (_) => page),
+      );
+    });
+  }
+
+  void _goHome(BuildContext context) {
     final navigator = Navigator.of(context);
     navigator.pop();
-    navigator.push(
-      MaterialPageRoute(builder: (_) => page),
-    );
+    // Após fechar o Drawer, volta à primeira rota (Menu Principal)
+    Future.microtask(() {
+      navigator.popUntil((route) => route.isFirst);
+    });
   }
 
   @override
@@ -31,9 +44,12 @@ class SideMenu extends StatelessWidget {
           DrawerListTile(
             title: "Menu Principal",
             svgSrc: "assets/icons/menu_dashboard.svg",
-            press: () {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
+            press: () => _goHome(context),
+          ),
+          DrawerListTile(
+            title: "Supervisão",
+            svgSrc: "assets/icons/menu_dashboard.svg",
+            press: () => _go(context, MainScreen()),
           ),
             DrawerListTile(
               title: "Supervisão",
@@ -106,21 +122,9 @@ class DrawerListTile extends StatelessWidget {
         colorFilter: const ColorFilter.mode(Colors.white54, BlendMode.srcIn),
         height: 16,
       ),
-      title: const Text(
-        // Você pode trocar para Theme.of(context).textTheme.bodyMedium
-        // se quiser herdar do tema do dashboard.
-        // Aqui mantive igual ao template original:
-        "",
-        // OBS: Para manter o texto, remova a string vazia acima
-        // e use a linha abaixo:
-        // title,
-        style: TextStyle(color: Colors.white54),
-      ),
-      // Corrige o label (o template original usa Text(title))
-      // Alguns templates duplicam builder; para garantir:
-      subtitle: Text(
+      title: Text(
         title,
-        style: const TextStyle(color: Colors.white70),
+        style: const TextStyle(color: Colors.white54),
       ),
     );
   }
