@@ -30,6 +30,23 @@ class SideMenu extends StatelessWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       navigator.popUntil((route) => route.isFirst);
     });
+
+      navigator.push(
+        MaterialPageRoute(builder: (_) => page),
+      );
+    });
+  }
+
+  void _goHome(BuildContext context) {
+            press: () => _goHome(context),
+          ),
+          DrawerListTile(
+            title: "Supervisão",
+            svgSrc: "assets/icons/menu_dashboard.svg",
+            press: () => _go(context, MainScreen()),
+      navigator.popUntil((route) => route.isFirst);
+    });
+
   }
 
   @override
@@ -44,12 +61,30 @@ class SideMenu extends StatelessWidget {
             title: "Menu Principal",
             svgSrc: "assets/icons/menu_dashboard.svg",
             press: () => _goHome(context),
+
+          ),
+          DrawerListTile(
+            title: "Supervisão",
+            svgSrc: "assets/icons/menu_dashboard.svg",
+            press: () => _go(context, MainScreen()),
+
+          ),
+          DrawerListTile(
+            title: "Supervisão",
+            svgSrc: "assets/icons/menu_dashboard.svg",
+            press: () => _go(context, MainScreen()),
+
           ),
           DrawerListTile(
             title: "Supervisão",
             svgSrc: "assets/icons/menu_dashboard.svg",
             press: () => _go(context, MainScreen()),
           ),
+            DrawerListTile(
+              title: "Supervisão",
+              svgSrc: "assets/icons/menu_dashboard.svg",
+              press: () => _go(context, MainScreen()),
+            ),
 
           // ====== SEÇÕES DO SEU SISTEMA ======
           DrawerListTile(
