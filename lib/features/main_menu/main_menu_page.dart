@@ -44,7 +44,6 @@ class MainMenuPage extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => MainScreen(),
-
                   ),
                 );
               },

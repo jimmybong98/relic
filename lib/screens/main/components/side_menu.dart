@@ -11,11 +11,11 @@ class SideMenu extends StatelessWidget {
   const SideMenu({Key? key}) : super(key: key);
 
   void _go(BuildContext context, Widget page) {
-    // Fecha o Drawer (se estiver aberto) e navega
-    if (Scaffold.of(context).isDrawerOpen) {
-      Navigator.of(context).pop();
-    }
-    Navigator.of(context).push(
+    // Captura o estado do Navigator antes de fechar o Drawer para
+    // evitar usar um BuildContext já desmontado após o pop.
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    navigator.push(
       MaterialPageRoute(builder: (_) => page),
     );
   }
