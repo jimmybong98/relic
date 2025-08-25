@@ -3,20 +3,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 // Ajuste estes imports para o caminho correto no seu app:
-import '../../../features/preparacao/presentation/preparacao_page.dart';
-import '../../../features/operador/presentation/operador_page.dart';
+import 'package:admin/features/preparacao/presentation/preparacao_page.dart';
+import 'package:admin/features/operador/presentation/operador_page.dart';
+import 'package:admin/screens/main/main_screen.dart';
 
 class SideMenu extends StatelessWidget {
   const SideMenu({Key? key}) : super(key: key);
 
   void _go(BuildContext context, Widget page) {
-    // Fecha o Drawer (se estiver aberto) e navega
-    if (Scaffold.of(context).isDrawerOpen) {
-      Navigator.of(context).pop();
-    }
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => page),
-    );
+    // Captura o Navigator antes de fechar o Drawer
+    final navigator = Navigator.of(context);
+    // Fecha o Drawer
+    navigator.pop();
+    // Agenda a navegação para o próximo microtask, evitando usar
+    // um BuildContext já desmontado e travamentos no push.
+    Future.microtask(() {
+      navigator.push(
+        MaterialPageRoute(builder: (_) => page),
+      );
+    });
+  }
+
+  void _goHome(BuildContext context) {
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    // Após fechar o Drawer, volta à primeira rota (Menu Principal)
+    Future.microtask(() {
+      navigator.popUntil((route) => route.isFirst);
+    });
   }
 
   @override
@@ -28,17 +42,19 @@ class SideMenu extends StatelessWidget {
             child: Image.asset("assets/images/logo.png"),
           ),
           DrawerListTile(
-            title: "Dashboard",
+            title: "Menu Principal",
             svgSrc: "assets/icons/menu_dashboard.svg",
-            press: () {
-              // Volta para a rota raiz (onde está seu dashboard)
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
+            press: () => _goHome(context),
+          ),
+          DrawerListTile(
+            title: "Supervisão",
+            svgSrc: "assets/icons/menu_dashboard.svg",
+            press: () => _go(context, MainScreen()),
           ),
 
           // ====== SEÇÕES DO SEU SISTEMA ======
           DrawerListTile(
-            title: "Preparação",
+            title: "Preparador",
             svgSrc: "assets/icons/menu_task.svg",
             press: () => _go(context, const PreparacaoPage()),
           ),
@@ -101,21 +117,9 @@ class DrawerListTile extends StatelessWidget {
         colorFilter: const ColorFilter.mode(Colors.white54, BlendMode.srcIn),
         height: 16,
       ),
-      title: const Text(
-        // Você pode trocar para Theme.of(context).textTheme.bodyMedium
-        // se quiser herdar do tema do dashboard.
-        // Aqui mantive igual ao template original:
-        "",
-        // OBS: Para manter o texto, remova a string vazia acima
-        // e use a linha abaixo:
-        // title,
-        style: TextStyle(color: Colors.white54),
-      ),
-      // Corrige o label (o template original usa Text(title))
-      // Alguns templates duplicam builder; para garantir:
-      subtitle: Text(
+      title: Text(
         title,
-        style: const TextStyle(color: Colors.white70),
+        style: const TextStyle(color: Colors.white54),
       ),
     );
   }
