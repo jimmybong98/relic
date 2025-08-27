@@ -1,52 +1,28 @@
-// lib/widgets/side_menu.dart  (ajuste o caminho conforme seu projeto)
+// Side menu for navigation across application sections
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-// Ajuste estes imports para o caminho correto no seu app:
 import 'package:admin/features/preparacao/presentation/preparacao_page.dart';
 import 'package:admin/features/operador/presentation/operador_page.dart';
 import 'package:admin/screens/main/main_screen.dart';
 
 class SideMenu extends StatelessWidget {
-  const SideMenu({Key? key}) : super(key: key);
+  const SideMenu({super.key});
 
-  void _go(BuildContext context, Widget page) {
-    // Usa o Navigator raiz para evitar travamentos ao fechar o Drawer
+  void _navigate(BuildContext context, Widget page) {
     final navigator = Navigator.of(context, rootNavigator: true);
-    // Fecha o Drawer
     navigator.pop();
-    // Aguarda o próximo frame antes de navegar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      navigator.push(
-        MaterialPageRoute(builder: (_) => page),
-      );
+      navigator.push(MaterialPageRoute(builder: (_) => page));
     });
   }
 
   void _goHome(BuildContext context) {
     final navigator = Navigator.of(context, rootNavigator: true);
     navigator.pop();
-    // Após fechar o Drawer, volta à primeira rota (Menu Principal)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       navigator.popUntil((route) => route.isFirst);
     });
-
-      navigator.push(
-        MaterialPageRoute(builder: (_) => page),
-      );
-    });
-  }
-
-  void _goHome(BuildContext context) {
-            press: () => _goHome(context),
-          ),
-          DrawerListTile(
-            title: "Supervisão",
-            svgSrc: "assets/icons/menu_dashboard.svg",
-            press: () => _go(context, MainScreen()),
-      navigator.popUntil((route) => route.isFirst);
-    });
-
   }
 
   @override
@@ -55,73 +31,51 @@ class SideMenu extends StatelessWidget {
       child: ListView(
         children: [
           DrawerHeader(
-            child: Image.asset("assets/images/logo.png"),
+            child: Image.asset('assets/images/logo.png'),
           ),
           DrawerListTile(
-            title: "Menu Principal",
-            svgSrc: "assets/icons/menu_dashboard.svg",
+            title: 'Menu Principal',
+            svgSrc: 'assets/icons/menu_dashboard.svg',
             press: () => _goHome(context),
-
           ),
           DrawerListTile(
-            title: "Supervisão",
-            svgSrc: "assets/icons/menu_dashboard.svg",
-            press: () => _go(context, MainScreen()),
-
+            title: 'Supervisão',
+            svgSrc: 'assets/icons/menu_dashboard.svg',
+            press: () => _navigate(context, MainScreen()),
           ),
           DrawerListTile(
-            title: "Supervisão",
-            svgSrc: "assets/icons/menu_dashboard.svg",
-            press: () => _go(context, MainScreen()),
-
+            title: 'Preparador',
+            svgSrc: 'assets/icons/menu_task.svg',
+            press: () => _navigate(context, const PreparacaoPage()),
           ),
           DrawerListTile(
-            title: "Supervisão",
-            svgSrc: "assets/icons/menu_dashboard.svg",
-            press: () => _go(context, MainScreen()),
-          ),
-            DrawerListTile(
-              title: "Supervisão",
-              svgSrc: "assets/icons/menu_dashboard.svg",
-              press: () => _go(context, MainScreen()),
-            ),
-
-          // ====== SEÇÕES DO SEU SISTEMA ======
-          DrawerListTile(
-            title: "Preparador",
-            svgSrc: "assets/icons/menu_task.svg",
-            press: () => _go(context, const PreparacaoPage()),
+            title: 'Operador',
+            svgSrc: 'assets/icons/menu_profile.svg',
+            press: () => _navigate(context, const OperadorPage()),
           ),
           DrawerListTile(
-            title: "Operador",
-            svgSrc: "assets/icons/menu_profile.svg",
-            press: () => _go(context, const OperadorPage()),
-          ),
-
-          // (demais itens do template — mantenha/ajuste como quiser)
-          DrawerListTile(
-            title: "Transaction",
-            svgSrc: "assets/icons/menu_tran.svg",
+            title: 'Transaction',
+            svgSrc: 'assets/icons/menu_tran.svg',
             press: () {},
           ),
           DrawerListTile(
-            title: "Documents",
-            svgSrc: "assets/icons/menu_doc.svg",
+            title: 'Documents',
+            svgSrc: 'assets/icons/menu_doc.svg',
             press: () {},
           ),
           DrawerListTile(
-            title: "Store",
-            svgSrc: "assets/icons/menu_store.svg",
+            title: 'Store',
+            svgSrc: 'assets/icons/menu_store.svg',
             press: () {},
           ),
           DrawerListTile(
-            title: "Notification",
-            svgSrc: "assets/icons/menu_notification.svg",
+            title: 'Notification',
+            svgSrc: 'assets/icons/menu_notification.svg',
             press: () {},
           ),
           DrawerListTile(
-            title: "Settings",
-            svgSrc: "assets/icons/menu_setting.svg",
+            title: 'Settings',
+            svgSrc: 'assets/icons/menu_setting.svg',
             press: () {},
           ),
         ],
@@ -132,13 +86,14 @@ class SideMenu extends StatelessWidget {
 
 class DrawerListTile extends StatelessWidget {
   const DrawerListTile({
-    Key? key,
+    super.key,
     required this.title,
     required this.svgSrc,
     required this.press,
-  }) : super(key: key);
+  });
 
-  final String title, svgSrc;
+  final String title;
+  final String svgSrc;
   final VoidCallback press;
 
   @override
@@ -158,3 +113,4 @@ class DrawerListTile extends StatelessWidget {
     );
   }
 }
+
