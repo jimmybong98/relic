@@ -1,6 +1,8 @@
 // lib/features/operador/presentation/operador_page.dart
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/services.dart';
+
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -232,29 +234,58 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    TextFormField(
-                      controller: _reCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'RE do Operador',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _reCtrl,
+                            textInputAction: TextInputAction.next,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            decoration: const InputDecoration(
+                              labelText: 'R.E. do Preparador', // ajuste o texto se for Operador
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              final s = (v ?? '').trim();
+                              if (s.isEmpty) return 'Obrigatório';
+                              if (!RegExp(r'^\d+$').hasMatch(s)) return 'Apenas números';
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 140, // igual ao campo Operação
+                          child: TextFormField(
+                            controller: _osCtrl,
+                            textInputAction: TextInputAction.next,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            decoration: const InputDecoration(
+                              labelText: 'O.S.',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              final s = (v ?? '').trim();
+                              if (s.isEmpty) return 'Obrigatório';
+                              if (!RegExp(r'^\d+$').hasMatch(s)) return 'Apenas números';
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
                     ),
+
                     const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _osCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'O.S.',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
-                    ),
-                    const SizedBox(height: 12),
+
+                    // ---------- PartNumber + Operação (Operação só números) ----------
                     Row(
                       children: [
                         Expanded(
                           child: TextFormField(
                             controller: _partCtrl,
+                            textInputAction: TextInputAction.next,
                             decoration: const InputDecoration(
                               labelText: 'Código da peça (PartNumber)',
                               border: OutlineInputBorder(),
@@ -268,16 +299,23 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                           width: 140,
                           child: TextFormField(
                             controller: _opCtrl,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                             decoration: const InputDecoration(
                               labelText: 'Operação',
                               border: OutlineInputBorder(),
                             ),
-                            validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
+                            validator: (v) {
+                              final s = (v ?? '').trim();
+                              if (s.isEmpty) return 'Obrigatório';
+                              if (!RegExp(r'^\d+$').hasMatch(s)) return 'Apenas números';
+                              return null;
+                            },
                           ),
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
