@@ -61,6 +61,7 @@ DB_USER = os.getenv("DB_USER", "relic")
 DB_PASS = os.getenv("DB_PASS", "veALZ2FBnDkG749")
 DB_NAME = os.getenv("DB_NAME", "relic_quality")
 
+
 def _conn_db(dbname: Optional[str] = None):
     return pymysql.connect(
         host=DB_HOST,
@@ -891,6 +892,7 @@ def operador_listar():
         sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY a.created_at DESC LIMIT 200"
 
+
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
@@ -931,6 +933,7 @@ def relatorio_sql():
 
 @app.route("/health")
 def health():
+
     return jsonify({
         "status": "ok",
         "prep_path": PLANILHA_PREPARADOR_PATH,
