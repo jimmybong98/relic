@@ -6,6 +6,7 @@ import '../../constants.dart';
 import 'components/header.dart';
 
 import 'components/recent_files.dart';
+import 'components/reports_table.dart';
 import 'components/storage_details.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -29,6 +30,8 @@ class DashboardScreen extends StatelessWidget {
                       MyFiles(),
                       SizedBox(height: defaultPadding),
                       RecentFiles(),
+                      SizedBox(height: defaultPadding),
+                      ReportsTable(),
                       if (Responsive.isMobile(context))
                         SizedBox(height: defaultPadding),
                       if (Responsive.isMobile(context)) StorageDetails(),
