@@ -39,13 +39,8 @@ class SideMenu extends StatelessWidget {
             press: () => _goHome(context),
           ),
           DrawerListTile(
-            title: 'Supervisão',
-            svgSrc: 'assets/icons/menu_dashboard.svg',
-            press: () => _navigate(context, MainScreen()),
-          ),
-          DrawerListTile(
             title: 'Preparador',
-            svgSrc: 'assets/icons/menu_task.svg',
+            svgSrc: 'assets/icons/menu_setting.svg',
             press: () => _navigate(context, const PreparacaoPage()),
           ),
           DrawerListTile(
@@ -53,6 +48,12 @@ class SideMenu extends StatelessWidget {
             svgSrc: 'assets/icons/menu_profile.svg',
             press: () => _navigate(context, const OperadorPage()),
           ),
+          DrawerListTile(
+            title: 'Supervisão',
+            svgSrc: 'assets/icons/menu_task.svg',
+            press: () => _navigate(context, MainScreen()),
+          ),
+
 
         ],
       ),
