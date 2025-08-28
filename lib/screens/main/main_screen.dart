@@ -11,7 +11,7 @@ class MainScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       key: context.read<MenuAppController>().scaffoldKey,
-      drawer: SideMenu(),
+      drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: SafeArea(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -21,7 +21,7 @@ class MainScreen extends StatelessWidget {
               Expanded(
                 // default flex = 1
                 // and it takes 1/6 part of the screen
-                child: SideMenu(),
+                child: SideMenu(current: SideMenuSection.dashboard),
               ),
             Expanded(
               // It takes 5/6 part of the screen

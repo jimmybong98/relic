@@ -224,7 +224,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           )
         ],
       ),
-      drawer: const SideMenu(),
+      drawer: const SideMenu(current: SideMenuSection.operador),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
