@@ -195,6 +195,99 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
+  Future<void> _fimJornada() async {
+    if (_reCtrl.text.trim().isEmpty || _osCtrl.text.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preencha RE e O.S. para finalizar.')),
+      );
+      return;
+    }
+
+    final body = jsonEncode({
+      're': _reCtrl.text.trim(),
+      'os': _osCtrl.text.trim(),
+      'partnumber': _partCtrl.text.trim(),
+      'operacao': _opCtrl.text.trim(),
+    });
+
+    final uri = Uri.parse('$kBaseUrl/operador/fim_jornada');
+    try {
+      final resp = await http
+          .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(const Duration(seconds: 20));
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Jornada pausada.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Falha: ${resp.statusCode} ${resp.body}')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erro: $e')));
+    }
+  }
+
+  Future<void> _encerrarOs() async {
+    if (_osCtrl.text.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe a O.S. para encerrar.')),
+      );
+      return;
+    }
+
+    final body = jsonEncode({'os': _osCtrl.text.trim()});
+    final uri = Uri.parse('$kBaseUrl/operador/encerrar_os');
+    try {
+      final resp = await http
+          .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(const Duration(seconds: 20));
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('OS encerrada.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Falha: ${resp.statusCode} ${resp.body}')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erro: $e')));
+    }
+  }
+
+  Future<void> _confirmEncerrarOs() async {
+    final confirma = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Encerrar OS'),
+        content: const Text('Tem certeza que deseja encerrar a OS?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Encerrar'),
+          ),
+        ],
+      ),
+    );
+    if (confirma == true) {
+      await _encerrarOs();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final medidasAsync = ref.watch(medidasOperadorControllerProvider);
@@ -224,7 +317,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           )
         ],
       ),
-      drawer: const SideMenu(),
+      drawer: const SideMenu(current: SideMenuSection.operador),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -369,13 +462,38 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                 ),
               ),
               const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _fimJornada,
+                      child: const Text('Fim de Jornada'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'encerrar') _confirmEncerrarOs();
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                        value: 'encerrar',
+                        child: Text('Encerrar OS'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
                   onPressed: podeRegistrar ? _registrarAmostragem : null,
                   icon: _registrando
                       ? const SizedBox(
-                      width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.save_outlined),
                   label: const Text('Registrar amostragem'),
                 ),

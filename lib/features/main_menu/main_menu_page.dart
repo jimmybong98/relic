@@ -12,7 +12,7 @@ class MainMenuPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Menu Principal')),
-      drawer: const SideMenu(),
+      drawer: const SideMenu(current: SideMenuSection.mainMenu),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
