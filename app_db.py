@@ -86,6 +86,7 @@ def _run_sql_report(sql_path: str, dbname: str = DB_NAME):
     return rows
 
 def _ensure_schema():
+
     """Garante que o banco e as tabelas principais existam (sem DDL agressivo)."""
     # Cria o database, se não existir
     with _conn_db(None) as c:
@@ -996,6 +997,7 @@ def relatorio_sql():
 
 @app.route("/health")
 def health():
+
     return jsonify({
         "status": "ok",
         "prep_path": PLANILHA_PREPARADOR_PATH,
