@@ -119,6 +119,7 @@ def _ensure_schema():
                       ADD COLUMN IF NOT EXISTS status VARCHAR(32) DEFAULT 'aberta'"""
               )
               # Operador (já estava)
+
               cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS operador_amostragem (
@@ -139,6 +140,7 @@ def _ensure_schema():
               cur.execute(
                   """
                   CREATE TABLE IF NOT EXISTS operador_amostragem_item (
+
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     amostragem_id BIGINT NOT NULL,
                     idx_medida INT NOT NULL,
@@ -161,7 +163,7 @@ def _ensure_schema():
                     CONSTRAINT fk_oa_item_oa
                         FOREIGN KEY (amostragem_id)
                         REFERENCES operador_amostragem(id)
-                        ON DELETE CASCADE
+                        ON DELETE CASCADE                  
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                   """
               )
@@ -180,6 +182,7 @@ def _ensure_schema():
                 """
             )
             # Preparador (registro + itens)
+
               cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS preparador_registro (
@@ -555,6 +558,7 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
         if st_row and (st_row.get("status") or "").strip().lower() == "encerrada":
             return (False, "ordem_servico", "status=encerrada")
         # 1) Se existir liberação com status final, já libera
+
         cur.execute(
             """
             SELECT status_geral
@@ -915,6 +919,7 @@ def operador_listar():
         sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY a.created_at DESC LIMIT 200"
 
+
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
@@ -958,6 +963,9 @@ def operador_encerrar_os():
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM operador_amostragem WHERE os=%s", (os_num,))
+                if cur.fetchone()[0] == 0:
+                    return jsonify({"error": "Nenhum registro de amostragem encontrado"}), 400
                 cur.execute("UPDATE ordem_servico SET status='encerrada' WHERE os=%s", (os_num,))
                 if cur.rowcount == 0:
                     return jsonify({"error": "OS não encontrada"}), 404
@@ -1009,6 +1017,7 @@ def _mensagem_bloqueio(os_num: str, part: str, op: str, fonte: str, detalhe: str
     fonte: "", "preparador_registro" ou "preparador_liberacao"
     detalhe: texto livre com dicas (ex.: "3/4 OK", "status_geral=pendente")
     """
+
     base = f"OS: {os_num}  •  Peça: {part}  •  Operação: {op}."
 
     fonte = (fonte or "").strip().lower()
@@ -1021,6 +1030,7 @@ def _mensagem_bloqueio(os_num: str, part: str, op: str, fonte: str, detalhe: str
 
     if not fonte:
         return base + "\nNão há registro do Preparador para esta combinação. Solicite a liberação (FOR-007/008)."
+
 
     if fonte == "preparador_liberacao":
         import re

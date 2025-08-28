@@ -265,6 +265,30 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
+  Future<void> _confirmEncerrarOs() async {
+    final confirma = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Encerrar OS'),
+        content: const Text('Tem certeza que deseja encerrar a OS?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Encerrar'),
+          ),
+        ],
+      ),
+    );
+    if (confirma == true) {
+      await _encerrarOs();
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final medidasAsync = ref.watch(medidasOperadorControllerProvider);
@@ -448,11 +472,17 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _encerrarOs,
-                      child: const Text('Encerrar OS'),
-                    ),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'encerrar') _confirmEncerrarOs();
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                        value: 'encerrar',
+                        child: Text('Encerrar OS'),
+                      ),
+                    ],
+
                   ),
                 ],
               ),
