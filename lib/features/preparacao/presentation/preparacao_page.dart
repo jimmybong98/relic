@@ -257,7 +257,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
           )
         ],
       ),
-      drawer: const SideMenu(),
+      drawer: const SideMenu(current: SideMenuSection.preparador),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
