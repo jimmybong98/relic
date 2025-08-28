@@ -73,6 +73,18 @@ def _conn_db(dbname: Optional[str] = None):
         charset="utf8mb4",
     )
 
+def _run_sql_report(sql_path: str, dbname: str = DB_NAME):
+    """Lê um arquivo .sql contendo um SELECT e retorna o resultado."""
+    sql_file = Path(sql_path)
+    if not sql_file.exists():
+        raise FileNotFoundError(f"Arquivo SQL não encontrado: {sql_path}")
+    query = sql_file.read_text(encoding="utf-8")
+    with _conn_db(dbname) as conn:
+        with conn.cursor() as cur:
+            cur.execute(query)
+            rows = cur.fetchall()
+    return rows
+
 def _ensure_schema():
     """Garante que o banco e as tabelas principais existam (sem DDL agressivo)."""
     # Cria o database, se não existir
@@ -887,6 +899,17 @@ def operador_listar():
         return jsonify(rows)
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar amostragens: {e}"}), 500
+
+@app.route("/relatorios/sql")
+def relatorio_sql():
+    path = request.args.get("path")
+    if not path:
+        return jsonify({"error": "parâmetro 'path' obrigatório"}), 400
+    try:
+        rows = _run_sql_report(path)
+        return jsonify(rows)
+    except Exception as e:
+        return jsonify({"error": f"Falha ao executar relatório: {e}"}), 500
 
 @app.route("/health")
 def health():
