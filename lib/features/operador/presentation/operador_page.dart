@@ -288,6 +288,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final medidasAsync = ref.watch(medidasOperadorControllerProvider);
@@ -481,6 +482,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                         child: Text('Encerrar OS'),
                       ),
                     ],
+
                   ),
                 ],
               ),
