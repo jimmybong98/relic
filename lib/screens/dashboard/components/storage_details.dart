@@ -1,60 +1,57 @@
 import 'package:flutter/material.dart';
 
 import '../../../constants.dart';
+import '../../../models/my_files.dart';
+import '../../../services/report_service.dart';
 import 'chart.dart';
 import 'storage_info_card.dart';
 
 class StorageDetails extends StatelessWidget {
-  const StorageDetails({
-    Key? key,
-  }) : super(key: key);
+  const StorageDetails({Key? key}) : super(key: key);
+
+  Future<List<CloudStorageInfo>> _loadSummaries() async {
+    final reports = await ReportService().fetchReports();
+    return buildStatusSummaries(reports);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(defaultPadding),
-      decoration: BoxDecoration(
-        color: secondaryColor,
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Storage Details",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
+    return FutureBuilder<List<CloudStorageInfo>>(
+      future: _loadSummaries(),
+      builder: (context, snapshot) {
+        final data = snapshot.data;
+        if (data == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return Container(
+          padding: const EdgeInsets.all(defaultPadding),
+          decoration: BoxDecoration(
+            color: secondaryColor,
+            borderRadius: const BorderRadius.all(Radius.circular(10)),
           ),
-          SizedBox(height: defaultPadding),
-          Chart(),
-          StorageInfoCard(
-            svgSrc: "assets/icons/Documents.svg",
-            title: "Documents Files",
-            amountOfFiles: "1.3GB",
-            numOfFiles: 1328,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Detalhes',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: defaultPadding),
+              Chart(data: data),
+              for (final info in data)
+                StorageInfoCard(
+                  svgSrc: info.svgSrc ?? 'assets/icons/Documents.svg',
+                  title: info.title ?? '',
+                  amountOfFiles: info.totalStorage ?? '',
+                  numOfFiles: info.numOfFiles ?? 0,
+                ),
+            ],
           ),
-          StorageInfoCard(
-            svgSrc: "assets/icons/media.svg",
-            title: "Media Files",
-            amountOfFiles: "15.3GB",
-            numOfFiles: 1328,
-          ),
-          StorageInfoCard(
-            svgSrc: "assets/icons/folder.svg",
-            title: "Other Files",
-            amountOfFiles: "1.3GB",
-            numOfFiles: 1328,
-          ),
-          StorageInfoCard(
-            svgSrc: "assets/icons/unknown.svg",
-            title: "Unknown",
-            amountOfFiles: "1.3GB",
-            numOfFiles: 140,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
