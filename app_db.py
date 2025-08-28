@@ -900,6 +900,25 @@ def operador_listar():
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar amostragens: {e}"}), 500
 
+@app.route("/reports")
+def listar_relatorios():
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT os, partnumber, operacao, status_geral, created_at
+                    FROM preparador_liberacao
+                    ORDER BY created_at DESC
+                    LIMIT 200
+                    """
+                )
+                rows = cur.fetchall()
+        return jsonify(rows)
+    except Exception as e:
+        return jsonify({"error": f"Falha ao consultar relatórios: {e}"}), 500
+
+
 @app.route("/relatorios/sql")
 def relatorio_sql():
     path = request.args.get("path")
