@@ -31,6 +31,7 @@ class DashboardScreen extends StatelessWidget {
                       SizedBox(height: defaultPadding),
                       RecentFiles(),
                       SizedBox(height: defaultPadding),
+
                       ReportsTable(),
                       if (Responsive.isMobile(context))
                         SizedBox(height: defaultPadding),

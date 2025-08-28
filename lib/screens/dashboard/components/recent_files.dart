@@ -1,78 +1,60 @@
-import 'package:admin/models/recent_file.dart';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 
 import '../../../constants.dart';
+import '../../../models/report.dart';
+import '../../../services/report_service.dart';
 
 class RecentFiles extends StatelessWidget {
-  const RecentFiles({
-    Key? key,
-  }) : super(key: key);
+  const RecentFiles({Key? key}) : super(key: key);
+
+  Future<List<Report>> _loadReports() => ReportService().fetchReports();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(defaultPadding),
-      decoration: BoxDecoration(
-        color: secondaryColor,
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Últimas O.S",
-            style: Theme.of(context).textTheme.titleMedium,
+    return FutureBuilder<List<Report>>(
+      future: _loadReports(),
+      builder: (context, snapshot) {
+        final reports = snapshot.data;
+        if (reports == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return Container(
+          padding: const EdgeInsets.all(defaultPadding),
+          decoration: BoxDecoration(
+            color: secondaryColor,
+            borderRadius: const BorderRadius.all(Radius.circular(10)),
           ),
-          SizedBox(
-            width: double.infinity,
-            child: DataTable(
-              columnSpacing: defaultPadding,
-              // minWidth: 600,
-              columns: [
-                DataColumn(
-                  label: Text("O.S"),
-                ),
-                DataColumn(
-                  label: Text("Date"),
-                ),
-                DataColumn(
-                  label: Text("Size"),
-                ),
-              ],
-              rows: List.generate(
-                demoRecentFiles.length,
-                (index) => recentFileDataRow(demoRecentFiles[index]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Últimas O.S',
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-            ),
+              SizedBox(
+                width: double.infinity,
+                child: DataTable(
+                  columnSpacing: defaultPadding,
+                  columns: const [
+                    DataColumn(label: Text('O.S')),
+                    DataColumn(label: Text('Operação')),
+                    DataColumn(label: Text('Status')),
+                  ],
+                  rows: reports
+                      .map(
+                        (report) => DataRow(cells: [
+                          DataCell(Text(report.os)),
+                          DataCell(Text(report.operacao)),
+                          DataCell(Text(report.status)),
+                        ]),
+                      )
+                      .toList(),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
-}
-
-DataRow recentFileDataRow(RecentFile fileInfo) {
-  return DataRow(
-    cells: [
-      DataCell(
-        Row(
-          children: [
-            SvgPicture.asset(
-              fileInfo.icon!,
-              height: 30,
-              width: 30,
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: defaultPadding),
-              child: Text(fileInfo.title!),
-            ),
-          ],
-        ),
-      ),
-      DataCell(Text(fileInfo.date!)),
-      DataCell(Text(fileInfo.size!)),
-    ],
-  );
 }
