@@ -288,7 +288,6 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final medidasAsync = ref.watch(medidasOperadorControllerProvider);
@@ -463,28 +462,25 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                 ),
               ),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _fimJornada,
-                      child: const Text('Fim de Jornada'),
+              Align(
+                alignment: Alignment.centerRight,
+                child: PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'fim') _fimJornada();
+                    if (value == 'encerrar') _confirmEncerrarOs();
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: 'fim',
+                      child: Text('Fim de Jornada'),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'encerrar') _confirmEncerrarOs();
-                    },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(
-                        value: 'encerrar',
-                        child: Text('Encerrar OS'),
-                      ),
-                    ],
+                    PopupMenuItem(
+                      value: 'encerrar',
+                      child: Text('Encerrar OS'),
+                    ),
+                  ],
+                ),
 
-                  ),
-                ],
               ),
               const SizedBox(height: 10),
               SizedBox(

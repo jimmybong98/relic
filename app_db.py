@@ -61,6 +61,7 @@ DB_USER = os.getenv("DB_USER", "relic")
 DB_PASS = os.getenv("DB_PASS", "veALZ2FBnDkG749")
 DB_NAME = os.getenv("DB_NAME", "relic_quality")
 
+
 def _conn_db(dbname: Optional[str] = None):
     return pymysql.connect(
         host=DB_HOST,
@@ -137,6 +138,7 @@ def _ensure_schema():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
             )
+
               cur.execute(
                   """
                   CREATE TABLE IF NOT EXISTS operador_amostragem_item (
@@ -163,7 +165,8 @@ def _ensure_schema():
                     CONSTRAINT fk_oa_item_oa
                         FOREIGN KEY (amostragem_id)
                         REFERENCES operador_amostragem(id)
-                        ON DELETE CASCADE                  
+
+                        ON DELETE CASCADE
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                   """
               )
@@ -551,6 +554,7 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
     op     = _norm(op)
     if not (os_num and part and op):
         return (False, "", "Parâmetros insuficientes para validação.")
+
 
     with conn.cursor() as cur:
         cur.execute("SELECT status FROM ordem_servico WHERE os=%s", (os_num,))
@@ -1017,7 +1021,6 @@ def _mensagem_bloqueio(os_num: str, part: str, op: str, fonte: str, detalhe: str
     fonte: "", "preparador_registro" ou "preparador_liberacao"
     detalhe: texto livre com dicas (ex.: "3/4 OK", "status_geral=pendente")
     """
-
     base = f"OS: {os_num}  •  Peça: {part}  •  Operação: {op}."
 
     fonte = (fonte or "").strip().lower()
@@ -1030,6 +1033,7 @@ def _mensagem_bloqueio(os_num: str, part: str, op: str, fonte: str, detalhe: str
 
     if not fonte:
         return base + "\nNão há registro do Preparador para esta combinação. Solicite a liberação (FOR-007/008)."
+
 
 
     if fonte == "preparador_liberacao":
