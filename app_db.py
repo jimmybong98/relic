@@ -918,6 +918,7 @@ def listar_relatorios():
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar relatórios: {e}"}), 500
 
+
 @app.route("/relatorios/sql")
 def relatorio_sql():
     path = request.args.get("path")
