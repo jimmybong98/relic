@@ -480,6 +480,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                     ),
                   ],
                 ),
+
               ),
               const SizedBox(height: 10),
               SizedBox(
