@@ -1,6 +1,8 @@
 import 'package:admin/constants.dart';
 import 'package:flutter/material.dart';
 
+import 'report.dart';
+
 class CloudStorageInfo {
   final String? svgSrc, title, totalStorage;
   final int? numOfFiles, percentage;
@@ -16,37 +18,37 @@ class CloudStorageInfo {
   });
 }
 
-List demoMyFiles = [
-  CloudStorageInfo(
-    title: "Documents",
-    numOfFiles: 1328,
-    svgSrc: "assets/icons/Documents.svg",
-    totalStorage: "1.9GB",
-    color: primaryColor,
-    percentage: 35,
-  ),
-  CloudStorageInfo(
-    title: "Google Drive",
-    numOfFiles: 1328,
-    svgSrc: "assets/icons/google_drive.svg",
-    totalStorage: "2.9GB",
-    color: Color(0xFFFFA113),
-    percentage: 35,
-  ),
-  CloudStorageInfo(
-    title: "One Drive",
-    numOfFiles: 1328,
-    svgSrc: "assets/icons/one_drive.svg",
-    totalStorage: "1GB",
-    color: Color(0xFFA4CDFF),
-    percentage: 10,
-  ),
-  CloudStorageInfo(
-    title: "Documents",
-    numOfFiles: 5328,
-    svgSrc: "assets/icons/drop_box.svg",
-    totalStorage: "7.3GB",
-    color: Color(0xFF007EE5),
-    percentage: 78,
-  ),
-];
+/// Builds a summary of reports grouped by status that can be consumed by the
+/// dashboard widgets such as [FileInfoCard] and [Chart].
+List<CloudStorageInfo> buildStatusSummaries(List<Report> reports) {
+  if (reports.isEmpty) return [];
+
+  final Map<String, int> counts = {};
+  for (final report in reports) {
+    counts[report.status] = (counts[report.status] ?? 0) + 1;
+  }
+
+  final colors = <Color>[
+    primaryColor,
+    const Color(0xFF26E5FF),
+    const Color(0xFFFFCF26),
+    const Color(0xFFEE2727),
+    primaryColor.withOpacity(0.1),
+  ];
+
+  final total = reports.length;
+  var colorIndex = 0;
+  return counts.entries.map((entry) {
+    final percentage = ((entry.value / total) * 100).round();
+    final info = CloudStorageInfo(
+      title: entry.key,
+      numOfFiles: entry.value,
+      svgSrc: 'assets/icons/Documents.svg',
+      totalStorage: '$percentage%',
+      color: colors[colorIndex % colors.length],
+      percentage: percentage,
+    );
+    colorIndex++;
+    return info;
+  }).toList();
+}
