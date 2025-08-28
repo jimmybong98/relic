@@ -73,6 +73,18 @@ def _conn_db(dbname: Optional[str] = None):
         charset="utf8mb4",
     )
 
+def _run_sql_report(sql_path: str, dbname: str = DB_NAME):
+    """Lê um arquivo .sql contendo um SELECT e retorna o resultado."""
+    sql_file = Path(sql_path)
+    if not sql_file.exists():
+        raise FileNotFoundError(f"Arquivo SQL não encontrado: {sql_path}")
+    query = sql_file.read_text(encoding="utf-8")
+    with _conn_db(dbname) as conn:
+        with conn.cursor() as cur:
+            cur.execute(query)
+            rows = cur.fetchall()
+    return rows
+
 def _ensure_schema():
     """Garante que o banco e as tabelas principais existam (sem DDL agressivo)."""
     # Cria o database, se não existir
@@ -88,20 +100,25 @@ def _ensure_schema():
     with _conn_db(DB_NAME) as c:
         with c.cursor() as cur:
             # Tabela-mestra de OS
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS ordem_servico (
-                  os VARCHAR(64) NOT NULL,
-                  descricao VARCHAR(255) DEFAULT NULL,
-                  cliente VARCHAR(255) DEFAULT NULL,
-                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                  atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                  PRIMARY KEY (os)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-                """
-            )
-            # Operador (já estava)
-            cur.execute(
+              cur.execute(
+                  """
+                  CREATE TABLE IF NOT EXISTS ordem_servico (
+                    os VARCHAR(64) NOT NULL,
+                    descricao VARCHAR(255) DEFAULT NULL,
+                    cliente VARCHAR(255) DEFAULT NULL,
+                    status VARCHAR(32) DEFAULT 'aberta',
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (os)
+                  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                  """
+              )
+              cur.execute(
+                  """ALTER TABLE ordem_servico
+                      ADD COLUMN IF NOT EXISTS status VARCHAR(32) DEFAULT 'aberta'"""
+              )
+              # Operador (já estava)
+              cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS operador_amostragem (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -118,9 +135,9 @@ def _ensure_schema():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
             )
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS operador_amostragem_item (
+              cur.execute(
+                  """
+                  CREATE TABLE IF NOT EXISTS operador_amostragem_item (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     amostragem_id BIGINT NOT NULL,
                     idx_medida INT NOT NULL,
@@ -144,11 +161,25 @@ def _ensure_schema():
                         FOREIGN KEY (amostragem_id)
                         REFERENCES operador_amostragem(id)
                         ON DELETE CASCADE
+                  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                  """
+              )
+              cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS operador_jornada (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    os VARCHAR(64) NOT NULL,
+                    partnumber VARCHAR(128) DEFAULT NULL,
+                    operacao VARCHAR(64) DEFAULT NULL,
+                    re_operador VARCHAR(64) NOT NULL,
+                    pausa_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    KEY idx_oj_os (os),
+                    CONSTRAINT fk_oj_os FOREIGN KEY (os) REFERENCES ordem_servico(os) ON UPDATE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
             )
             # Preparador (registro + itens)
-            cur.execute(
+              cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS preparador_registro (
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -162,7 +193,7 @@ def _ensure_schema():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
             )
-            cur.execute(
+              cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS preparador_registro_item (
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -187,7 +218,7 @@ def _ensure_schema():
                 """
             )
             # Preparador (liberação consolidada)
-            cur.execute(
+              cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS preparador_liberacao (
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -204,7 +235,7 @@ def _ensure_schema():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
             )
-            cur.execute(
+              cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS preparador_liberacao_item (
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -518,6 +549,10 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
         return (False, "", "Parâmetros insuficientes para validação.")
 
     with conn.cursor() as cur:
+        cur.execute("SELECT status FROM ordem_servico WHERE os=%s", (os_num,))
+        st_row = cur.fetchone()
+        if st_row and (st_row.get("status") or "").strip().lower() == "encerrada":
+            return (False, "ordem_servico", "status=encerrada")
         # 1) Se existir liberação com status final, já libera
         cur.execute(
             """
@@ -888,6 +923,80 @@ def operador_listar():
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar amostragens: {e}"}), 500
 
+@app.route("/operador/fim_jornada", methods=["POST"])
+def operador_fim_jornada():
+    payload = request.get_json(silent=True) or {}
+    os_num = _norm(payload.get("os"))
+    re_op = _norm(payload.get("re"))
+    part = _norm(payload.get("partnumber"))
+    op = _norm(payload.get("operacao"))
+    if not os_num or not re_op:
+        return jsonify({"error": "Campos 'os' e 're' são obrigatórios"}), 400
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute("INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,))
+                cur.execute(
+                    """
+                    INSERT INTO operador_jornada (os, partnumber, operacao, re_operador)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (os_num, part or None, op or None, re_op)
+                )
+            c.commit()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": f"Falha ao registrar fim de jornada: {e}"}), 500
+
+@app.route("/operador/encerrar_os", methods=["POST"])
+def operador_encerrar_os():
+    payload = request.get_json(silent=True) or {}
+    os_num = _norm(payload.get("os"))
+    if not os_num:
+        return jsonify({"error": "Campo 'os' é obrigatório"}), 400
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM operador_amostragem WHERE os=%s", (os_num,))
+                if cur.fetchone()[0] == 0:
+                    return jsonify({"error": "Nenhum registro de amostragem encontrado"}), 400
+                cur.execute("UPDATE ordem_servico SET status='encerrada' WHERE os=%s", (os_num,))
+                if cur.rowcount == 0:
+                    return jsonify({"error": "OS não encontrada"}), 404
+            c.commit()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": f"Falha ao encerrar OS: {e}"}), 500
+
+@app.route("/reports")
+def listar_relatorios():
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT os, partnumber, operacao, status_geral, created_at
+                    FROM preparador_liberacao
+                    ORDER BY created_at DESC
+                    LIMIT 200
+                    """
+                )
+                rows = cur.fetchall()
+        return jsonify(rows)
+    except Exception as e:
+        return jsonify({"error": f"Falha ao consultar relatórios: {e}"}), 500
+
+@app.route("/relatorios/sql")
+def relatorio_sql():
+    path = request.args.get("path")
+    if not path:
+        return jsonify({"error": "parâmetro 'path' obrigatório"}), 400
+    try:
+        rows = _run_sql_report(path)
+        return jsonify(rows)
+    except Exception as e:
+        return jsonify({"error": f"Falha ao executar relatório: {e}"}), 500
+
 @app.route("/health")
 def health():
     return jsonify({
@@ -901,13 +1010,15 @@ def _mensagem_bloqueio(os_num: str, part: str, op: str, fonte: str, detalhe: str
     fonte: "", "preparador_registro" ou "preparador_liberacao"
     detalhe: texto livre com dicas (ex.: "3/4 OK", "status_geral=pendente")
     """
-    base = (
-        "A máquina ainda não foi liberada pelo Preparador.\n"
-        f"OS: {os_num}  •  Peça: {part}  •  Operação: {op}."
-    )
+    base = f"OS: {os_num}  •  Peça: {part}  •  Operação: {op}."
 
     fonte = (fonte or "").strip().lower()
     det = str(detalhe or "")
+
+    if fonte == "ordem_servico":
+        return base + "\nA ordem de serviço está encerrada."
+
+    base = "A máquina ainda não foi liberada pelo Preparador.\n" + base
 
     if not fonte:
         return base + "\nNão há registro do Preparador para esta combinação. Solicite a liberação (FOR-007/008)."
