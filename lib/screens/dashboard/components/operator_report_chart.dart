@@ -36,14 +36,17 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
 
   double _statusToValue(String status) {
     switch (status.toLowerCase()) {
-      case 'alerta':
+      case 'pendente':
         return 1;
+      case 'reprovado':
+
       case 'reprovada':
       case 'reprovada acima':
       case 'reprovada abaixo':
         return 2;
       default:
-        return 0; // "boa" or any other status
+        return 0; // "aprovado" or any other status treated as bom
+
     }
   }
 
@@ -61,20 +64,39 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
           Text('Progresso das Amostragens',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: defaultPadding),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _osCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Número da OS',
-                    border: OutlineInputBorder(),
-                  ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 400;
+              final inputField = TextField(
+                controller: _osCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Número da OS',
+                  border: OutlineInputBorder(),
                 ),
-              ),
-              const SizedBox(width: defaultPadding),
-              ElevatedButton(onPressed: _fetch, child: const Text('Buscar')),
-            ],
+              );
+              final button = ElevatedButton(
+                onPressed: _fetch,
+                child: const Text('Buscar'),
+              );
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    inputField,
+                    const SizedBox(height: defaultPadding),
+                    Align(alignment: Alignment.centerRight, child: button),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: inputField),
+                  const SizedBox(width: defaultPadding),
+                  button,
+                ],
+              );
+            },
+
           ),
           const SizedBox(height: defaultPadding),
           FutureBuilder<List<Report>>(
@@ -115,6 +137,8 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
 
               return SizedBox(
                 height: 200,
+                width: double.infinity,
+
                 child: LineChart(
                   LineChartData(
                     minY: 0,
