@@ -52,8 +52,10 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
         return 2;
       default:
         if (st.contains('reprovado')) return 2; // covers "aprovado|reprovado"
+
         if (st.contains('alerta')) return 1;
         return 0; // "ok"/"aprovado" treated como bom
+
     }
   }
 

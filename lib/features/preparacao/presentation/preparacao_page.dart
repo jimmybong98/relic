@@ -145,10 +145,11 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   String statusToString(StatusMedida st) {
     switch (st) {
       case StatusMedida.ok:
-        return 'ok';
+      case StatusMedida.alerta:
+        return 'aprovado';
       case StatusMedida.reprovadaAbaixo:
-        return 'reprovada_abaixo';
       case StatusMedida.reprovadaAcima:
+
         return 'reprovada_acima';
       case StatusMedida.alertaAbaixo:
         return 'alerta_abaixo';
@@ -156,6 +157,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
         return 'alerta_acima';
       case StatusMedida.alerta:
         return 'alerta';
+
       case StatusMedida.pendente:
         return 'pendente';
     }

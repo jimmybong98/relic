@@ -42,17 +42,18 @@ StatusMedida statusFromString(String? s) {
 String statusToString(StatusMedida s) {
   switch (s) {
     case StatusMedida.ok:
+
       return 'ok';
     case StatusMedida.alertaAcima:
       return 'alerta_acima';
     case StatusMedida.alertaAbaixo:
       return 'alerta_abaixo';
+
     case StatusMedida.alerta:
-      return 'alerta';
+      return 'aprovado';
     case StatusMedida.reprovadaAcima:
-      return 'reprovada_acima';
     case StatusMedida.reprovadaAbaixo:
-      return 'reprovada_abaixo';
+      return 'reprovado';
     case StatusMedida.pendente:
       return 'pendente';
   }

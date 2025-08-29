@@ -583,6 +583,7 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             return (False, "", "Sem registro do preparador para esta OS/peça/operação.")
 
         reg_id = reg["id"]
+
         cur.execute(
             """
             SELECT
@@ -609,6 +610,7 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
                 "preparador_registro",
                 f"registro_id={reg_id}; {ok_cnt}/{total} aprovadas",
             )
+
 
 
 # ========= Rotas de Leitura =========
@@ -807,6 +809,7 @@ def resultado_preparador():
           "indice": 0,
           "titulo": "...",
           "faixaTexto": "...",
+
           "min": 1.23, "max": 4.56, "unidade": "mm",
           "medicao": "1.30",
           "status": "ok|reprovada_acima|reprovada_abaixo|alerta_acima|alerta_abaixo|alerta|pendente",
@@ -817,6 +820,7 @@ def resultado_preparador():
     (Para medições de tampão, o campo `status` envia os dois lados como
     "aprovado|reprovado".)
     """
+
     payload = request.get_json(silent=True) or {}
     print(f"[DEBUG] /preparador/resultado recebido: {payload}", flush=True)
 
@@ -925,6 +929,7 @@ def resultado_preparador():
                     else ("reprovada" if has_reprov else "pendente")
                 )
 
+
                 # upsert simples em preparador_liberacao (não cria itens aqui)
                 cur.execute(
                     """
@@ -1006,6 +1011,7 @@ def operador_registrar():
     Payload:
     {
       "os": "...", "re": "...", "partnumber": "...", "operacao": "...",
+
       "itens": [
         {
           "indice": 0, "titulo": "...", "instrumento": "...",
@@ -1019,6 +1025,7 @@ def operador_registrar():
     (Para medições de tampão, o campo `status` envia os dois lados como
     "aprovado|reprovado".)
     """
+
     payload = request.get_json(silent=True) or {}
 
     os_num = _norm(payload.get("os"))
@@ -1227,6 +1234,7 @@ def operador_encerrar_os():
         return jsonify({"error": f"Falha ao encerrar OS: {e}"}), 500
 
 
+
 @app.route("/reports")
 def listar_relatorios():
     try:
@@ -1426,6 +1434,7 @@ def _mensagem_bloqueio(
         status = (m.group(1) if m else "pendente").replace("_", " ")
         return base + f"\nSituação da liberação: {status}. Procure o Preparador."
 
+
     if fonte == "preparador_registro":
         import re
 
@@ -1437,6 +1446,7 @@ def _mensagem_bloqueio(
                 + f"\nProgresso do registro do Preparador: {aprov_cnt}/{total} medidas aprovadas. Aguarde até todas estarem aprovadas."
             )
         return base + "\nO registro do Preparador ainda não está 100% aprovado."
+
 
     return base
 
