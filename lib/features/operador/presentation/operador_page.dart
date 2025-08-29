@@ -142,8 +142,12 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
 
     // Monta itens no formato que o backend espera
-    final itens = medidas.map((m) {
+    final itens = <Map<String, dynamic>>[];
+    for (var i = 0; i < medidas.length; i++) {
+      final m = medidas[i];
       final map = m.toMap();
+      // índice esperado pelo backend
+      map['indice'] = i;
       // backend espera 'min'/'max' e não 'minimo'/'maximo'
       map['min'] = m.minimo;
       map['max'] = m.maximo;
@@ -151,8 +155,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       map['escolha'] = m.medicao ?? '';
       // status como string
       map['status'] = statusToString(m.status);
-      return map;
-    }).toList();
+      itens.add(map);
+    }
 
     final body = jsonEncode({
       're': _reCtrl.text.trim(),
