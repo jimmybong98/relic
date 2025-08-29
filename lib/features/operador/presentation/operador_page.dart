@@ -153,8 +153,27 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       map['max'] = m.maximo;
       // escolha = texto selecionado (OK / Aprovado / Reprovado / pílula etc.)
       map['escolha'] = m.medicao ?? '';
-      // status como string
-      map['status'] = statusToString(m.status);
+      // status como string (sempre "aprovado"/"reprovado" e tampão inclui os dois lados)
+      String status;
+      final med = m.medicao ?? '';
+      if (med.contains('Lado passa') && med.contains('Lado não passa')) {
+        // Tampão: avalia cada lado separadamente
+        var passa = 'aprovado';
+        var naoPassa = 'aprovado';
+        for (final part in med.split('|')) {
+          final p = part.trim();
+          if (p.startsWith('Lado passa') && p.endsWith('Reprovado')) {
+            passa = 'reprovado';
+          }
+          if (p.startsWith('Lado não passa') && p.endsWith('Reprovado')) {
+            naoPassa = 'reprovado';
+          }
+        }
+        status = '$passa|$naoPassa';
+      } else {
+        status = statusToString(m.status);
+      }
+      map['status'] = status;
       itens.add(map);
     }
 
@@ -575,7 +594,6 @@ class _MeasurementTile extends StatelessWidget {
     final hasPassa = parts.any((p) => p.startsWith('Lado passa'));
     final hasNaoPassa =
         parts.any((p) => p.startsWith('Lado não passa'));
-
     if (hasPassa && hasNaoPassa) {
       final passaReprovado = parts.contains('Lado passa — Reprovado');
       final naoPassaReprovado =
@@ -586,7 +604,6 @@ class _MeasurementTile extends StatelessWidget {
       if (passaReprovado) return StatusMedida.reprovadaAbaixo;
       if (naoPassaReprovado) return StatusMedida.reprovadaAcima;
       return StatusMedida.ok;
-
     }
     return StatusMedida.pendente;
   }
