@@ -56,6 +56,14 @@ class ApiMedidasRepository implements MedidasRepository {
     if (kDebugMode) debugPrint('GET $uri');
 
     final resp = await _client.get(uri).timeout(const Duration(seconds: 15));
+
+    // Se a peça/operacao não existir, alguns backends retornam 404 ou 204.
+    // Nesses casos consideramos como lista vazia para exibir a mensagem
+    // "Nenhuma medida encontrada" em vez de erro genérico.
+    if (resp.statusCode == 404 || resp.statusCode == 204) {
+      return <MedidaItem>[];
+    }
+
     if (resp.statusCode != 200) {
       throw Exception('Falha ao buscar medidas (${resp.statusCode}): ${resp.body}');
     }
