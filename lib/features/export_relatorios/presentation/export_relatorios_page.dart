@@ -36,7 +36,7 @@ class _ExportRelatoriosPageState extends State<ExportRelatoriosPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Exportar relatórios')),
-      drawer: const SideMenu(current: SideMenuSection.mainMenu),
+      drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
