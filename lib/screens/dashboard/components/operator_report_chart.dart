@@ -39,12 +39,14 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
       case 'pendente':
         return 1;
       case 'reprovado':
+
       case 'reprovada':
       case 'reprovada acima':
       case 'reprovada abaixo':
         return 2;
       default:
         return 0; // "aprovado" or any other status treated as bom
+
     }
   }
 
@@ -94,6 +96,7 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                 ],
               );
             },
+
           ),
           const SizedBox(height: defaultPadding),
           FutureBuilder<List<Report>>(
@@ -135,6 +138,7 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
               return SizedBox(
                 height: 200,
                 width: double.infinity,
+
                 child: LineChart(
                   LineChartData(
                     minY: 0,
