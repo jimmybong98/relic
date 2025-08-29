@@ -575,9 +575,18 @@ class _MeasurementTile extends StatelessWidget {
     final hasPassa = parts.any((p) => p.startsWith('Lado passa'));
     final hasNaoPassa =
         parts.any((p) => p.startsWith('Lado não passa'));
-    final hasReprovado = parts.any((p) => p.endsWith('Reprovado'));
+
     if (hasPassa && hasNaoPassa) {
-      return hasReprovado ? StatusMedida.reprovadaAcima : StatusMedida.ok;
+      final passaReprovado = parts.contains('Lado passa — Reprovado');
+      final naoPassaReprovado =
+          parts.contains('Lado não passa — Reprovado');
+      if (passaReprovado && naoPassaReprovado) {
+        return StatusMedida.reprovadaAcima;
+      }
+      if (passaReprovado) return StatusMedida.reprovadaAbaixo;
+      if (naoPassaReprovado) return StatusMedida.reprovadaAcima;
+      return StatusMedida.ok;
+
     }
     return StatusMedida.pendente;
   }
