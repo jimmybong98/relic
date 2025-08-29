@@ -611,6 +611,8 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             )
 
 
+
+
 # ========= Rotas de Leitura =========
 # ========= Supervisão =========
 
@@ -817,6 +819,7 @@ def resultado_preparador():
     (Para medições de tampão, o campo `status` envia os dois lados como
     "aprovado|reprovado".)
     """
+
     payload = request.get_json(silent=True) or {}
     print(f"[DEBUG] /preparador/resultado recebido: {payload}", flush=True)
 
@@ -910,6 +913,7 @@ def resultado_preparador():
                     )
                     all_status.append(status)
 
+
                 # Consolida liberação
                 has_reprov = any(
                     any(parte.strip().startswith("reprov") for parte in s.split("|"))
@@ -924,6 +928,8 @@ def resultado_preparador():
                     if all_ok
                     else ("reprovada" if has_reprov else "pendente")
                 )
+
+
 
                 # upsert simples em preparador_liberacao (não cria itens aqui)
                 cur.execute(
@@ -1019,6 +1025,7 @@ def operador_registrar():
     (Para medições de tampão, o campo `status` envia os dois lados como
     "aprovado|reprovado".)
     """
+
     payload = request.get_json(silent=True) or {}
 
     os_num = _norm(payload.get("os"))
@@ -1227,6 +1234,7 @@ def operador_encerrar_os():
         return jsonify({"error": f"Falha ao encerrar OS: {e}"}), 500
 
 
+
 @app.route("/reports")
 def listar_relatorios():
     try:
@@ -1377,6 +1385,7 @@ def exportar_relatorio_excel():
     except Exception as e:
         return jsonify({"error": f"Falha ao exportar relatório: {e}"}), 500
 
+
 @app.route("/relatorios/sql")
 def relatorio_sql():
     path = request.args.get("path")
@@ -1437,6 +1446,7 @@ def _mensagem_bloqueio(
                 + f"\nProgresso do registro do Preparador: {aprov_cnt}/{total} medidas aprovadas. Aguarde até todas estarem aprovadas."
             )
         return base + "\nO registro do Preparador ainda não está 100% aprovado."
+
 
     return base
 
