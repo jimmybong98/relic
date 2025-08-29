@@ -1256,11 +1256,19 @@ def listar_relatorios_preparador():
 
 @app.route("/reports/operador")
 def listar_relatorios_operador():
+    os_num = _norm(request.args.get("os"))
+    where = ""
+    params = []
+    order_by = "ORDER BY a.created_at DESC"
+    if os_num:
+        where = "WHERE a.os = %s"
+        params.append(os_num)
+        order_by = "ORDER BY a.created_at ASC"
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     SELECT a.os, a.partnumber, a.operacao, a.re_operador,
                            CASE
                              WHEN SUM(CASE WHEN LOWER(i.status)='reprovado' THEN 1 ELSE 0 END) > 0 THEN 'reprovado'
@@ -1270,10 +1278,12 @@ def listar_relatorios_operador():
                            a.created_at
                     FROM operador_amostragem a
                     LEFT JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+                    {where}
                     GROUP BY a.id
-                    ORDER BY a.created_at DESC
+                    {order_by}
                     LIMIT 200
-                    """
+                    """,
+                    params,
                 )
                 rows = cur.fetchall()
         return jsonify(rows)

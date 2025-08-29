@@ -52,6 +52,18 @@ class ReportService {
     return [];
   }
 
+  /// Fetch releases performed by operators for a specific OS.
+  Future<List<Report>> fetchOperatorReleasesByOs(String os) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/reports/operador?os=$os');
+      final response = await _client.get(uri);
+      if (response.statusCode == 200) {
+        return Report.listFromResponse(response.body);
+      }
+    } catch (_) {}
+    return [];
+  }
+
   /// Downloads the Excel report for a given OS and type.
   /// Returns `true` if the file was saved successfully.
   Future<bool> exportToExcel({required String os, required String tipo}) async {
