@@ -1306,22 +1306,37 @@ def exportar_relatorio_excel():
                     cur.execute(
                         """
                         SELECT a.os, a.partnumber, a.operacao, a.re_operador,
-                               CASE
-                                 WHEN SUM(CASE WHEN LOWER(i.status)='reprovado' THEN 1 ELSE 0 END) > 0 THEN 'reprovado'
-                                 WHEN SUM(CASE WHEN LOWER(i.status)='ok' THEN 1 ELSE 0 END) = COUNT(i.id) THEN 'aprovado'
-                                 ELSE 'pendente'
-                               END AS status_geral,
-                               a.created_at
+                               i.idx_medida, i.titulo, i.instrumento, i.faixa_texto,
+                               i.minimo, i.maximo, i.unidade, i.periodicidade,
+                               i.tolerancias, i.escolha, i.status, i.observacao,
+                               i.created_at
                         FROM operador_amostragem a
-                        LEFT JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+                        JOIN operador_amostragem_item i ON i.amostragem_id = a.id
                         WHERE a.os=%s
-                        GROUP BY a.id
-                        ORDER BY a.created_at DESC
+                        ORDER BY a.created_at DESC, i.idx_medida ASC
                         """,
                         (os_num,),
                     )
                     rows = cur.fetchall()
-                    headers = ["os", "partnumber", "operacao", "re_operador", "status_geral", "created_at"]
+                    headers = [
+                        "os",
+                        "partnumber",
+                        "operacao",
+                        "re_operador",
+                        "idx_medida",
+                        "titulo",
+                        "instrumento",
+                        "faixa_texto",
+                        "minimo",
+                        "maximo",
+                        "unidade",
+                        "periodicidade",
+                        "tolerancias",
+                        "escolha",
+                        "status",
+                        "observacao",
+                        "created_at",
+                    ]
 
         wb = Workbook()
         ws = wb.active

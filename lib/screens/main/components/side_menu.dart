@@ -40,12 +40,17 @@ class SideMenu extends StatelessWidget {
         svgSrc: 'assets/icons/menu_dashboard.svg',
         press: () => _goHome(context),
       ),
-      DrawerListTile(
-        title: 'Exportar relatórios',
-        svgSrc: 'assets/icons/menu_doc.svg',
-        press: () => _navigate(context, const ExportRelatoriosPage()),
-      ),
     ];
+
+    if (current == SideMenuSection.dashboard) {
+      items.add(
+        DrawerListTile(
+          title: 'Exportar relatórios',
+          svgSrc: 'assets/icons/menu_doc.svg',
+          press: () => _navigate(context, const ExportRelatoriosPage()),
+        ),
+      );
+    }
 
     switch (current) {
       case SideMenuSection.dashboard:
@@ -58,8 +63,7 @@ class SideMenu extends StatelessWidget {
           DrawerListTile(
             title: 'Cadastro de Preparadores',
             svgSrc: 'assets/icons/menu_profile.svg',
-            press: () =>
-                _navigate(context, const CadastroPreparadoresPage()),
+            press: () => _navigate(context, const CadastroPreparadoresPage()),
           ),
         ]);
         break;
