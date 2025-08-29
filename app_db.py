@@ -970,6 +970,153 @@ def resultado_preparador():
         return jsonify({"error": f"Falha ao inserir registro do preparador: {e}"}), 500
 
 
+# ========= Finalização da OS pelo Preparador =========
+@app.route("/preparador/finalizar_os", methods=["POST"])
+def preparador_finalizar_os():
+    payload = request.get_json(silent=True) or {}
+    print(f"[DEBUG] /preparador/finalizar_os recebido: {payload}", flush=True)
+
+    os_num = _norm(payload.get("os"))
+    re_prep = _norm(payload.get("re"))
+    part = _norm_part(payload.get("partnumber"))
+    op = _norm_op(payload.get("operacao"))
+    itens = payload.get("itens", [])
+
+    if not os_num or not re_prep or not part or not op:
+        return (
+            jsonify(
+                {"error": "Campos 'os', 're', 'partnumber' e 'operacao' são obrigatórios"}
+            ),
+            400,
+        )
+    if not isinstance(itens, list) or len(itens) == 0:
+        return (
+            jsonify({"error": "Lista 'itens' é obrigatória e não pode ser vazia"}),
+            400,
+        )
+
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute(
+                    "SELECT status FROM ordem_servico WHERE os=%s", (os_num,)
+                )
+                st = (cur.fetchone() or {}).get("status", "").lower()
+                if st == "encerrada":
+                    return (
+                        jsonify({"code": "ja_finalizada", "error": "OS já finalizada."}),
+                        409,
+                    )
+                if st != "fim_prod":
+                    return (
+                        jsonify(
+                            {
+                                "code": "producao_nao_encerrada",
+                                "error": "Produção não encerrada pelo operador.",
+                            }
+                        ),
+                        409,
+                    )
+
+                cur.execute(
+                    "INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,)
+                )
+
+                cur.execute(
+                    """
+                    INSERT INTO preparador_registro (os, partnumber, operacao, re_preparador)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (os_num, part, op, re_prep),
+                )
+                registro_id = cur.lastrowid
+
+                all_status = []
+                for it in itens:
+                    idx = int(it.get("indice", 0))
+                    titulo = _norm(it.get("titulo"))
+                    faixa_texto = _norm(it.get("faixaTexto"))
+                    minimo = it.get("min")
+                    maximo = it.get("max")
+                    unidade = _norm(it.get("unidade"))
+                    medicao = _norm(it.get("medicao"))
+                    status = _norm(it.get("status")).lower()
+                    observacao = _norm(it.get("observacao"))
+
+                    cur.execute(
+                        """
+                        INSERT INTO preparador_registro_item
+                          (registro_id, idx_medida, titulo, faixa_texto, minimo, maximo, unidade,
+                           medicao, status, observacao)
+                        VALUES
+                          (%s, %s, %s, %s, %s, %s, %s,
+                           %s, %s, %s)
+                        """,
+                        (
+                            registro_id,
+                            idx,
+                            titulo,
+                            faixa_texto,
+                            minimo,
+                            maximo,
+                            unidade,
+                            medicao,
+                            status,
+                            observacao,
+                        ),
+                    )
+                    all_status.append(status)
+
+                has_reprov = any(
+                    any(parte.strip().startswith("reprov") for parte in s.split("|"))
+                    for s in all_status
+                )
+                all_ok = len(all_status) > 0 and all(
+                    all(parte.strip() in ("ok", "aprovado") for parte in s.split("|"))
+                    for s in all_status
+                )
+                status_geral = (
+                    "finalizada"
+                    if all_ok
+                    else ("reprovada" if has_reprov else "pendente")
+                )
+
+                cur.execute(
+                    """
+                    UPDATE preparador_liberacao
+                    SET re_preparador=%s, status_geral=%s
+                    WHERE os=%s
+                      AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
+                      AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
+                    ORDER BY id DESC LIMIT 1
+                    """,
+                    (re_prep, status_geral, os_num, part, op),
+                )
+                if cur.rowcount == 0:
+                    cur.execute(
+                        """
+                        INSERT INTO preparador_liberacao
+                          (os, partnumber, operacao, re_preparador, status_geral)
+                        VALUES (%s, %s, %s, %s, %s)
+                        """,
+                        (os_num, part, op, re_prep, status_geral),
+                    )
+
+                cur.execute(
+                    "UPDATE ordem_servico SET status='encerrada' WHERE os=%s",
+                    (os_num,),
+                )
+            c.commit()
+
+        return jsonify(
+            {
+                "status": "ok",
+                "registro_id": registro_id,
+                "status_geral": status_geral,
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": f"Falha ao finalizar OS: {e}"}), 500
 # ========= CHECAGEM (para UI) =========
 @app.route("/operador/pode")
 def operador_pode():
@@ -1206,8 +1353,8 @@ def operador_fim_jornada():
         return jsonify({"error": f"Falha ao registrar fim de jornada: {e}"}), 500
 
 
-@app.route("/operador/encerrar_os", methods=["POST"])
-def operador_encerrar_os():
+@app.route("/operador/encerrar_producao", methods=["POST"])
+def operador_encerrar_producao():
     payload = request.get_json(silent=True) or {}
     os_num = _norm(payload.get("os"))
     if not os_num:
@@ -1224,14 +1371,15 @@ def operador_encerrar_os():
                         400,
                     )
                 cur.execute(
-                    "UPDATE ordem_servico SET status='encerrada' WHERE os=%s", (os_num,)
+                    "UPDATE ordem_servico SET status='fim_prod' WHERE os=%s",
+                    (os_num,),
                 )
                 if cur.rowcount == 0:
                     return jsonify({"error": "OS não encontrada"}), 404
             c.commit()
         return jsonify({"status": "ok"})
     except Exception as e:
-        return jsonify({"error": f"Falha ao encerrar OS: {e}"}), 500
+        return jsonify({"error": f"Falha ao encerrar produção: {e}"}), 500
 
 
 

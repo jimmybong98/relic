@@ -259,7 +259,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
-  Future<void> _encerrarOs() async {
+  Future<void> _encerrarProducao() async {
     if (_osCtrl.text.trim().isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -269,7 +269,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
 
     final body = jsonEncode({'os': _osCtrl.text.trim()});
-    final uri = Uri.parse('$kBaseUrl/operador/encerrar_os');
+    final uri = Uri.parse('$kBaseUrl/operador/encerrar_producao');
     try {
       final resp = await http
           .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
@@ -277,7 +277,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       if (!mounted) return;
       if (resp.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('OS encerrada.')),
+          const SnackBar(content: Text('Produção encerrada.')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -291,12 +291,12 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
-  Future<void> _confirmEncerrarOs() async {
+  Future<void> _confirmEncerrarProducao() async {
     final confirma = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Encerrar OS'),
-        content: const Text('Tem certeza que deseja encerrar a OS?'),
+        title: const Text('Encerrar produção'),
+        content: const Text('Tem certeza que deseja encerrar a produção?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -310,7 +310,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       ),
     );
     if (confirma == true) {
-      await _encerrarOs();
+      await _encerrarProducao();
     }
   }
 
@@ -493,7 +493,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                 child: PopupMenuButton<String>(
                   onSelected: (value) {
                     if (value == 'fim') _fimJornada();
-                    if (value == 'encerrar') _confirmEncerrarOs();
+                    if (value == 'encerrar') _confirmEncerrarProducao();
                   },
                   itemBuilder: (context) => const [
                     PopupMenuItem(
@@ -502,7 +502,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                     ),
                     PopupMenuItem(
                       value: 'encerrar',
-                      child: Text('Encerrar OS'),
+                      child: Text('Encerrar produção'),
                     ),
                   ],
                 ),

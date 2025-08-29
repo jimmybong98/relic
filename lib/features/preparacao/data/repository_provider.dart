@@ -20,3 +20,12 @@ final preparadorRepositoryProvider = Provider<MedidasRepository>((ref) {
     resultadoPath: '/preparador/resultado', // já existe no backend (retorna ok)
   );
 });
+
+/// Provider para a Finalização da OS pelo preparador
+final finalizadorRepositoryProvider = Provider<MedidasRepository>((ref) {
+  return MedidasRepositoryFactory.create(
+    useApi: true,
+    medidasPath: '/preparador/medidas',
+    resultadoPath: '/preparador/finalizar_os',
+  );
+});
