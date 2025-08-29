@@ -36,9 +36,21 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
 
   double _statusToValue(String status) {
     final st = status.toLowerCase();
-    if (st == 'pendente') return 1;
-    if (st.contains('reprovado')) return 2;
-    return 0; // "aprovado" or any other status treated as bom
+
+    switch (st) {
+      case 'pendente':
+        return 1;
+      case 'reprovado':
+      case 'reprovada':
+      case 'reprovada acima':
+      case 'reprovada_acima':
+      case 'reprovada abaixo':
+      case 'reprovada_abaixo':
+        return 2;
+      default:
+        if (st.contains('reprovado')) return 2; // covers "aprovado|reprovado"
+        return 0; // "ok"/"aprovado" treated as bom
+    }
   }
 
   @override
