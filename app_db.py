@@ -253,14 +253,14 @@ def _ensure_schema():
               )
         c.commit()
 
-# chama ao subir
-_ensure_schema()
 
 # ========= Utils =========
+
 def _norm(text):
     return (str(text or "")).strip()
 
 def _norm_part(text):
+    """Normaliza o partnumber removendo espaços extras."""
     return _norm(text)
 
 def _norm_op(text):
@@ -290,6 +290,12 @@ def _log_supervisao(cur, tabela: str, acao: str, antes, depois):
         )
     except Exception:
         pass
+
+
+
+# chama ao subir
+_ensure_schema()
+
 
 def _normalize_text(s: str) -> str:
     t = _norm(s).lower()
