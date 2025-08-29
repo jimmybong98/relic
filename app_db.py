@@ -1,10 +1,13 @@
 # app.py
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from pathlib import Path
 from typing import Optional, Tuple
 import os
 import re
 import json
+import io
+
+from openpyxl import Workbook
 
 # --------- MySQL ----------
 import pymysql
@@ -1220,7 +1223,7 @@ def listar_relatorios():
             with c.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT os, partnumber, operacao, status_geral, created_at
+                    SELECT os, partnumber, operacao, re_preparador, status_geral, created_at
                     FROM preparador_liberacao
                     ORDER BY created_at DESC
                     LIMIT 200
@@ -1231,6 +1234,112 @@ def listar_relatorios():
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar relatórios: {e}"}), 500
 
+
+@app.route("/reports/preparador")
+def listar_relatorios_preparador():
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT os, partnumber, operacao, re_preparador, status_geral, created_at
+                    FROM preparador_liberacao
+                    ORDER BY created_at DESC
+                    LIMIT 200
+                    """
+                )
+                rows = cur.fetchall()
+        return jsonify(rows)
+    except Exception as e:
+        return jsonify({"error": f"Falha ao consultar relatórios do preparador: {e}"}), 500
+
+
+@app.route("/reports/operador")
+def listar_relatorios_operador():
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT a.os, a.partnumber, a.operacao, a.re_operador,
+                           CASE
+                             WHEN SUM(CASE WHEN LOWER(i.status)='reprovado' THEN 1 ELSE 0 END) > 0 THEN 'reprovado'
+                             WHEN SUM(CASE WHEN LOWER(i.status)='ok' THEN 1 ELSE 0 END) = COUNT(i.id) THEN 'aprovado'
+                             ELSE 'pendente'
+                           END AS status_geral,
+                           a.created_at
+                    FROM operador_amostragem a
+                    LEFT JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+                    GROUP BY a.id
+                    ORDER BY a.created_at DESC
+                    LIMIT 200
+                    """
+                )
+                rows = cur.fetchall()
+        return jsonify(rows)
+    except Exception as e:
+        return jsonify({"error": f"Falha ao consultar relatórios do operador: {e}"}), 500
+
+
+@app.route("/reports/export")
+def exportar_relatorio_excel():
+    os_num = _norm(request.args.get("os"))
+    tipo = (request.args.get("type") or "").upper()
+    if not os_num or tipo not in ("FOR07", "FOR09"):
+        return jsonify({"error": "Parâmetros 'os' e 'type' são obrigatórios"}), 400
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                if tipo == "FOR07":
+                    cur.execute(
+                        """
+                        SELECT os, partnumber, operacao, re_preparador, status_geral, created_at
+                        FROM preparador_liberacao
+                        WHERE os=%s
+                        ORDER BY created_at DESC
+                        """,
+                        (os_num,),
+                    )
+                    rows = cur.fetchall()
+                    headers = ["os", "partnumber", "operacao", "re_preparador", "status_geral", "created_at"]
+                else:
+                    cur.execute(
+                        """
+                        SELECT a.os, a.partnumber, a.operacao, a.re_operador,
+                               CASE
+                                 WHEN SUM(CASE WHEN LOWER(i.status)='reprovado' THEN 1 ELSE 0 END) > 0 THEN 'reprovado'
+                                 WHEN SUM(CASE WHEN LOWER(i.status)='ok' THEN 1 ELSE 0 END) = COUNT(i.id) THEN 'aprovado'
+                                 ELSE 'pendente'
+                               END AS status_geral,
+                               a.created_at
+                        FROM operador_amostragem a
+                        LEFT JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+                        WHERE a.os=%s
+                        GROUP BY a.id
+                        ORDER BY a.created_at DESC
+                        """,
+                        (os_num,),
+                    )
+                    rows = cur.fetchall()
+                    headers = ["os", "partnumber", "operacao", "re_operador", "status_geral", "created_at"]
+
+        wb = Workbook()
+        ws = wb.active
+        ws.append(headers)
+        for r in rows:
+            ws.append([r.get(h) for h in headers])
+        stream = io.BytesIO()
+        wb.save(stream)
+        stream.seek(0)
+        filename = f"relatorio_{os_num}_{tipo}.xlsx"
+        return send_file(
+            stream,
+            as_attachment=True,
+            download_name=filename,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    except Exception as e:
+        return jsonify({"error": f"Falha ao exportar relatório: {e}"}), 500
 
 @app.route("/relatorios/sql")
 def relatorio_sql():

@@ -6,6 +6,7 @@ import 'package:admin/features/preparacao/presentation/preparacao_page.dart';
 import 'package:admin/features/operador/presentation/operador_page.dart';
 import 'package:admin/features/cadastro_itens/presentation/cadastro_itens_page.dart';
 import 'package:admin/features/cadastro_preparadores/presentation/cadastro_preparadores_page.dart';
+import 'package:admin/features/export_relatorios/presentation/export_relatorios_page.dart';
 import 'package:admin/screens/main/main_screen.dart';
 
 enum SideMenuSection { mainMenu, dashboard, preparador, operador }
@@ -38,6 +39,11 @@ class SideMenu extends StatelessWidget {
         title: 'Menu Principal',
         svgSrc: 'assets/icons/menu_dashboard.svg',
         press: () => _goHome(context),
+      ),
+      DrawerListTile(
+        title: 'Exportar relatórios',
+        svgSrc: 'assets/icons/menu_doc.svg',
+        press: () => _navigate(context, const ExportRelatoriosPage()),
       ),
     ];
 
