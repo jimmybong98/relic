@@ -824,6 +824,20 @@ def resultado_preparador():
 
     try:
         with _conn_db(DB_NAME) as c:
+            ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op)
+            if ok:
+                return (
+                    jsonify(
+                        {
+                            "code": "ja_liberada",
+                            "error": "Máquina já liberada pelo preparador. Novos registros não são permitidos.",
+                            "fonte": fonte,
+                            "detalhe": detalhe,
+                        }
+                    ),
+                    409,
+                )
+
             with c.cursor() as cur:
                 # garante OS na mestre (por causa de FKs futuras)
                 cur.execute(
