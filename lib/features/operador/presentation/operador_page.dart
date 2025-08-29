@@ -675,15 +675,6 @@ class _MeasurementTile extends StatelessWidget {
 
     // NÃO usar ?? [] se tolerancias for não-nulo (evita dead_null_aware_expression)
     final tolerancias = item.tolerancias;
-    final tolVals = <double>[];
-    for (final t in tolerancias) {
-      final d = _toDoubleNum(t);
-      if (d != null) tolVals.add(d);
-    }
-    tolVals.sort();
-
-    final minEdge = item.minimo ?? (tolVals.isNotEmpty ? tolVals.first : null);
-    final maxEdge = item.maximo ?? (tolVals.isNotEmpty ? tolVals.last : null);
 
     // ------- UI -------
     return Card(
@@ -799,23 +790,44 @@ class _MeasurementTile extends StatelessWidget {
                 builder: (context) {
                   final chips = <Widget>[];
 
-                  // Monta as 4 pílulas coloridas
-                  for (final raw in tolerancias) {
+                  // Monta as 4 pílulas coloridas na ordem recebida
+                  for (var i = 0; i < tolerancias.length; i++) {
+                    final raw = tolerancias[i];
                     final d = _toDoubleNum(raw);
-                    // default amarelo
-                    Color bg = Colors.amber.shade100;
-                    Color bd = Colors.amber.shade400;
-                    if (d != null &&
-                        ((minEdge != null && _near(d, minEdge)) ||
-                            (maxEdge != null && _near(d, maxEdge)))) {
-                      bg = Colors.red.shade100; // extremos
-                      bd = Colors.red.shade400;
+
+                    // Define cores e status conforme a posição
+                    StatusMedida st;
+                    Color bg;
+                    Color bd;
+                    switch (i) {
+                      case 0:
+                        st = StatusMedida.reprovadaAbaixo;
+                        bg = Colors.red.shade100;
+                        bd = Colors.red.shade400;
+                        break;
+                      case 1:
+                        st = StatusMedida.alertaAbaixo;
+                        bg = Colors.amber.shade100;
+                        bd = Colors.amber.shade400;
+                        break;
+                      case 2:
+                        st = StatusMedida.alertaAcima;
+                        bg = Colors.amber.shade100;
+                        bd = Colors.amber.shade400;
+                        break;
+                      case 3:
+                        st = StatusMedida.reprovadaAcima;
+                        bg = Colors.red.shade100;
+                        bd = Colors.red.shade400;
+                        break;
+                      default:
+                        st = StatusMedida.alerta;
+                        bg = Colors.amber.shade100;
+                        bd = Colors.amber.shade400;
                     }
 
-                    final label = d != null
-                        ? d.toStringAsFixed(2)
-                        : raw.toString();
-
+                    final label =
+                        d != null ? d.toStringAsFixed(2) : raw.toString();
                     final selected = item.medicao == label;
 
                     chips.add(_pill(
@@ -823,20 +835,7 @@ class _MeasurementTile extends StatelessWidget {
                       bg: bg,
                       border: bd,
                       selected: selected,
-                      onTap: () {
-                        // Seleciona a tolerância: classifica
-                        StatusMedida st = StatusMedida.alerta;
-                        if (d != null) {
-                          if (minEdge != null && _near(d, minEdge)) {
-                            st = StatusMedida.reprovadaAbaixo;
-                          } else if (maxEdge != null && _near(d, maxEdge)) {
-                            st = StatusMedida.reprovadaAcima;
-                          } else {
-                            st = StatusMedida.alerta;
-                          }
-                        }
-                        onSelect(st, label);
-                      },
+                      onTap: () => onSelect(st, label),
                     ));
                   }
 
