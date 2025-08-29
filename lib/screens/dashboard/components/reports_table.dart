@@ -12,7 +12,7 @@ class ReportsTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final service = ReportService();
     return FutureBuilder<List<Report>>(
-      future: service.fetchReports(),
+      future: service.fetchOperatorReleases(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -37,14 +37,16 @@ class ReportsTable extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Relatórios', style: Theme.of(context).textTheme.titleMedium),
+              Text('Relatórios (Operador)',
+                  style: Theme.of(context).textTheme.titleMedium),
               SizedBox(
                 width: double.infinity,
                 child: DataTable(
                   columnSpacing: defaultPadding,
                   columns: const [
                     DataColumn(label: Text('O.S')),
-                    DataColumn(label: Text('Partnumber')),
+                    DataColumn(label: Text('Código da peça')),
+                    DataColumn(label: Text('RE Operador')),
                     DataColumn(label: Text('Status')),
                   ],
                   rows: reports
@@ -52,6 +54,7 @@ class ReportsTable extends StatelessWidget {
                         (r) => DataRow(cells: [
                           DataCell(Text(r.os)),
                           DataCell(Text(r.partnumber)),
+                          DataCell(Text(r.reOperador)),
                           DataCell(Text(r.status)),
                         ]),
                       )

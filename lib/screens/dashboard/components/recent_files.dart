@@ -4,10 +4,11 @@ import '../../../constants.dart';
 import '../../../models/report.dart';
 import '../../../services/report_service.dart';
 
+/// Displays the last machine releases performed by the preparer.
 class RecentFiles extends StatelessWidget {
   const RecentFiles({Key? key}) : super(key: key);
 
-  Future<List<Report>> _loadReports() => ReportService().fetchReports();
+  Future<List<Report>> _loadReports() => ReportService().fetchPreparerReleases();
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +29,7 @@ class RecentFiles extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Últimas O.S',
+                'Últimas liberações (Preparador)',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               SizedBox(
@@ -37,14 +38,16 @@ class RecentFiles extends StatelessWidget {
                   columnSpacing: defaultPadding,
                   columns: const [
                     DataColumn(label: Text('O.S')),
-                    DataColumn(label: Text('Operação')),
+                    DataColumn(label: Text('Código da peça')),
+                    DataColumn(label: Text('RE Preparador')),
                     DataColumn(label: Text('Status')),
                   ],
                   rows: reports
                       .map(
                         (report) => DataRow(cells: [
                           DataCell(Text(report.os)),
-                          DataCell(Text(report.operacao)),
+                          DataCell(Text(report.partnumber)),
+                          DataCell(Text(report.rePreparador)),
                           DataCell(Text(report.status)),
                         ]),
                       )
