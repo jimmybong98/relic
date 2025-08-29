@@ -115,9 +115,25 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   final _opCtrl = TextEditingController();
 
   bool _registrando = false;
+  bool _osLiberada = false;
+
+  void _resetLiberada() {
+    if (_osLiberada) setState(() => _osLiberada = false);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _osCtrl.addListener(_resetLiberada);
+    _partCtrl.addListener(_resetLiberada);
+    _opCtrl.addListener(_resetLiberada);
+  }
 
   @override
   void dispose() {
+    _osCtrl.removeListener(_resetLiberada);
+    _partCtrl.removeListener(_resetLiberada);
+    _opCtrl.removeListener(_resetLiberada);
     _reCtrl.dispose();
     _osCtrl.dispose();
     _partCtrl.dispose();
@@ -207,10 +223,23 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       if (!mounted) return;
 
       if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final statusGeral = (data['status_geral'] ?? '').toString().toLowerCase();
+        if (statusGeral == 'liberada') {
+          setState(() => _osLiberada = true);
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Resultado registrado com sucesso!')),
         );
         ref.read(medidasPreparadorControllerProvider.notifier).resetSelecoes();
+      } else if (resp.statusCode == 409) {
+        final data = jsonDecode(resp.body);
+        if ((data['code'] ?? '') == 'ja_liberada') {
+          setState(() => _osLiberada = true);
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Falha ao registrar: ${data['error'] ?? resp.body}')),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -240,7 +269,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
         medidas.every((m) =>
         (m.medicao ?? '').isNotEmpty &&
             m.status != StatusMedida.pendente);
-    final podeRegistrar = reOk && osOk && todasOk && !_registrando;
+    final podeRegistrar =
+        reOk && osOk && todasOk && !_registrando && !_osLiberada;
 
     return Scaffold(
       appBar: AppBar(
