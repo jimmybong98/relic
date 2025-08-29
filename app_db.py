@@ -16,8 +16,10 @@ try:  # Flask 3.x
     app.json.ensure_ascii = False
 except Exception:
     pass
-    
+
     # FORCE 'charset=utf-8' em todas as respostas JSON
+
+
 @app.after_request
 def _force_utf8_json(resp):
     if resp.mimetype == "application/json":
@@ -25,6 +27,7 @@ def _force_utf8_json(resp):
         if "charset" not in ct.lower():
             resp.headers["Content-Type"] = "application/json; charset=utf-8"
     return resp
+
 
 # ========= DB (MySQL) =========
 DB_HOST = os.getenv("DB_HOST", "192.168.0.31")
@@ -46,6 +49,7 @@ def _conn_db(dbname: Optional[str] = None):
         charset="utf8mb4",
     )
 
+
 def _run_sql_report(sql_path: str, dbname: str = DB_NAME):
     """Lê um arquivo .sql contendo um SELECT e retorna o resultado."""
     sql_file = Path(sql_path)
@@ -58,8 +62,8 @@ def _run_sql_report(sql_path: str, dbname: str = DB_NAME):
             rows = cur.fetchall()
     return rows
 
-def _ensure_schema():
 
+def _ensure_schema():
     """Garante que o banco e as tabelas principais existam (sem DDL agressivo)."""
     # Cria o database, se não existir
     with _conn_db(None) as c:
@@ -74,8 +78,8 @@ def _ensure_schema():
     with _conn_db(DB_NAME) as c:
         with c.cursor() as cur:
             # Tabela-mestra de OS
-              cur.execute(
-                  """
+            cur.execute(
+                """
                   CREATE TABLE IF NOT EXISTS ordem_servico (
                     os VARCHAR(64) NOT NULL,
                     descricao VARCHAR(255) DEFAULT NULL,
@@ -86,14 +90,14 @@ def _ensure_schema():
                     PRIMARY KEY (os)
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                   """
-              )
-              cur.execute(
-                  """ALTER TABLE ordem_servico
+            )
+            cur.execute(
+                """ALTER TABLE ordem_servico
                       ADD COLUMN IF NOT EXISTS status VARCHAR(32) DEFAULT 'aberta'"""
-              )
-              # Operador (já estava)
+            )
+            # Operador (já estava)
 
-              cur.execute(
+            cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS operador_amostragem (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -111,8 +115,8 @@ def _ensure_schema():
                 """
             )
 
-              cur.execute(
-                  """
+            cur.execute(
+                """
                   CREATE TABLE IF NOT EXISTS operador_amostragem_item (
 
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -141,8 +145,8 @@ def _ensure_schema():
                         ON DELETE CASCADE
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                   """
-              )
-              cur.execute(
+            )
+            cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS operador_jornada (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -158,7 +162,7 @@ def _ensure_schema():
             )
             # Preparador (registro + itens)
 
-              cur.execute(
+            cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS preparador_registro (
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -172,7 +176,7 @@ def _ensure_schema():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
             )
-              cur.execute(
+            cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS preparador_registro_item (
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -197,7 +201,7 @@ def _ensure_schema():
                 """
             )
             # Preparador (liberação consolidada)
-              cur.execute(
+            cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS preparador_liberacao (
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -214,7 +218,7 @@ def _ensure_schema():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
             )
-              cur.execute(
+            cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS preparador_liberacao_item (
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -239,8 +243,8 @@ def _ensure_schema():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
             )
-              cur.execute(
-                  """
+            cur.execute(
+                """
                   CREATE TABLE IF NOT EXISTS supervisao_log (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     tabela VARCHAR(64) NOT NULL,
@@ -250,22 +254,26 @@ def _ensure_schema():
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                   """
-              )
+            )
         c.commit()
 
 
 # ========= Utils =========
 
+
 def _norm(text):
     return (str(text or "")).strip()
+
 
 def _norm_part(text):
     """Normaliza o partnumber removendo espaços extras."""
     return _norm(text)
 
+
 def _norm_op(text):
     t = _norm(text)
     return t.zfill(3) if t.isdigit() else t
+
 
 def _to_float(s):
     try:
@@ -292,7 +300,6 @@ def _log_supervisao(cur, tabela: str, acao: str, antes, depois):
         pass
 
 
-
 # chama ao subir
 _ensure_schema()
 
@@ -300,33 +307,44 @@ _ensure_schema()
 def _normalize_text(s: str) -> str:
     t = _norm(s).lower()
     rep = {
-        "á": "a", "à": "a", "ã": "a", "â": "a",
-        "é": "e", "ê": "e",
+        "á": "a",
+        "à": "a",
+        "ã": "a",
+        "â": "a",
+        "é": "e",
+        "ê": "e",
         "í": "i",
-        "ó": "o", "ô": "o", "õ": "o",
+        "ó": "o",
+        "ô": "o",
+        "õ": "o",
         "ú": "u",
-        "ç": "c"
+        "ç": "c",
     }
     for a, b in rep.items():
         t = t.replace(a, b)
     return t
 
+
 def _has_min_token(s: str) -> bool:
     t = _normalize_text(s)
     return "minimo" in t or re.search(r"\bmin\b", t) is not None
 
+
 def _has_max_token(s: str) -> bool:
     t = _normalize_text(s)
     return "maximo" in t or re.search(r"\bmax\b", t) is not None
+
 
 def _is_rugosidade_text(s: str) -> bool:
     t = _normalize_text(s)
     # "rug" + ("ra" ou "rz")
     return ("rug" in t) and ("ra" in t or "rz" in t)
 
+
 def _first_number(s: str):
     m = re.search(r"-?\d+(?:[.,]\d+)?", str(s))
     return _to_float(m.group(0)) if m else None
+
 
 def _parse_range_any(texto: str):
     """
@@ -343,7 +361,8 @@ def _parse_range_any(texto: str):
     # Faixa
     m = re.search(
         r"(-?\d+(?:[.,]\d+)?)\s*(?:-|–|~|a|ate|até|to)\s*(-?\d+(?:[.,]\d+)?)\s*([^\d\s]+.*)?$",
-        s, re.IGNORECASE
+        s,
+        re.IGNORECASE,
     )
     if m:
         v1 = _to_float(m.group(1))
@@ -364,10 +383,10 @@ def _parse_range_any(texto: str):
     has_min = _has_min_token(s)
     has_max = _has_max_token(s)
     if has_min and not has_max:
-        return (v, None, uni)   # mínimo somente
+        return (v, None, uni)  # mínimo somente
     if has_max and not has_min:
-        return (None, v, uni)   # máximo somente
-    return (v, v, uni)          # valor exato
+        return (None, v, uni)  # máximo somente
+    return (v, v, uni)  # valor exato
 
 
 _ALLOWED_TABELAS = {"FOR07": "for07_norm", "FOR09": "for09_norm"}
@@ -375,6 +394,7 @@ _ALLOWED_TABELAS = {"FOR07": "for07_norm", "FOR09": "for09_norm"}
 
 def _resolve_tabela(nome: str):
     return _ALLOWED_TABELAS.get((nome or "").upper())
+
 
 # ========= Consulta de medidas no BD =========
 def _medidas_preparador_db(part: str, op: str):
@@ -422,15 +442,18 @@ def _medidas_preparador_db(part: str, op: str):
                 mn = 0.0
             elif mn is None and mx is not None:
                 mn = 0.0
-        medidas.append({
-            "titulo": titulo,
-            "faixaTexto": faixa,
-            "min": mn,
-            "max": mx,
-            "unidade": uni,
-            "instrumento": row.get("instrumento") or "",
-        })
+        medidas.append(
+            {
+                "titulo": titulo,
+                "faixaTexto": faixa,
+                "min": mn,
+                "max": mx,
+                "unidade": uni,
+                "instrumento": row.get("instrumento") or "",
+            }
+        )
     return medidas
+
 
 def _medidas_operador_db(part: str, op: str):
     part = _norm_part(part)
@@ -486,17 +509,20 @@ def _medidas_operador_db(part: str, op: str):
             row.get("reprovada_acima"),
         ]
         tolerancias = [t for t in tolerancias if t is not None]
-        medidas.append({
-            "titulo": titulo,
-            "faixaTexto": faixa,
-            "min": mn,
-            "max": mx,
-            "unidade": uni,
-            "periodicidade": row.get("periodicidade") or "",
-            "instrumento": row.get("instrumento") or "",
-            "tolerancias": tolerancias,
-        })
+        medidas.append(
+            {
+                "titulo": titulo,
+                "faixaTexto": faixa,
+                "min": mn,
+                "max": mx,
+                "unidade": uni,
+                "periodicidade": row.get("periodicidade") or "",
+                "instrumento": row.get("instrumento") or "",
+                "tolerancias": tolerancias,
+            }
+        )
     return medidas
+
 
 # ========= HELPERS DE NEGÓCIO =========
 def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str, str]:
@@ -505,11 +531,10 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
     fonte: 'preparador_liberacao' | 'preparador_registro' | ''
     """
     os_num = _norm(os_num)
-    part   = _norm_part(part)
-    op     = _norm_op(op)
+    part = _norm_part(part)
+    op = _norm_op(op)
     if not (os_num and part and op):
         return (False, "", "Parâmetros insuficientes para validação.")
-
 
     with conn.cursor() as cur:
         cur.execute("SELECT status FROM ordem_servico WHERE os=%s", (os_num,))
@@ -525,7 +550,7 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             WHERE os=%s AND partnumber=%s AND operacao=%s
             ORDER BY id DESC LIMIT 1
             """,
-            (os_num, part, op)
+            (os_num, part, op),
         )
         row = cur.fetchone()
         if row:
@@ -543,7 +568,7 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             WHERE os=%s AND partnumber=%s AND operacao=%s
             ORDER BY created_at DESC, id DESC LIMIT 1
             """,
-            (os_num, part, op)
+            (os_num, part, op),
         )
         reg = cur.fetchone()
         if not reg:
@@ -558,15 +583,24 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             FROM preparador_registro_item
             WHERE registro_id=%s
             """,
-            (reg_id,)
+            (reg_id,),
         )
         stats = cur.fetchone() or {}
         ok_cnt = int(stats.get("ok_cnt") or 0)
-        total  = int(stats.get("total") or 0)
+        total = int(stats.get("total") or 0)
         if total > 0 and ok_cnt == total:
-            return (True, "preparador_registro", f"registro_id={reg_id}; {ok_cnt}/{total} OK")
+            return (
+                True,
+                "preparador_registro",
+                f"registro_id={reg_id}; {ok_cnt}/{total} OK",
+            )
         else:
-            return (False, "preparador_registro", f"registro_id={reg_id}; {ok_cnt}/{total} OK")
+            return (
+                False,
+                "preparador_registro",
+                f"registro_id={reg_id}; {ok_cnt}/{total} OK",
+            )
+
 
 # ========= Rotas de Leitura =========
 # ========= Supervisão =========
@@ -617,6 +651,24 @@ def supervisor_inserir():
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
+                # Se o índice não for informado, calcula o próximo
+                part = _norm_part(dados.get("partnumber"))
+                op = _norm_op(dados.get("operacao"))
+                idx = dados.get("idx_medida")
+                if idx in (None, "", 0):
+                    if not part or not op:
+                        return (
+                            jsonify(
+                                {"error": "partnumber e operacao são obrigatórios"}
+                            ),
+                            400,
+                        )
+                    cur.execute(
+                        f"SELECT COALESCE(MAX(idx_medida),0)+1 FROM {tabela} WHERE partnumber=%s AND operacao=%s",
+                        (part, op),
+                    )
+                    dados["idx_medida"] = cur.fetchone()[0]
+
                 cols = list(dados.keys())
                 vals = [dados[k] for k in cols]
                 placeholders = ", ".join(["%s"] * len(cols))
@@ -640,7 +692,11 @@ def supervisor_atualizar():
     idx = dados.get("idx_medida")
     if not tabela or not part or not op or idx is None:
         return jsonify({"error": "parâmetros obrigatórios faltando"}), 400
-    updates = {k: v for k, v in dados.items() if k not in ("partnumber", "operacao", "idx_medida")}
+    updates = {
+        k: v
+        for k, v in dados.items()
+        if k not in ("partnumber", "operacao", "idx_medida")
+    }
     if not updates:
         return jsonify({"error": "sem campos para atualizar"}), 400
     try:
@@ -656,42 +712,70 @@ def supervisor_atualizar():
                     f"UPDATE {tabela} SET {set_sql} WHERE partnumber=%s AND operacao=%s AND idx_medida=%s",
                     list(updates.values()) + [part, op, idx],
                 )
-                _log_supervisao(cur, tabela, "update", antes, {**{"partnumber": part, "operacao": op, "idx_medida": idx}, **updates})
+                _log_supervisao(
+                    cur,
+                    tabela,
+                    "update",
+                    antes,
+                    {
+                        **{"partnumber": part, "operacao": op, "idx_medida": idx},
+                        **updates,
+                    },
+                )
             c.commit()
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"error": f"Falha ao atualizar: {e}"}), 500
 
+
 # ========= Rotas de Leitura =========
 @app.route("/preparador/medidas")
 def medidas_preparador():
     part = _norm_part(request.args.get("partnumber"))
-    op   = _norm_op(request.args.get("operacao"))
+    op = _norm_op(request.args.get("operacao"))
     if not part or not op:
-        return jsonify({"error": "Parâmetros 'partnumber' e 'operacao' são obrigatórios"}), 400
+        return (
+            jsonify({"error": "Parâmetros 'partnumber' e 'operacao' são obrigatórios"}),
+            400,
+        )
 
     try:
         data = _medidas_preparador_db(part, op)
         if not data:
-            return jsonify({"error": "Nenhuma medida encontrada para os parâmetros informados"}), 404
+            return (
+                jsonify(
+                    {"error": "Nenhuma medida encontrada para os parâmetros informados"}
+                ),
+                404,
+            )
         return jsonify(data)
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar BD do PREPARADOR: {e}"}), 500
 
+
 @app.route("/operador/medidas")
 def medidas_operador():
     part = _norm_part(request.args.get("partnumber"))
-    op   = _norm_op(request.args.get("operacao"))
+    op = _norm_op(request.args.get("operacao"))
     if not part or not op:
-        return jsonify({"error": "Parâmetros 'partnumber' e 'operacao' são obrigatórios"}), 400
+        return (
+            jsonify({"error": "Parâmetros 'partnumber' e 'operacao' são obrigatórios"}),
+            400,
+        )
 
     try:
         medidas = _medidas_operador_db(part, op)
         if not medidas:
-            return jsonify({"error": "Nenhuma medida encontrada para os parâmetros informados"}), 404
+            return (
+                jsonify(
+                    {"error": "Nenhuma medida encontrada para os parâmetros informados"}
+                ),
+                404,
+            )
         return jsonify(medidas)
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar BD do OPERADOR: {e}"}), 500
+
 
 # ========= Registro (MySQL): PREPARADOR =========
 @app.route("/preparador/resultado", methods=["POST"])
@@ -724,15 +808,27 @@ def resultado_preparador():
     itens = payload.get("itens", [])
 
     if not os_num or not re_prep or not part or not op:
-        return jsonify({"error": "Campos 'os', 're', 'partnumber' e 'operacao' são obrigatórios"}), 400
+        return (
+            jsonify(
+                {
+                    "error": "Campos 'os', 're', 'partnumber' e 'operacao' são obrigatórios"
+                }
+            ),
+            400,
+        )
     if not isinstance(itens, list) or len(itens) == 0:
-        return jsonify({"error": "Lista 'itens' é obrigatória e não pode ser vazia"}), 400
+        return (
+            jsonify({"error": "Lista 'itens' é obrigatória e não pode ser vazia"}),
+            400,
+        )
 
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 # garante OS na mestre (por causa de FKs futuras)
-                cur.execute("INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,))
+                cur.execute(
+                    "INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,)
+                )
 
                 # cabeçalho
                 cur.execute(
@@ -740,7 +836,7 @@ def resultado_preparador():
                     INSERT INTO preparador_registro (os, partnumber, operacao, re_preparador)
                     VALUES (%s, %s, %s, %s)
                     """,
-                    (os_num, part, op, re_prep)
+                    (os_num, part, op, re_prep),
                 )
                 registro_id = cur.lastrowid
 
@@ -767,16 +863,28 @@ def resultado_preparador():
                            %s, %s, %s)
                         """,
                         (
-                            registro_id, idx, titulo, faixa_texto, minimo, maximo, unidade,
-                            medicao, status, observacao
-                        )
+                            registro_id,
+                            idx,
+                            titulo,
+                            faixa_texto,
+                            minimo,
+                            maximo,
+                            unidade,
+                            medicao,
+                            status,
+                            observacao,
+                        ),
                     )
                     all_status.append(status)
 
                 # Consolida liberação
                 has_reprov = any(s.startswith("reprovada") for s in all_status)
                 all_ok = len(all_status) > 0 and all(s == "ok" for s in all_status)
-                status_geral = "liberada" if all_ok else ("reprovada" if has_reprov else "pendente")
+                status_geral = (
+                    "liberada"
+                    if all_ok
+                    else ("reprovada" if has_reprov else "pendente")
+                )
 
                 # upsert simples em preparador_liberacao (não cria itens aqui)
                 cur.execute(
@@ -785,13 +893,13 @@ def resultado_preparador():
                     WHERE os=%s AND partnumber=%s AND operacao=%s
                     ORDER BY id DESC LIMIT 1
                     """,
-                    (os_num, part, op)
+                    (os_num, part, op),
                 )
                 row = cur.fetchone()
                 if row:
                     cur.execute(
                         "UPDATE preparador_liberacao SET re_preparador=%s, status_geral=%s WHERE id=%s",
-                        (re_prep, status_geral, row["id"])
+                        (re_prep, status_geral, row["id"]),
                     )
                 else:
                     cur.execute(
@@ -800,15 +908,18 @@ def resultado_preparador():
                           (os, partnumber, operacao, re_preparador, status_geral)
                         VALUES (%s, %s, %s, %s, %s)
                         """,
-                        (os_num, part, op, re_prep, status_geral)
+                        (os_num, part, op, re_prep, status_geral),
                     )
 
             c.commit()
 
-        return jsonify({"status": "ok", "registro_id": registro_id, "status_geral": status_geral})
+        return jsonify(
+            {"status": "ok", "registro_id": registro_id, "status_geral": status_geral}
+        )
 
     except Exception as e:
         return jsonify({"error": f"Falha ao inserir registro do preparador: {e}"}), 500
+
 
 # ========= CHECAGEM (para UI) =========
 @app.route("/operador/pode")
@@ -818,14 +929,29 @@ def operador_pode():
     part = _norm_part(request.args.get("partnumber"))
     op = _norm_op(request.args.get("operacao"))
     if not os_num or not part or not op:
-        return jsonify({"error": "Parâmetros 'os', 'partnumber' e 'operacao' são obrigatórios"}), 400
+        return (
+            jsonify(
+                {"error": "Parâmetros 'os', 'partnumber' e 'operacao' são obrigatórios"}
+            ),
+            400,
+        )
 
     try:
         with _conn_db(DB_NAME) as c:
             ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op)
-        return jsonify({"os": os_num, "partnumber": part, "operacao": op, "liberada": ok, "fonte": fonte, "detalhe": detalhe})
+        return jsonify(
+            {
+                "os": os_num,
+                "partnumber": part,
+                "operacao": op,
+                "liberada": ok,
+                "fonte": fonte,
+                "detalhe": detalhe,
+            }
+        )
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar liberação: {e}"}), 500
+
 
 # ========= Registro (MySQL): OPERADOR =========
 @app.route("/operador/registrar", methods=["POST"])
@@ -858,9 +984,19 @@ def operador_registrar():
 
     # validações mínimas
     if not os_num or not re_op or not part or not op:
-        return jsonify({"error": "Campos 'os', 're', 'partnumber' e 'operacao' são obrigatórios"}), 400
+        return (
+            jsonify(
+                {
+                    "error": "Campos 'os', 're', 'partnumber' e 'operacao' são obrigatórios"
+                }
+            ),
+            400,
+        )
     if not isinstance(itens, list) or len(itens) == 0:
-        return jsonify({"error": "Lista 'itens' é obrigatória e não pode ser vazia"}), 400
+        return (
+            jsonify({"error": "Lista 'itens' é obrigatória e não pode ser vazia"}),
+            400,
+        )
 
     try:
         with _conn_db(DB_NAME) as c:
@@ -868,16 +1004,23 @@ def operador_registrar():
             ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op)
             if not ok:
                 msg = _mensagem_bloqueio(os_num, part, op, fonte, detalhe)
-                return jsonify({
-                    "code": "liberacao_pendente",
-                    "error": msg,                 # amigável (mantive a chave 'error' p/ compatibilidade)
-                    "fonte": fonte,
-                    "detalhe": detalhe
-                }), 409
+                return (
+                    jsonify(
+                        {
+                            "code": "liberacao_pendente",
+                            "error": msg,  # amigável (mantive a chave 'error' p/ compatibilidade)
+                            "fonte": fonte,
+                            "detalhe": detalhe,
+                        }
+                    ),
+                    409,
+                )
 
             with c.cursor() as cur:
                 # garante OS na mestre (FK)
-                cur.execute("INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,))
+                cur.execute(
+                    "INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,)
+                )
 
                 # cabeçalho
                 cur.execute(
@@ -885,7 +1028,7 @@ def operador_registrar():
                     INSERT INTO operador_amostragem (os, partnumber, operacao, re_operador)
                     VALUES (%s, %s, %s, %s)
                     """,
-                    (os_num, part, op, re_op)
+                    (os_num, part, op, re_op),
                 )
                 amostragem_id = cur.lastrowid
 
@@ -922,17 +1065,30 @@ def operador_registrar():
                            %s, %s, %s)
                         """,
                         (
-                            amostragem_id, idx, titulo, instrumento, faixa_texto,
-                            minimo, maximo, unidade, periodicidade, tol_txt,
-                            escolha, status, observacao
-                        )
+                            amostragem_id,
+                            idx,
+                            titulo,
+                            instrumento,
+                            faixa_texto,
+                            minimo,
+                            maximo,
+                            unidade,
+                            periodicidade,
+                            tol_txt,
+                            escolha,
+                            status,
+                            observacao,
+                        ),
                     )
             c.commit()
 
-        return jsonify({"status": "ok", "amostragem_id": amostragem_id, "itens": len(itens)})
+        return jsonify(
+            {"status": "ok", "amostragem_id": amostragem_id, "itens": len(itens)}
+        )
 
     except Exception as e:
         return jsonify({"error": f"Falha ao inserir amostragem: {e}"}), 500
+
 
 # (Opcional) listar por OS para futuros relatórios
 @app.route("/operador/amostragens")
@@ -960,7 +1116,6 @@ def operador_listar():
         sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY a.created_at DESC LIMIT 200"
 
-
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
@@ -969,6 +1124,7 @@ def operador_listar():
         return jsonify(rows)
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar amostragens: {e}"}), 500
+
 
 @app.route("/operador/fim_jornada", methods=["POST"])
 def operador_fim_jornada():
@@ -982,18 +1138,21 @@ def operador_fim_jornada():
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
-                cur.execute("INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,))
+                cur.execute(
+                    "INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,)
+                )
                 cur.execute(
                     """
                     INSERT INTO operador_jornada (os, partnumber, operacao, re_operador)
                     VALUES (%s, %s, %s, %s)
                     """,
-                    (os_num, part or None, op or None, re_op)
+                    (os_num, part or None, op or None, re_op),
                 )
             c.commit()
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"error": f"Falha ao registrar fim de jornada: {e}"}), 500
+
 
 @app.route("/operador/encerrar_os", methods=["POST"])
 def operador_encerrar_os():
@@ -1004,16 +1163,24 @@ def operador_encerrar_os():
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM operador_amostragem WHERE os=%s", (os_num,))
+                cur.execute(
+                    "SELECT COUNT(*) FROM operador_amostragem WHERE os=%s", (os_num,)
+                )
                 if cur.fetchone()[0] == 0:
-                    return jsonify({"error": "Nenhum registro de amostragem encontrado"}), 400
-                cur.execute("UPDATE ordem_servico SET status='encerrada' WHERE os=%s", (os_num,))
+                    return (
+                        jsonify({"error": "Nenhum registro de amostragem encontrado"}),
+                        400,
+                    )
+                cur.execute(
+                    "UPDATE ordem_servico SET status='encerrada' WHERE os=%s", (os_num,)
+                )
                 if cur.rowcount == 0:
                     return jsonify({"error": "OS não encontrada"}), 404
             c.commit()
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"error": f"Falha ao encerrar OS: {e}"}), 500
+
 
 @app.route("/reports")
 def listar_relatorios():
@@ -1033,6 +1200,7 @@ def listar_relatorios():
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar relatórios: {e}"}), 500
 
+
 @app.route("/relatorios/sql")
 def relatorio_sql():
     path = request.args.get("path")
@@ -1044,13 +1212,16 @@ def relatorio_sql():
     except Exception as e:
         return jsonify({"error": f"Falha ao executar relatório: {e}"}), 500
 
+
 @app.route("/health")
 def health():
 
-    return jsonify({
-        "status": "ok"
-    })
-def _mensagem_bloqueio(os_num: str, part: str, op: str, fonte: str, detalhe: str) -> str:
+    return jsonify({"status": "ok"})
+
+
+def _mensagem_bloqueio(
+    os_num: str, part: str, op: str, fonte: str, detalhe: str
+) -> str:
     """
     Gera um texto legível explicando por que o operador não pode registrar.
     fonte: "", "preparador_registro" ou "preparador_liberacao"
@@ -1067,25 +1238,32 @@ def _mensagem_bloqueio(os_num: str, part: str, op: str, fonte: str, detalhe: str
     base = "A máquina ainda não foi liberada pelo Preparador.\n" + base
 
     if not fonte:
-        return base + "\nNão há registro do Preparador para esta combinação. Solicite a liberação (FOR-007/008)."
-
-
+        return (
+            base
+            + "\nNão há registro do Preparador para esta combinação. Solicite a liberação (FOR-007/008)."
+        )
 
     if fonte == "preparador_liberacao":
         import re
+
         m = re.search(r"status_geral=([a-z_]+)", det, re.I)
         status = (m.group(1) if m else "pendente").replace("_", " ")
         return base + f"\nSituação da liberação: {status}. Procure o Preparador."
 
     if fonte == "preparador_registro":
         import re
+
         m = re.search(r"(\d+)\s*/\s*(\d+)", det)  # ex.: "3/4 OK"
         if m:
             ok_cnt, total = m.group(1), m.group(2)
-            return base + f"\nProgresso do registro do Preparador: {ok_cnt}/{total} medidas OK. Aguarde até todas estarem OK."
+            return (
+                base
+                + f"\nProgresso do registro do Preparador: {ok_cnt}/{total} medidas OK. Aguarde até todas estarem OK."
+            )
         return base + "\nO registro do Preparador ainda não está 100% OK."
 
     return base
+
 
 if __name__ == "__main__":
     # threaded=True mantém atendendo enquanto indexa em background entre requests

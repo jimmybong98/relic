@@ -18,6 +18,9 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   Map<String, TextEditingController> _controllersAdd = {};
   List<String> _camposAdd = [];
 
+  /// Controladores dos campos de edição para cada registro buscado
+  List<Map<String, TextEditingController>> _editControllers = [];
+
   String _tabelaEdit = 'FOR07';
   final _partCtrl = TextEditingController();
   final _opCtrl = TextEditingController();
@@ -32,9 +35,14 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   Future<void> _loadCampos() async {
     final campos = await _service.fetchCampos(_tabelaAdd);
     setState(() {
-      _camposAdd = campos;
+      // o campo `idx_medida` será gerado automaticamente no backend,
+      // portanto não deve aparecer para o usuário
+      _camposAdd = [
+        for (var c in campos)
+          if (c != 'idx_medida') c
+      ];
       _controllersAdd = {
-        for (var c in campos) c: TextEditingController()
+        for (var c in _camposAdd) c: TextEditingController()
       };
     });
   }
@@ -50,12 +58,33 @@ class _CadastroItensPageState extends State<CadastroItensPage>
         content: Text(ok ? 'Registro adicionado' : 'Falha ao adicionar'),
       ),
     );
+    if (ok) {
+      // Mantém os campos de peça e operação preenchidos para facilitar
+      // o cadastro de várias medidas na mesma peça/operacao
+      for (var c in _camposAdd) {
+        if (c != 'partnumber' && c != 'operacao') {
+          _controllersAdd[c]!.clear();
+        }
+      }
+    }
   }
 
   Future<void> _buscarRegistros() async {
     final regs = await _service.fetchRegistros(
         _tabelaEdit, _partCtrl.text, _opCtrl.text);
-    setState(() => _registros = regs);
+    final lista = regs
+        .map((e) => Map<String, dynamic>.from(e)..remove('id'))
+        .toList();
+    setState(() {
+      _registros = lista;
+      _editControllers = lista
+          .map((item) => {
+                for (var entry in item.entries)
+                  entry.key:
+                      TextEditingController(text: '${entry.value ?? ''}')
+              })
+          .toList();
+    });
   }
 
   Future<void> _salvarEdicao(Map<String, dynamic> item) async {
@@ -163,59 +192,45 @@ class _CadastroItensPageState extends State<CadastroItensPage>
           child: ListView.builder(
             itemCount: _registros.length,
             itemBuilder: (context, index) {
-              final item = Map<String, dynamic>.from(_registros[index]);
-              return ListTile(
-                title: Text('Idx ${item['idx_medida']}: ${item['titulo'] ?? ''}'),
-                onTap: () => _showEditDialog(item),
+              final item = _registros[index];
+              final ctrls = _editControllers[index];
+              return Card(
+                margin: const EdgeInsets.all(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    children: [
+                      ...item.keys.map(
+                        (k) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: TextField(
+                            controller: ctrls[k],
+                            decoration: InputDecoration(labelText: k),
+                            enabled: !['idx_medida', 'partnumber', 'operacao']
+                                .contains(k),
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton(
+                          onPressed: () {
+                            final data = {
+                              for (var k in ctrls.keys) k: ctrls[k]!.text
+                            };
+                            _salvarEdicao(data);
+                          },
+                          child: const Text('Salvar'),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
               );
             },
           ),
         ),
       ],
-    );
-  }
-
-  Future<void> _showEditDialog(Map<String, dynamic> item) async {
-    final controllers = {
-      for (var e in item.entries)
-        e.key: TextEditingController(text: '${e.value ?? ''}')
-    };
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Editar idx ${item['idx_medida']}'),
-        content: SingleChildScrollView(
-          child: Column(
-            children: controllers.keys
-                .map(
-                  (k) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: TextField(
-                      controller: controllers[k],
-                      decoration: InputDecoration(labelText: k),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final data = {
-                for (var k in controllers.keys) k: controllers[k]!.text
-              };
-              Navigator.pop(context);
-              _salvarEdicao(data);
-            },
-            child: const Text('Salvar'),
-          ),
-        ],
-      ),
     );
   }
 }
