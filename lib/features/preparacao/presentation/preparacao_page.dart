@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:admin/features/preparacao/data/models.dart';
 import 'package:admin/features/operador/data/repository_provider.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
+import 'package:admin/utils/string_utils.dart';
 
 /// Mesmo base URL usado no Operador
 const String kBaseUrl = 'http://192.168.0.241:5005';
@@ -207,8 +208,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     final body = jsonEncode({
       're': _reCtrl.text.trim(),
       'os': _osCtrl.text.trim(),
-      'partnumber': _partCtrl.text.trim(),
-      'operacao': _opCtrl.text.trim(),
+      'partnumber': normalizeCode(_partCtrl.text),
+      'operacao': normalizeCode(_opCtrl.text),
       'itens': itens,
     });
 
@@ -389,8 +390,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             await ref
                                 .read(medidasPreparadorControllerProvider.notifier)
                                 .carregar(
-                              partnumber: _partCtrl.text.trim(),
-                              operacao: _opCtrl.text.trim(),
+                              partnumber: normalizeCode(_partCtrl.text),
+                              operacao: normalizeCode(_opCtrl.text),
                             );
                           }
                         },

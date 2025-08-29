@@ -1,6 +1,8 @@
 // lib/features/preparacao/data/models.dart
 import 'dart:convert';
 
+import 'package:admin/utils/string_utils.dart';
+
 enum StatusMedida { ok, alerta, reprovadaAcima, reprovadaAbaixo, pendente }
 
 StatusMedida statusFromString(String? s) {
@@ -282,8 +284,8 @@ class PreparacaoResultado {
 
   Map<String, dynamic> toMap() => {
     're': re,
-    'partnumber': partnumber,
-    'operacao': operacao,
+    'partnumber': normalizeCode(partnumber),
+    'operacao': normalizeCode(operacao),
     'medidas': medidas.map((e) => e.toMap()).toList(),
   };
 

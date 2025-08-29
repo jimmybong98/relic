@@ -265,14 +265,18 @@ def _norm(text):
     return (str(text or "")).strip()
 
 
+def _strip_leading_zeros(t: str) -> str:
+    t = re.sub(r"^0+", "", t)
+    return t or "0"
+
+
 def _norm_part(text):
-    """Normaliza o partnumber removendo espaços extras."""
-    return _norm(text)
+    """Normaliza o partnumber removendo espaços extras e zeros à esquerda."""
+    return _strip_leading_zeros(_norm(text))
 
 
 def _norm_op(text):
-    t = _norm(text)
-    return t.zfill(3) if t.isdigit() else t
+    return _strip_leading_zeros(_norm(text))
 
 
 def _to_float(s):
@@ -401,26 +405,19 @@ def _medidas_preparador_db(part: str, op: str):
     part = _norm_part(part)
     op = _norm_op(op)
     rows = []
-    candidates = [part]
-    if part.isdigit():
-        pad = part.zfill(12)
-        if pad != part:
-            candidates.append(pad)
     with _conn_db(DB_NAME) as c:
         with c.cursor() as cur:
-            for p in candidates:
-                cur.execute(
-                    """
-                    SELECT idx_medida, titulo, faixa_texto, instrumento, minimo, maximo
-                    FROM for07_norm
-                    WHERE partnumber=%s AND operacao=%s
-                    ORDER BY idx_medida
-                    """,
-                    (p, op),
-                )
-                rows = cur.fetchall()
-                if rows:
-                    break
+            cur.execute(
+                """
+                SELECT idx_medida, titulo, faixa_texto, instrumento, minimo, maximo
+                FROM for07_norm
+                WHERE TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s)
+                  AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s)
+                ORDER BY idx_medida
+                """,
+                (part, op),
+            )
+            rows = cur.fetchall()
     medidas = []
     for row in rows:
         titulo = row.get("titulo") or ""
@@ -459,28 +456,21 @@ def _medidas_operador_db(part: str, op: str):
     part = _norm_part(part)
     op = _norm_op(op)
     rows = []
-    candidates = [part]
-    if part.isdigit():
-        pad = part.zfill(12)
-        if pad != part:
-            candidates.append(pad)
     with _conn_db(DB_NAME) as c:
         with c.cursor() as cur:
-            for p in candidates:
-                cur.execute(
-                    """
-                    SELECT idx_medida, titulo, faixa_texto, minimo, maximo,
-                           periodicidade, instrumento,
-                           reprovada_abaixo, alerta_abaixo, alerta_acima, reprovada_acima
-                    FROM for09_norm
-                    WHERE partnumber=%s AND operacao=%s
-                    ORDER BY idx_medida
-                    """,
-                    (p, op),
-                )
-                rows = cur.fetchall()
-                if rows:
-                    break
+            cur.execute(
+                """
+                SELECT idx_medida, titulo, faixa_texto, minimo, maximo,
+                       periodicidade, instrumento,
+                       reprovada_abaixo, alerta_abaixo, alerta_acima, reprovada_acima
+                FROM for09_norm
+                WHERE TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s)
+                  AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s)
+                ORDER BY idx_medida
+                """,
+                (part, op),
+            )
+            rows = cur.fetchall()
     medidas = []
     for row in rows:
         titulo = row.get("titulo") or ""
@@ -547,7 +537,9 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             """
             SELECT status_geral
             FROM preparador_liberacao
-            WHERE os=%s AND partnumber=%s AND operacao=%s
+            WHERE os=%s
+              AND TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s)
+              AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s)
             ORDER BY id DESC LIMIT 1
             """,
             (os_num, part, op),
@@ -565,7 +557,9 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             """
             SELECT id
             FROM preparador_registro
-            WHERE os=%s AND partnumber=%s AND operacao=%s
+            WHERE os=%s
+              AND TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s)
+              AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s)
             ORDER BY created_at DESC, id DESC LIMIT 1
             """,
             (os_num, part, op),
@@ -633,7 +627,7 @@ def supervisor_registros():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 cur.execute(
-                    f"SELECT * FROM {tabela} WHERE partnumber=%s AND operacao=%s ORDER BY idx_medida",
+                    f"SELECT * FROM {tabela} WHERE TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s) AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s) ORDER BY idx_medida",
                     (part, op),
                 )
                 rows = cur.fetchall()
@@ -664,7 +658,7 @@ def supervisor_inserir():
                             400,
                         )
                     cur.execute(
-                        f"SELECT COALESCE(MAX(idx_medida),0)+1 FROM {tabela} WHERE partnumber=%s AND operacao=%s",
+                        f"SELECT COALESCE(MAX(idx_medida),0)+1 FROM {tabela} WHERE TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s) AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s)",
                         (part, op),
                     )
                     dados["idx_medida"] = cur.fetchone()[0]
@@ -703,13 +697,13 @@ def supervisor_atualizar():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 cur.execute(
-                    f"SELECT * FROM {tabela} WHERE partnumber=%s AND operacao=%s AND idx_medida=%s",
+                    f"SELECT * FROM {tabela} WHERE TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s) AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s) AND idx_medida=%s",
                     (part, op, idx),
                 )
                 antes = cur.fetchone()
                 set_sql = ", ".join([f"{k}=%s" for k in updates.keys()])
                 cur.execute(
-                    f"UPDATE {tabela} SET {set_sql} WHERE partnumber=%s AND operacao=%s AND idx_medida=%s",
+                    f"UPDATE {tabela} SET {set_sql} WHERE TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s) AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s) AND idx_medida=%s",
                     list(updates.values()) + [part, op, idx],
                 )
                 _log_supervisao(
@@ -904,7 +898,9 @@ def resultado_preparador():
                 cur.execute(
                     """
                     SELECT id FROM preparador_liberacao
-                    WHERE os=%s AND partnumber=%s AND operacao=%s
+                    WHERE os=%s
+                      AND TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s)
+                      AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s)
                     ORDER BY id DESC LIMIT 1
                     """,
                     (os_num, part, op),
@@ -1116,10 +1112,10 @@ def operador_listar():
         where.append("a.os = %s")
         params.append(os_num)
     if part:
-        where.append("a.partnumber = %s")
+        where.append("TRIM(LEADING '0' FROM a.partnumber) = TRIM(LEADING '0' FROM %s)")
         params.append(part)
     if op:
-        where.append("a.operacao = %s")
+        where.append("TRIM(LEADING '0' FROM a.operacao) = TRIM(LEADING '0' FROM %s)")
         params.append(op)
 
     sql = """

@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:admin/utils/string_utils.dart';
+
 class SupervisaoService {
   SupervisaoService({http.Client? client, String? baseUrl})
       : _client = client ?? http.Client(),
@@ -24,7 +26,7 @@ class SupervisaoService {
   Future<List<Map<String, dynamic>>> fetchRegistros(
       String tabela, String part, String op) async {
     final uri = Uri.parse(
-        '$_baseUrl/supervisor/registros?tabela=$tabela&partnumber=$part&operacao=$op');
+        '$_baseUrl/supervisor/registros?tabela=$tabela&partnumber=${normalizeCode(part)}&operacao=${normalizeCode(op)}');
     final resp = await _client.get(uri);
     if (resp.statusCode == 200) {
       final data = jsonDecode(resp.body) as List;
@@ -35,17 +37,31 @@ class SupervisaoService {
 
   Future<bool> inserir(String tabela, Map<String, dynamic> dados) async {
     final uri = Uri.parse('$_baseUrl/supervisor/registros?tabela=$tabela');
+    final map = Map<String, dynamic>.from(dados);
+    if (map.containsKey('partnumber')) {
+      map['partnumber'] = normalizeCode(map['partnumber'].toString());
+    }
+    if (map.containsKey('operacao')) {
+      map['operacao'] = normalizeCode(map['operacao'].toString());
+    }
     final resp = await _client.post(uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(dados));
+        body: jsonEncode(map));
     return resp.statusCode == 200;
   }
 
   Future<bool> atualizar(String tabela, Map<String, dynamic> dados) async {
     final uri = Uri.parse('$_baseUrl/supervisor/registros?tabela=$tabela');
+    final map = Map<String, dynamic>.from(dados);
+    if (map.containsKey('partnumber')) {
+      map['partnumber'] = normalizeCode(map['partnumber'].toString());
+    }
+    if (map.containsKey('operacao')) {
+      map['operacao'] = normalizeCode(map['operacao'].toString());
+    }
     final resp = await _client.put(uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(dados));
+        body: jsonEncode(map));
     return resp.statusCode == 200;
   }
 }
