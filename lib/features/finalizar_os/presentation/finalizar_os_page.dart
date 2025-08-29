@@ -145,7 +145,6 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
   String statusToString(StatusMedida st) {
     switch (st) {
       case StatusMedida.ok:
-      case StatusMedida.alerta:
         return 'aprovado';
       case StatusMedida.reprovadaAbaixo:
       case StatusMedida.reprovadaAcima:
