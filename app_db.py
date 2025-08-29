@@ -1,12 +1,9 @@
 # app.py
 from flask import Flask, request, jsonify
-from openpyxl import load_workbook
 from pathlib import Path
-from threading import Lock
 from typing import Optional, Tuple
 import os
 import re
-import time
 import json
 
 # --------- MySQL ----------
@@ -28,31 +25,6 @@ def _force_utf8_json(resp):
         if "charset" not in ct.lower():
             resp.headers["Content-Type"] = "application/json; charset=utf-8"
     return resp
-
-# ========= CONFIG =========
-# Caminhos originais (rede)
-_NET_PREP = r"\\192.168.0.82\00. SGI - Sistema Integrado\12. Qualidade\09. Formulários\For - 007 - Registro de amostragem e For - 008 - Liberação de Maquina 4.xlsx"
-_NET_OPER = r"\\192.168.0.82\00. SGI - Sistema Integrado\12. Qualidade\09. Formulários\For - 09 a 14 - Verificação durante o Processo 2.xlsx"
-
-ABA_PREPARADOR = "CADASTRO"
-ABA_OPERADOR   = "CADASTRO"
-
-# Onde começam as medidas (pares para preparador / quartetos para operador)
-COL_MEDIDAS_INICIO = 6  # G em 0-based
-
-# Chave combinada (A=0 p/ Preparador; C=2 p/ Operador)
-COL_CHAVE_COMBINADA_PREPARADOR = 0
-COL_CHAVE_COMBINADA_OPERADOR   = 2
-
-# ========= Paths (preferir arquivo local se existir) =========
-BASE_DIR = Path(__file__).resolve().parent
-
-def _prefer_local(network_path: str) -> str:
-    local = BASE_DIR / Path(network_path).name
-    return str(local) if local.exists() else network_path
-
-PLANILHA_PREPARADOR_PATH = _prefer_local(_NET_PREP)
-PLANILHA_OPERADOR_PATH   = _prefer_local(_NET_OPER)
 
 # ========= DB (MySQL) =========
 DB_HOST = os.getenv("DB_HOST", "192.168.0.31")
@@ -276,12 +248,13 @@ _ensure_schema()
 def _norm(text):
     return (str(text or "")).strip()
 
-def _only_digits(text):
-    s = re.sub(r"\D+", "", str(text or ""))
-    return str(int(s)) if s else ""
+def _norm_part(text):
+    t = _norm(text)
+    return t.zfill(12) if t.isdigit() else t
 
-def _key_for(part: str, op: str) -> str:
-    return f"{_only_digits(part)}*{_only_digits(op)}"
+def _norm_op(text):
+    t = _norm(text)
+    return t.zfill(3) if t.isdigit() else t
 
 def _to_float(s):
     try:
@@ -361,186 +334,108 @@ def _parse_range_any(texto: str):
         return (None, v, uni)   # máximo somente
     return (v, v, uni)          # valor exato
 
-def _cell_text(row_vals, col_idx):
-    return (
-        str(row_vals[col_idx])
-        if col_idx < len(row_vals) and row_vals[col_idx] is not None
-        else ""
-    ).strip()
-
-# ---- Conversão de rótulo de coluna Excel -> índice 0-based ----
-def _col_to_idx(label: str) -> int:
-    lab = label.strip().upper()
-    n = 0
-    for ch in lab:
-        if "A" <= ch <= "Z":
-            n = n * 26 + (ord(ch) - 64)
-        else:
-            break
-    return n - 1  # 0-based
-
-# Primeiro bloco de tolerâncias começa em AE (0-based 30):
-TOL_COL_INICIO = _col_to_idx("AE")  # AE=31 (1-based) => 30 (0-based)
-
-# ========= Cache/Index por aba =========
-class SheetIndex:
-    """
-    Indexa a planilha: key 'part*op' normalizada -> linha (ou lista de linhas).
-    Recarrega automaticamente se o arquivo for alterado (mtime).
-    """
-    def __init__(self, path: str, sheet: str, key_col: int, multi: bool):
-        self.path = path
-        self.sheet = sheet
-        self.key_col = key_col
-        self.multi = multi
-        self.mtime = None
-        self.index = {}
-        self.lock = Lock()
-
-    def ensure(self):
-        try:
-            mtime = os.path.getmtime(self.path)
-        except Exception:
-            mtime = None
-
-        with self.lock:
-            if self.index and self.mtime == mtime:
-                return
-
-            t0 = time.time()
-            wb = load_workbook(self.path, data_only=True, read_only=True)
-            try:
-                if self.sheet not in wb.sheetnames:
-                    raise RuntimeError(f"Aba '{self.sheet}' não encontrada em {self.path}")
-                ws = wb[self.sheet]
-
-                new_index = {}
-                for row in ws.iter_rows(values_only=True):
-                    cel = row[self.key_col] if self.key_col < len(row) else ""
-                    s = _norm(cel)
-                    if "*" not in s:
-                        continue
-                    left, right = s.split("*", 1)
-                    key = _key_for(left, right)
-                    if not key:
-                        continue
-                    rv = list(row)
-                    if self.multi:
-                        new_index.setdefault(key, []).append(rv)
-                    else:
-                        if key not in new_index:
-                            new_index[key] = rv
-                self.index = new_index
-                self.mtime = mtime
-            finally:
-                wb.close()
-
-            dt = (time.time() - t0) * 1000
-            print(f"[CACHE] Indexado '{self.sheet}' de {Path(self.path).name} em {dt:.0f} ms "
-                  f"(chaves: {len(self.index)})", flush=True)
-
-    def get_one(self, key: str):
-        self.ensure()
-        return self.index.get(key)
-
-    def get_many(self, key: str):
-        self.ensure()
-        return self.index.get(key, [])
-
-IDX_PREP = SheetIndex(PLANILHA_PREPARADOR_PATH, ABA_PREPARADOR, COL_CHAVE_COMBINADA_PREPARADOR, multi=False)
-IDX_OP   = SheetIndex(PLANILHA_OPERADOR_PATH,   ABA_OPERADOR,   COL_CHAVE_COMBINADA_OPERADOR,   multi=True)
-
-# ========= Extração de medidas =========
-def _extrair_medidas_pares(row_vals):
-    """Para PREPARADOR: pares (etiqueta, faixa)."""
+# ========= Consulta de medidas no BD =========
+def _medidas_preparador_db(part: str, op: str):
+    part = _norm_part(part)
+    op = _norm_op(op)
+    with _conn_db(DB_NAME) as c:
+        with c.cursor() as cur:
+            cur.execute(
+                """
+                SELECT idx_medida, titulo, faixa_texto, instrumento, minimo, maximo
+                FROM for07_norm
+                WHERE partnumber=%s AND operacao=%s
+                ORDER BY idx_medida
+                """,
+                (part, op),
+            )
+            rows = cur.fetchall()
     medidas = []
-    col = COL_MEDIDAS_INICIO
-    while True:
-        etiqueta = _cell_text(row_vals, col)
-        faixa    = _cell_text(row_vals, col + 1)
-        if not (etiqueta or faixa):
-            break
-
-        mn, mx, uni = _parse_range_any(faixa)
+    for row in rows:
+        titulo = row.get("titulo") or ""
+        faixa = row.get("faixa_texto") or ""
+        mn = row.get("minimo")
+        mx = row.get("maximo")
+        uni = None
         if mn is None and mx is None:
-            mn, mx, uni2 = _parse_range_any(etiqueta)
+            mn, mx, uni = _parse_range_any(faixa)
+            if mn is None and mx is None:
+                mn, mx, uni = _parse_range_any(titulo)
+        else:
+            _, _, uni = _parse_range_any(faixa)
             if uni is None:
-                uni = uni2
-
-        # regra rugosidade: valor único vira 0..valor
-        if _is_rugosidade_text(etiqueta):
+                _, _, uni = _parse_range_any(titulo)
+        if _is_rugosidade_text(titulo):
             if mn is not None and mx is not None and mn == mx:
                 mx = mn
                 mn = 0.0
             elif mn is None and mx is not None:
                 mn = 0.0
-
         medidas.append({
-            "titulo": etiqueta or "",
-            "faixaTexto": faixa or "",
+            "titulo": titulo,
+            "faixaTexto": faixa,
             "min": mn,
             "max": mx,
             "unidade": uni,
+            "instrumento": row.get("instrumento") or "",
         })
-        col += 2
     return medidas
 
-def _extrair_medidas_quartetos(row_vals):
-    """
-    Para OPERADOR: quartetos (tipo, faixa, periodicidade, instrumento)
-    + tolerâncias em blocos de 4 colunas a partir de AE (AE–AH p/ 1º quarteto,
-      AI–AL p/ 2º, AM–AP p/ 3º, ...).
-    """
+def _medidas_operador_db(part: str, op: str):
+    part = _norm_part(part)
+    op = _norm_op(op)
+    with _conn_db(DB_NAME) as c:
+        with c.cursor() as cur:
+            cur.execute(
+                """
+                SELECT idx_medida, titulo, faixa_texto, minimo, maximo,
+                       periodicidade, instrumento,
+                       reprovada_abaixo, alerta_abaixo, alerta_acima, reprovada_acima
+                FROM for09_norm
+                WHERE partnumber=%s AND operacao=%s
+                ORDER BY idx_medida
+                """,
+                (part, op),
+            )
+            rows = cur.fetchall()
     medidas = []
-    col = COL_MEDIDAS_INICIO
-    idx_quarteto = 0  # 0 para G/H/I/J, 1 para K/L/M/N, 2 para O/P/Q/R, ...
-
-    while True:
-        tipo        = _cell_text(row_vals, col)
-        faixa       = _cell_text(row_vals, col + 1)
-        periodic    = _cell_text(row_vals, col + 2)
-        instrumento = _cell_text(row_vals, col + 3)
-
-        if not (tipo or faixa or periodic or instrumento):
-            break
-
-        mn, mx, uni = _parse_range_any(faixa)
+    for row in rows:
+        titulo = row.get("titulo") or ""
+        faixa = row.get("faixa_texto") or ""
+        mn = row.get("minimo")
+        mx = row.get("maximo")
+        uni = None
         if mn is None and mx is None:
-            mn, mx, uni2 = _parse_range_any(tipo)
+            mn, mx, uni = _parse_range_any(faixa)
+            if mn is None and mx is None:
+                mn, mx, uni = _parse_range_any(titulo)
+        else:
+            _, _, uni = _parse_range_any(faixa)
             if uni is None:
-                uni = uni2
-
-        # regra rugosidade
-        if _is_rugosidade_text(tipo):
+                _, _, uni = _parse_range_any(titulo)
+        if _is_rugosidade_text(titulo):
             if mn is not None and mx is not None and mn == mx:
                 mx = mn
                 mn = 0.0
             elif mn is None and mx is not None:
                 mn = 0.0
-
-        # ----- Tolerâncias por quarteto (4 colunas cada) -----
-        tol_start = TOL_COL_INICIO + idx_quarteto * 4
-        tolerancias = []
-        for tcol in range(tol_start, tol_start + 4):
-            if tcol < len(row_vals):
-                d = _to_float(row_vals[tcol])
-                if d is not None:
-                    tolerancias.append(d)
-
+        tolerancias = [
+            row.get("reprovada_abaixo"),
+            row.get("alerta_abaixo"),
+            row.get("alerta_acima"),
+            row.get("reprovada_acima"),
+        ]
+        tolerancias = [t for t in tolerancias if t is not None]
         medidas.append({
-            "titulo": tipo or "",
-            "faixaTexto": faixa or "",
+            "titulo": titulo,
+            "faixaTexto": faixa,
             "min": mn,
             "max": mx,
             "unidade": uni,
-            "periodicidade": periodic or "",
-            "instrumento": instrumento or "",
-            "tolerancias": tolerancias,  # pode vir []
+            "periodicidade": row.get("periodicidade") or "",
+            "instrumento": row.get("instrumento") or "",
+            "tolerancias": tolerancias,
         })
-
-        col += 4
-        idx_quarteto += 1
-
     return medidas
 
 # ========= HELPERS DE NEGÓCIO =========
@@ -550,8 +445,8 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
     fonte: 'preparador_liberacao' | 'preparador_registro' | ''
     """
     os_num = _norm(os_num)
-    part   = _norm(part)
-    op     = _norm(op)
+    part   = _norm_part(part)
+    op     = _norm_op(op)
     if not (os_num and part and op):
         return (False, "", "Parâmetros insuficientes para validação.")
 
@@ -616,45 +511,33 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
 # ========= Rotas de Leitura =========
 @app.route("/preparador/medidas")
 def medidas_preparador():
-    part = _norm(request.args.get("partnumber"))
-    op   = _norm(request.args.get("operacao"))
+    part = _norm_part(request.args.get("partnumber"))
+    op   = _norm_op(request.args.get("operacao"))
     if not part or not op:
         return jsonify({"error": "Parâmetros 'partnumber' e 'operacao' são obrigatórios"}), 400
 
-    key = _key_for(part, op)
-    print(f"[DEBUG] /preparador/medidas: key={key} (path={PLANILHA_PREPARADOR_PATH})", flush=True)
     try:
-        row_vals = IDX_PREP.get_one(key)
-        if row_vals is None:
-            return jsonify({"error": "Nenhuma medida encontrada para os parâmetros informados"}), 404
-        data = _extrair_medidas_pares(row_vals)
+        data = _medidas_preparador_db(part, op)
         if not data:
             return jsonify({"error": "Nenhuma medida encontrada para os parâmetros informados"}), 404
         return jsonify(data)
     except Exception as e:
-        return jsonify({"error": f"Falha ao ler planilha do PREPARADOR: {e}"}), 500
+        return jsonify({"error": f"Falha ao consultar BD do PREPARADOR: {e}"}), 500
 
 @app.route("/operador/medidas")
 def medidas_operador():
-    part = _norm(request.args.get("partnumber"))
-    op   = _norm(request.args.get("operacao"))
+    part = _norm_part(request.args.get("partnumber"))
+    op   = _norm_op(request.args.get("operacao"))
     if not part or not op:
         return jsonify({"error": "Parâmetros 'partnumber' e 'operacao' são obrigatórios"}), 400
 
-    key = _key_for(part, op)
-    print(f"[DEBUG] /operador/medidas: key={key} (path={PLANILHA_OPERADOR_PATH})", flush=True)
     try:
-        linhas = IDX_OP.get_many(key)
-        if not linhas:
-            return jsonify({"error": "Nenhuma medida encontrada para os parâmetros informados"}), 404
-        medidas = []
-        for row_vals in linhas:
-            medidas.extend(_extrair_medidas_quartetos(row_vals))
+        medidas = _medidas_operador_db(part, op)
         if not medidas:
             return jsonify({"error": "Nenhuma medida encontrada para os parâmetros informados"}), 404
         return jsonify(medidas)
     except Exception as e:
-        return jsonify({"error": f"Falha ao ler planilha do OPERADOR: {e}"}), 500
+        return jsonify({"error": f"Falha ao consultar BD do OPERADOR: {e}"}), 500
 
 # ========= Registro (MySQL): PREPARADOR =========
 @app.route("/preparador/resultado", methods=["POST"])
@@ -682,8 +565,8 @@ def resultado_preparador():
 
     os_num = _norm(payload.get("os"))
     re_prep = _norm(payload.get("re"))
-    part = _norm(payload.get("partnumber"))
-    op = _norm(payload.get("operacao"))
+    part = _norm_part(payload.get("partnumber"))
+    op = _norm_op(payload.get("operacao"))
     itens = payload.get("itens", [])
 
     if not os_num or not re_prep or not part or not op:
@@ -778,8 +661,8 @@ def resultado_preparador():
 def operador_pode():
     """Consulta rápida: pode o operador amostrar? (máquina liberada?)"""
     os_num = _norm(request.args.get("os"))
-    part = _norm(request.args.get("partnumber"))
-    op = _norm(request.args.get("operacao"))
+    part = _norm_part(request.args.get("partnumber"))
+    op = _norm_op(request.args.get("operacao"))
     if not os_num or not part or not op:
         return jsonify({"error": "Parâmetros 'os', 'partnumber' e 'operacao' são obrigatórios"}), 400
 
@@ -815,8 +698,8 @@ def operador_registrar():
 
     os_num = _norm(payload.get("os"))
     re_op = _norm(payload.get("re"))
-    part = _norm(payload.get("partnumber"))
-    op = _norm(payload.get("operacao"))
+    part = _norm_part(payload.get("partnumber"))
+    op = _norm_op(payload.get("operacao"))
     itens = payload.get("itens", [])
 
     # validações mínimas
@@ -901,8 +784,8 @@ def operador_registrar():
 @app.route("/operador/amostragens")
 def operador_listar():
     os_num = _norm(request.args.get("os"))
-    part = _norm(request.args.get("partnumber"))
-    op = _norm(request.args.get("operacao"))
+    part = _norm_part(request.args.get("partnumber"))
+    op = _norm_op(request.args.get("operacao"))
     where = []
     params = []
     if os_num:
@@ -938,8 +821,8 @@ def operador_fim_jornada():
     payload = request.get_json(silent=True) or {}
     os_num = _norm(payload.get("os"))
     re_op = _norm(payload.get("re"))
-    part = _norm(payload.get("partnumber"))
-    op = _norm(payload.get("operacao"))
+    part = _norm_part(payload.get("partnumber"))
+    op = _norm_op(payload.get("operacao"))
     if not os_num or not re_op:
         return jsonify({"error": "Campos 'os' e 're' são obrigatórios"}), 400
     try:
@@ -1011,9 +894,7 @@ def relatorio_sql():
 def health():
 
     return jsonify({
-        "status": "ok",
-        "prep_path": PLANILHA_PREPARADOR_PATH,
-        "oper_path": PLANILHA_OPERADOR_PATH
+        "status": "ok"
     })
 def _mensagem_bloqueio(os_num: str, part: str, op: str, fonte: str, detalhe: str) -> str:
     """
