@@ -411,8 +411,8 @@ def _medidas_preparador_db(part: str, op: str):
                 """
                 SELECT idx_medida, titulo, faixa_texto, instrumento, minimo, maximo
                 FROM for07_norm
-                WHERE TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s)
-                  AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s)
+                WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=TRIM(LEADING '0' FROM %s)
+                  AND TRIM(LEADING '0' FROM TRIM(operacao))=TRIM(LEADING '0' FROM %s)
                 ORDER BY idx_medida
                 """,
                 (part, op),
@@ -464,8 +464,8 @@ def _medidas_operador_db(part: str, op: str):
                        periodicidade, instrumento,
                        reprovada_abaixo, alerta_abaixo, alerta_acima, reprovada_acima
                 FROM for09_norm
-                WHERE TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s)
-                  AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s)
+                WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=TRIM(LEADING '0' FROM %s)
+                  AND TRIM(LEADING '0' FROM TRIM(operacao))=TRIM(LEADING '0' FROM %s)
                 ORDER BY idx_medida
                 """,
                 (part, op),
@@ -538,8 +538,8 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             SELECT status_geral
             FROM preparador_liberacao
             WHERE os=%s
-              AND TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s)
-              AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s)
+              AND TRIM(LEADING '0' FROM TRIM(partnumber))=TRIM(LEADING '0' FROM %s)
+              AND TRIM(LEADING '0' FROM TRIM(operacao))=TRIM(LEADING '0' FROM %s)
             ORDER BY id DESC LIMIT 1
             """,
             (os_num, part, op),
@@ -558,8 +558,8 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             SELECT id
             FROM preparador_registro
             WHERE os=%s
-              AND TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s)
-              AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s)
+              AND TRIM(LEADING '0' FROM TRIM(partnumber))=TRIM(LEADING '0' FROM %s)
+              AND TRIM(LEADING '0' FROM TRIM(operacao))=TRIM(LEADING '0' FROM %s)
             ORDER BY created_at DESC, id DESC LIMIT 1
             """,
             (os_num, part, op),
@@ -627,7 +627,7 @@ def supervisor_registros():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 cur.execute(
-                    f"SELECT * FROM {tabela} WHERE TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s) AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s) ORDER BY idx_medida",
+                    f"SELECT * FROM {tabela} WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=TRIM(LEADING '0' FROM %s) AND TRIM(LEADING '0' FROM TRIM(operacao))=TRIM(LEADING '0' FROM %s) ORDER BY idx_medida",
                     (part, op),
                 )
                 rows = cur.fetchall()
@@ -658,7 +658,7 @@ def supervisor_inserir():
                             400,
                         )
                     cur.execute(
-                        f"SELECT COALESCE(MAX(idx_medida),0)+1 FROM {tabela} WHERE TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s) AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s)",
+                        f"SELECT COALESCE(MAX(idx_medida),0)+1 FROM {tabela} WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=TRIM(LEADING '0' FROM %s) AND TRIM(LEADING '0' FROM TRIM(operacao))=TRIM(LEADING '0' FROM %s)",
                         (part, op),
                     )
                     dados["idx_medida"] = cur.fetchone()[0]
@@ -697,13 +697,13 @@ def supervisor_atualizar():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 cur.execute(
-                    f"SELECT * FROM {tabela} WHERE TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s) AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s) AND idx_medida=%s",
+                    f"SELECT * FROM {tabela} WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=TRIM(LEADING '0' FROM %s) AND TRIM(LEADING '0' FROM TRIM(operacao))=TRIM(LEADING '0' FROM %s) AND idx_medida=%s",
                     (part, op, idx),
                 )
                 antes = cur.fetchone()
                 set_sql = ", ".join([f"{k}=%s" for k in updates.keys()])
                 cur.execute(
-                    f"UPDATE {tabela} SET {set_sql} WHERE TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s) AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s) AND idx_medida=%s",
+                    f"UPDATE {tabela} SET {set_sql} WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=TRIM(LEADING '0' FROM %s) AND TRIM(LEADING '0' FROM TRIM(operacao))=TRIM(LEADING '0' FROM %s) AND idx_medida=%s",
                     list(updates.values()) + [part, op, idx],
                 )
                 _log_supervisao(
@@ -899,8 +899,8 @@ def resultado_preparador():
                     """
                     SELECT id FROM preparador_liberacao
                     WHERE os=%s
-                      AND TRIM(LEADING '0' FROM partnumber)=TRIM(LEADING '0' FROM %s)
-                      AND TRIM(LEADING '0' FROM operacao)=TRIM(LEADING '0' FROM %s)
+                      AND TRIM(LEADING '0' FROM TRIM(partnumber))=TRIM(LEADING '0' FROM %s)
+                      AND TRIM(LEADING '0' FROM TRIM(operacao))=TRIM(LEADING '0' FROM %s)
                     ORDER BY id DESC LIMIT 1
                     """,
                     (os_num, part, op),
