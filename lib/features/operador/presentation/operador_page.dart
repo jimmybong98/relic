@@ -153,8 +153,27 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       map['max'] = m.maximo;
       // escolha = texto selecionado (OK / Aprovado / Reprovado / pílula etc.)
       map['escolha'] = m.medicao ?? '';
-      // status como string
-      map['status'] = statusToString(m.status);
+      // status como string; tampão envia "aprovado|reprovado" com ambos os lados
+      String status;
+      final med = m.medicao ?? '';
+      if (med.contains('Lado passa') && med.contains('Lado não passa')) {
+        // Tampão: avalia cada lado separadamente
+        var passa = 'aprovado';
+        var naoPassa = 'aprovado';
+        for (final part in med.split('|')) {
+          final p = part.trim();
+          if (p.startsWith('Lado passa') && p.endsWith('Reprovado')) {
+            passa = 'reprovado';
+          }
+          if (p.startsWith('Lado não passa') && p.endsWith('Reprovado')) {
+            naoPassa = 'reprovado';
+          }
+        }
+        status = '$passa|$naoPassa';
+      } else {
+        status = statusToString(m.status);
+      }
+      map['status'] = status;
       itens.add(map);
     }
 
@@ -562,6 +581,33 @@ class _MeasurementTile extends StatelessWidget {
         _containsAny(inst, ['tamp', 'tampao', 'tampão', 'tampa']);
   }
 
+  Set<String> _partsFromMedicao(String? medicao) =>
+      (medicao ?? '')
+          .split('|')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toSet();
+
+  String _joinParts(Set<String> parts) => parts.join(' | ');
+
+  StatusMedida _statusFromParts(Set<String> parts) {
+    final hasPassa = parts.any((p) => p.startsWith('Lado passa'));
+    final hasNaoPassa =
+        parts.any((p) => p.startsWith('Lado não passa'));
+    if (hasPassa && hasNaoPassa) {
+      final passaReprovado = parts.contains('Lado passa — Reprovado');
+      final naoPassaReprovado =
+          parts.contains('Lado não passa — Reprovado');
+      if (passaReprovado && naoPassaReprovado) {
+        return StatusMedida.reprovadaAcima;
+      }
+      if (passaReprovado) return StatusMedida.reprovadaAbaixo;
+      if (naoPassaReprovado) return StatusMedida.reprovadaAcima;
+      return StatusMedida.ok;
+    }
+    return StatusMedida.pendente;
+  }
+
   double? _toDoubleNum(dynamic v) {
     if (v == null) return null;
     if (v is num) return v.toDouble();
@@ -627,15 +673,6 @@ class _MeasurementTile extends StatelessWidget {
 
     // NÃO usar ?? [] se tolerancias for não-nulo (evita dead_null_aware_expression)
     final tolerancias = item.tolerancias;
-    final tolVals = <double>[];
-    for (final t in tolerancias) {
-      final d = _toDoubleNum(t);
-      if (d != null) tolVals.add(d);
-    }
-    tolVals.sort();
-
-    final minEdge = item.minimo ?? (tolVals.isNotEmpty ? tolVals.first : null);
-    final maxEdge = item.maximo ?? (tolVals.isNotEmpty ? tolVals.last : null);
 
     // ------- UI -------
     return Card(
@@ -685,46 +722,65 @@ class _MeasurementTile extends StatelessWidget {
           ]
           // Modo 2: Tampão (4 botões)
           else if (_isTampao) ...[
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _pill(
-                  text: 'Lado passa — Aprovado',
-                  bg: Colors.green.shade200,
-                  border: Colors.green.shade600,
-                  fg: Colors.green.shade900,
-                  selected: item.medicao == 'Lado passa — Aprovado',
-                  onTap: () =>
-                      onSelect(StatusMedida.ok, 'Lado passa — Aprovado'),
-                ),
-                _pill(
-                  text: 'Lado passa — Reprovado',
-                  bg: Colors.red.shade100,
-                  border: Colors.red.shade400,
-                  selected: item.medicao == 'Lado passa — Reprovado',
-                  onTap: () => onSelect(
-                      StatusMedida.reprovadaAcima, 'Lado passa — Reprovado'),
-                ),
-                _pill(
-                  text: 'Lado não passa — Aprovado',
-                  bg: Colors.green.shade200,
-                  border: Colors.green.shade600,
-                  fg: Colors.green.shade900,
-                  selected: item.medicao == 'Lado não passa — Aprovado',
-                  onTap: () => onSelect(
-                      StatusMedida.ok, 'Lado não passa — Aprovado'),
-                ),
-                _pill(
-                  text: 'Lado não passa — Reprovado',
-                  bg: Colors.red.shade100,
-                  border: Colors.red.shade400,
-                  selected: item.medicao == 'Lado não passa — Reprovado',
-                  onTap: () => onSelect(StatusMedida.reprovadaAcima,
-                      'Lado não passa — Reprovado'),
-                ),
-              ],
-            ),
+            Builder(builder: (context) {
+              final parts = _partsFromMedicao(item.medicao);
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _pill(
+                    text: 'Lado passa — Aprovado',
+                    bg: Colors.green.shade200,
+                    border: Colors.green.shade600,
+                    fg: Colors.green.shade900,
+                    selected: parts.contains('Lado passa — Aprovado'),
+                    onTap: () {
+                      final p = _partsFromMedicao(item.medicao);
+                      p.removeWhere((e) => e.startsWith('Lado passa'));
+                      p.add('Lado passa — Aprovado');
+                      onSelect(_statusFromParts(p), _joinParts(p));
+                    },
+                  ),
+                  _pill(
+                    text: 'Lado passa — Reprovado',
+                    bg: Colors.red.shade100,
+                    border: Colors.red.shade400,
+                    selected: parts.contains('Lado passa — Reprovado'),
+                    onTap: () {
+                      final p = _partsFromMedicao(item.medicao);
+                      p.removeWhere((e) => e.startsWith('Lado passa'));
+                      p.add('Lado passa — Reprovado');
+                      onSelect(_statusFromParts(p), _joinParts(p));
+                    },
+                  ),
+                  _pill(
+                    text: 'Lado não passa — Aprovado',
+                    bg: Colors.green.shade200,
+                    border: Colors.green.shade600,
+                    fg: Colors.green.shade900,
+                    selected: parts.contains('Lado não passa — Aprovado'),
+                    onTap: () {
+                      final p = _partsFromMedicao(item.medicao);
+                      p.removeWhere((e) => e.startsWith('Lado não passa'));
+                      p.add('Lado não passa — Aprovado');
+                      onSelect(_statusFromParts(p), _joinParts(p));
+                    },
+                  ),
+                  _pill(
+                    text: 'Lado não passa — Reprovado',
+                    bg: Colors.red.shade100,
+                    border: Colors.red.shade400,
+                    selected: parts.contains('Lado não passa — Reprovado'),
+                    onTap: () {
+                      final p = _partsFromMedicao(item.medicao);
+                      p.removeWhere((e) => e.startsWith('Lado não passa'));
+                      p.add('Lado não passa — Reprovado');
+                      onSelect(_statusFromParts(p), _joinParts(p));
+                    },
+                  ),
+                ],
+              );
+            }),
           ]
           // Modo 3: Pílulas de tolerância + OK
           else ...[
@@ -732,23 +788,44 @@ class _MeasurementTile extends StatelessWidget {
                 builder: (context) {
                   final chips = <Widget>[];
 
-                  // Monta as 4 pílulas coloridas
-                  for (final raw in tolerancias) {
+                  // Monta as 4 pílulas coloridas na ordem recebida
+                  for (var i = 0; i < tolerancias.length; i++) {
+                    final raw = tolerancias[i];
                     final d = _toDoubleNum(raw);
-                    // default amarelo
-                    Color bg = Colors.amber.shade100;
-                    Color bd = Colors.amber.shade400;
-                    if (d != null &&
-                        ((minEdge != null && _near(d, minEdge)) ||
-                            (maxEdge != null && _near(d, maxEdge)))) {
-                      bg = Colors.red.shade100; // extremos
-                      bd = Colors.red.shade400;
+
+                    // Define cores e status conforme a posição
+                    StatusMedida st;
+                    Color bg;
+                    Color bd;
+                    switch (i) {
+                      case 0:
+                        st = StatusMedida.reprovadaAbaixo;
+                        bg = Colors.red.shade100;
+                        bd = Colors.red.shade400;
+                        break;
+                      case 1:
+                        st = StatusMedida.alertaAbaixo;
+                        bg = Colors.amber.shade100;
+                        bd = Colors.amber.shade400;
+                        break;
+                      case 2:
+                        st = StatusMedida.alertaAcima;
+                        bg = Colors.amber.shade100;
+                        bd = Colors.amber.shade400;
+                        break;
+                      case 3:
+                        st = StatusMedida.reprovadaAcima;
+                        bg = Colors.red.shade100;
+                        bd = Colors.red.shade400;
+                        break;
+                      default:
+                        st = StatusMedida.alertaAbaixo;
+                        bg = Colors.amber.shade100;
+                        bd = Colors.amber.shade400;
                     }
 
-                    final label = d != null
-                        ? d.toStringAsFixed(2)
-                        : raw.toString();
-
+                    final label =
+                        d != null ? d.toStringAsFixed(2) : raw.toString();
                     final selected = item.medicao == label;
 
                     chips.add(_pill(
@@ -756,20 +833,7 @@ class _MeasurementTile extends StatelessWidget {
                       bg: bg,
                       border: bd,
                       selected: selected,
-                      onTap: () {
-                        // Seleciona a tolerância: classifica
-                        StatusMedida st = StatusMedida.alerta;
-                        if (d != null) {
-                          if (minEdge != null && _near(d, minEdge)) {
-                            st = StatusMedida.reprovadaAbaixo;
-                          } else if (maxEdge != null && _near(d, maxEdge)) {
-                            st = StatusMedida.reprovadaAcima;
-                          } else {
-                            st = StatusMedida.alerta;
-                          }
-                        }
-                        onSelect(st, label);
-                      },
+                      onTap: () => onSelect(st, label),
                     ));
                   }
 
