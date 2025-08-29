@@ -8,12 +8,14 @@ enum StatusMedida { ok, alerta, reprovadaAcima, reprovadaAbaixo, pendente }
 StatusMedida statusFromString(String? s) {
   switch ((s ?? '').toLowerCase()) {
     case 'ok':
+    case 'aprovado':
       return StatusMedida.ok;
     case 'alerta':
       return StatusMedida.alerta;
     case 'reprovada_acima':
     case 'acima':
     case 'reprovada':
+    case 'reprovado':
       return StatusMedida.reprovadaAcima;
     case 'reprovada_abaixo':
     case 'abaixo':

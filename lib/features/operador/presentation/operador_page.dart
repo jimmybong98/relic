@@ -153,8 +153,27 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       map['max'] = m.maximo;
       // escolha = texto selecionado (OK / Aprovado / Reprovado / pílula etc.)
       map['escolha'] = m.medicao ?? '';
-      // status como string
-      map['status'] = statusToString(m.status);
+      // status como string; tampão envia "aprovado|reprovado" com ambos os lados
+      String status;
+      final med = m.medicao ?? '';
+      if (med.contains('Lado passa') && med.contains('Lado não passa')) {
+        // Tampão: avalia cada lado separadamente
+        var passa = 'aprovado';
+        var naoPassa = 'aprovado';
+        for (final part in med.split('|')) {
+          final p = part.trim();
+          if (p.startsWith('Lado passa') && p.endsWith('Reprovado')) {
+            passa = 'reprovado';
+          }
+          if (p.startsWith('Lado não passa') && p.endsWith('Reprovado')) {
+            naoPassa = 'reprovado';
+          }
+        }
+        status = '$passa|$naoPassa';
+      } else {
+        status = statusToString(m.status);
+      }
+      map['status'] = status;
       itens.add(map);
     }
 
@@ -562,6 +581,33 @@ class _MeasurementTile extends StatelessWidget {
         _containsAny(inst, ['tamp', 'tampao', 'tampão', 'tampa']);
   }
 
+  Set<String> _partsFromMedicao(String? medicao) =>
+      (medicao ?? '')
+          .split('|')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toSet();
+
+  String _joinParts(Set<String> parts) => parts.join(' | ');
+
+  StatusMedida _statusFromParts(Set<String> parts) {
+    final hasPassa = parts.any((p) => p.startsWith('Lado passa'));
+    final hasNaoPassa =
+        parts.any((p) => p.startsWith('Lado não passa'));
+    if (hasPassa && hasNaoPassa) {
+      final passaReprovado = parts.contains('Lado passa — Reprovado');
+      final naoPassaReprovado =
+          parts.contains('Lado não passa — Reprovado');
+      if (passaReprovado && naoPassaReprovado) {
+        return StatusMedida.reprovadaAcima;
+      }
+      if (passaReprovado) return StatusMedida.reprovadaAbaixo;
+      if (naoPassaReprovado) return StatusMedida.reprovadaAcima;
+      return StatusMedida.ok;
+    }
+    return StatusMedida.pendente;
+  }
+
   double? _toDoubleNum(dynamic v) {
     if (v == null) return null;
     if (v is num) return v.toDouble();
@@ -685,46 +731,65 @@ class _MeasurementTile extends StatelessWidget {
           ]
           // Modo 2: Tampão (4 botões)
           else if (_isTampao) ...[
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _pill(
-                  text: 'Lado passa — Aprovado',
-                  bg: Colors.green.shade200,
-                  border: Colors.green.shade600,
-                  fg: Colors.green.shade900,
-                  selected: item.medicao == 'Lado passa — Aprovado',
-                  onTap: () =>
-                      onSelect(StatusMedida.ok, 'Lado passa — Aprovado'),
-                ),
-                _pill(
-                  text: 'Lado passa — Reprovado',
-                  bg: Colors.red.shade100,
-                  border: Colors.red.shade400,
-                  selected: item.medicao == 'Lado passa — Reprovado',
-                  onTap: () => onSelect(
-                      StatusMedida.reprovadaAcima, 'Lado passa — Reprovado'),
-                ),
-                _pill(
-                  text: 'Lado não passa — Aprovado',
-                  bg: Colors.green.shade200,
-                  border: Colors.green.shade600,
-                  fg: Colors.green.shade900,
-                  selected: item.medicao == 'Lado não passa — Aprovado',
-                  onTap: () => onSelect(
-                      StatusMedida.ok, 'Lado não passa — Aprovado'),
-                ),
-                _pill(
-                  text: 'Lado não passa — Reprovado',
-                  bg: Colors.red.shade100,
-                  border: Colors.red.shade400,
-                  selected: item.medicao == 'Lado não passa — Reprovado',
-                  onTap: () => onSelect(StatusMedida.reprovadaAcima,
-                      'Lado não passa — Reprovado'),
-                ),
-              ],
-            ),
+            Builder(builder: (context) {
+              final parts = _partsFromMedicao(item.medicao);
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _pill(
+                    text: 'Lado passa — Aprovado',
+                    bg: Colors.green.shade200,
+                    border: Colors.green.shade600,
+                    fg: Colors.green.shade900,
+                    selected: parts.contains('Lado passa — Aprovado'),
+                    onTap: () {
+                      final p = _partsFromMedicao(item.medicao);
+                      p.removeWhere((e) => e.startsWith('Lado passa'));
+                      p.add('Lado passa — Aprovado');
+                      onSelect(_statusFromParts(p), _joinParts(p));
+                    },
+                  ),
+                  _pill(
+                    text: 'Lado passa — Reprovado',
+                    bg: Colors.red.shade100,
+                    border: Colors.red.shade400,
+                    selected: parts.contains('Lado passa — Reprovado'),
+                    onTap: () {
+                      final p = _partsFromMedicao(item.medicao);
+                      p.removeWhere((e) => e.startsWith('Lado passa'));
+                      p.add('Lado passa — Reprovado');
+                      onSelect(_statusFromParts(p), _joinParts(p));
+                    },
+                  ),
+                  _pill(
+                    text: 'Lado não passa — Aprovado',
+                    bg: Colors.green.shade200,
+                    border: Colors.green.shade600,
+                    fg: Colors.green.shade900,
+                    selected: parts.contains('Lado não passa — Aprovado'),
+                    onTap: () {
+                      final p = _partsFromMedicao(item.medicao);
+                      p.removeWhere((e) => e.startsWith('Lado não passa'));
+                      p.add('Lado não passa — Aprovado');
+                      onSelect(_statusFromParts(p), _joinParts(p));
+                    },
+                  ),
+                  _pill(
+                    text: 'Lado não passa — Reprovado',
+                    bg: Colors.red.shade100,
+                    border: Colors.red.shade400,
+                    selected: parts.contains('Lado não passa — Reprovado'),
+                    onTap: () {
+                      final p = _partsFromMedicao(item.medicao);
+                      p.removeWhere((e) => e.startsWith('Lado não passa'));
+                      p.add('Lado não passa — Reprovado');
+                      onSelect(_statusFromParts(p), _joinParts(p));
+                    },
+                  ),
+                ],
+              );
+            }),
           ]
           // Modo 3: Pílulas de tolerância + OK
           else ...[
