@@ -216,6 +216,19 @@ class MedidaItem {
       }
     }
 
+    // Correção para ângulos: alguns registros vêm com min/max negativos ou
+    // invertidos (ex.: -17, 13 representando 13°–17°). Normaliza para
+    // valores absolutos e ordenados quando o item é um ângulo.
+    final tituloNorm = _normalizeLower(titulo);
+    final isAngulo =
+        (uni != null && RegExp(r'[°º]').hasMatch(uni)) || tituloNorm.contains('angulo');
+    if (isAngulo && minimo != null && maximo != null) {
+      final vals = [minimo!.abs(), maximo!.abs()]
+        ..sort();
+      minimo = vals.first;
+      maximo = vals.last;
+    }
+
     // Se faixaTexto veio vazio, monta automaticamente a partir de min/max/unidade
     final faixaOut = (faixa.isNotEmpty) ? faixa : _makeFaixaTexto(minimo, maximo, uni);
 
