@@ -239,6 +239,18 @@ def _ensure_schema():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
             )
+              cur.execute(
+                  """
+                  CREATE TABLE IF NOT EXISTS supervisao_log (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tabela VARCHAR(64) NOT NULL,
+                    acao VARCHAR(16) NOT NULL,
+                    registro_antes JSON NULL,
+                    registro_depois JSON NOT NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                  """
+              )
         c.commit()
 
 # chama ao subir
@@ -260,6 +272,24 @@ def _to_float(s):
         return float(str(s).replace(",", ".").strip())
     except Exception:
         return None
+
+
+def _log_supervisao(cur, tabela: str, acao: str, antes, depois):
+    try:
+        cur.execute(
+            """
+            INSERT INTO supervisao_log (tabela, acao, registro_antes, registro_depois)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                tabela,
+                acao,
+                json.dumps(antes, ensure_ascii=False) if antes is not None else None,
+                json.dumps(depois, ensure_ascii=False),
+            ),
+        )
+    except Exception:
+        pass
 
 def _normalize_text(s: str) -> str:
     t = _norm(s).lower()
@@ -332,6 +362,13 @@ def _parse_range_any(texto: str):
     if has_max and not has_min:
         return (None, v, uni)   # máximo somente
     return (v, v, uni)          # valor exato
+
+
+_ALLOWED_TABELAS = {"FOR07": "for07_norm", "FOR09": "for09_norm"}
+
+
+def _resolve_tabela(nome: str):
+    return _ALLOWED_TABELAS.get((nome or "").upper())
 
 # ========= Consulta de medidas no BD =========
 def _medidas_preparador_db(part: str, op: str):
@@ -524,6 +561,100 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             return (True, "preparador_registro", f"registro_id={reg_id}; {ok_cnt}/{total} OK")
         else:
             return (False, "preparador_registro", f"registro_id={reg_id}; {ok_cnt}/{total} OK")
+
+# ========= Rotas de Leitura =========
+# ========= Supervisão =========
+
+
+@app.route("/supervisor/campos")
+def supervisor_campos():
+    tabela = _resolve_tabela(request.args.get("tabela"))
+    if not tabela:
+        return jsonify({"error": "tabela inválida"}), 400
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute(f"DESCRIBE {tabela}")
+                rows = cur.fetchall()
+        campos = [row["Field"] for row in rows if row["Field"] != "id"]
+        return jsonify(campos)
+    except Exception as e:
+        return jsonify({"error": f"Falha ao listar campos: {e}"}), 500
+
+
+@app.route("/supervisor/registros")
+def supervisor_registros():
+    tabela = _resolve_tabela(request.args.get("tabela"))
+    part = _norm_part(request.args.get("partnumber"))
+    op = _norm_op(request.args.get("operacao"))
+    if not tabela or not part or not op:
+        return jsonify({"error": "parâmetros inválidos"}), 400
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute(
+                    f"SELECT * FROM {tabela} WHERE partnumber=%s AND operacao=%s ORDER BY idx_medida",
+                    (part, op),
+                )
+                rows = cur.fetchall()
+        return jsonify(rows)
+    except Exception as e:
+        return jsonify({"error": f"Falha ao buscar registros: {e}"}), 500
+
+
+@app.route("/supervisor/registros", methods=["POST"])
+def supervisor_inserir():
+    tabela = _resolve_tabela(request.args.get("tabela"))
+    dados = request.get_json(silent=True) or {}
+    if not tabela or not dados:
+        return jsonify({"error": "dados inválidos"}), 400
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cols = list(dados.keys())
+                vals = [dados[k] for k in cols]
+                placeholders = ", ".join(["%s"] * len(cols))
+                cur.execute(
+                    f"INSERT INTO {tabela} ({', '.join(cols)}) VALUES ({placeholders})",
+                    vals,
+                )
+                _log_supervisao(cur, tabela, "insert", None, dados)
+            c.commit()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": f"Falha ao inserir: {e}"}), 500
+
+
+@app.route("/supervisor/registros", methods=["PUT"])
+def supervisor_atualizar():
+    tabela = _resolve_tabela(request.args.get("tabela"))
+    dados = request.get_json(silent=True) or {}
+    part = _norm_part(dados.get("partnumber"))
+    op = _norm_op(dados.get("operacao"))
+    idx = dados.get("idx_medida")
+    if not tabela or not part or not op or idx is None:
+        return jsonify({"error": "parâmetros obrigatórios faltando"}), 400
+    updates = {k: v for k, v in dados.items() if k not in ("partnumber", "operacao", "idx_medida")}
+    if not updates:
+        return jsonify({"error": "sem campos para atualizar"}), 400
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute(
+                    f"SELECT * FROM {tabela} WHERE partnumber=%s AND operacao=%s AND idx_medida=%s",
+                    (part, op, idx),
+                )
+                antes = cur.fetchone()
+                set_sql = ", ".join([f"{k}=%s" for k in updates.keys()])
+                cur.execute(
+                    f"UPDATE {tabela} SET {set_sql} WHERE partnumber=%s AND operacao=%s AND idx_medida=%s",
+                    list(updates.values()) + [part, op, idx],
+                )
+                _log_supervisao(cur, tabela, "update", antes, {**{"partnumber": part, "operacao": op, "idx_medida": idx}, **updates})
+            c.commit()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": f"Falha ao atualizar: {e}"}), 500
 
 # ========= Rotas de Leitura =========
 @app.route("/preparador/medidas")
