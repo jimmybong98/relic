@@ -8,12 +8,20 @@ class Report {
   final String status;
   final String createdAt;
 
+  /// Registration number (RE) of the preparer who handled this report.
+  final String rePreparador;
+
+  /// Registration number (RE) of the operator who handled this report.
+  final String reOperador;
+
   Report({
     required this.os,
     required this.partnumber,
     required this.operacao,
     required this.status,
     required this.createdAt,
+    this.rePreparador = '',
+    this.reOperador = '',
   });
 
   factory Report.fromJson(Map<String, dynamic> json) {
@@ -23,6 +31,8 @@ class Report {
       operacao: json['operacao']?.toString() ?? '',
       status: json['status_geral']?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',
+      rePreparador: json['re_preparador']?.toString() ?? '',
+      reOperador: json['re_operador']?.toString() ?? '',
     );
   }
 
