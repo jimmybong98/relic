@@ -8,6 +8,7 @@ import 'components/header.dart';
 import 'components/recent_files.dart';
 import 'components/reports_table.dart';
 import 'components/storage_details.dart';
+import 'components/operator_report_chart.dart';
 
 class DashboardScreen extends StatelessWidget {
   @override
@@ -33,6 +34,8 @@ class DashboardScreen extends StatelessWidget {
                       SizedBox(height: defaultPadding),
 
                       ReportsTable(),
+                      SizedBox(height: defaultPadding),
+                      OperatorReportChart(),
                       if (Responsive.isMobile(context))
                         SizedBox(height: defaultPadding),
                       if (Responsive.isMobile(context)) StorageDetails(),
