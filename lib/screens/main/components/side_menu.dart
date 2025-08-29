@@ -4,12 +4,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:admin/features/preparacao/presentation/preparacao_page.dart';
 import 'package:admin/features/operador/presentation/operador_page.dart';
+import 'package:admin/features/finalizar_os/presentation/finalizar_os_page.dart';
 import 'package:admin/features/cadastro_itens/presentation/cadastro_itens_page.dart';
 import 'package:admin/features/cadastro_preparadores/presentation/cadastro_preparadores_page.dart';
 import 'package:admin/features/export_relatorios/presentation/export_relatorios_page.dart';
 import 'package:admin/screens/main/main_screen.dart';
 
-enum SideMenuSection { mainMenu, dashboard, preparador, operador }
+enum SideMenuSection { mainMenu, dashboard, preparador, operador, finalizar }
 
 class SideMenu extends StatelessWidget {
   const SideMenu({super.key, required this.current});
@@ -68,22 +69,46 @@ class SideMenu extends StatelessWidget {
         ]);
         break;
       case SideMenuSection.preparador:
-        items.add(
+        items.addAll([
           DrawerListTile(
             title: 'Operador',
             svgSrc: 'assets/icons/menu_profile.svg',
             press: () => _navigate(context, const OperadorPage()),
           ),
-        );
+          DrawerListTile(
+            title: 'Finalizar OS',
+            svgSrc: 'assets/icons/menu_doc.svg',
+            press: () => _navigate(context, const FinalizarOsPage()),
+          ),
+        ]);
         break;
       case SideMenuSection.operador:
-        items.add(
+        items.addAll([
           DrawerListTile(
             title: 'Preparador',
             svgSrc: 'assets/icons/menu_setting.svg',
             press: () => _navigate(context, const PreparacaoPage()),
           ),
-        );
+          DrawerListTile(
+            title: 'Finalizar OS',
+            svgSrc: 'assets/icons/menu_doc.svg',
+            press: () => _navigate(context, const FinalizarOsPage()),
+          ),
+        ]);
+        break;
+      case SideMenuSection.finalizar:
+        items.addAll([
+          DrawerListTile(
+            title: 'Preparador',
+            svgSrc: 'assets/icons/menu_setting.svg',
+            press: () => _navigate(context, const PreparacaoPage()),
+          ),
+          DrawerListTile(
+            title: 'Operador',
+            svgSrc: 'assets/icons/menu_profile.svg',
+            press: () => _navigate(context, const OperadorPage()),
+          ),
+        ]);
         break;
       case SideMenuSection.mainMenu:
       default:
@@ -97,6 +122,11 @@ class SideMenu extends StatelessWidget {
             title: 'Operador',
             svgSrc: 'assets/icons/menu_profile.svg',
             press: () => _navigate(context, const OperadorPage()),
+          ),
+          DrawerListTile(
+            title: 'Finalizar OS',
+            svgSrc: 'assets/icons/menu_doc.svg',
+            press: () => _navigate(context, const FinalizarOsPage()),
           ),
           DrawerListTile(
             title: 'Supervisão',

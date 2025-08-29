@@ -4,6 +4,7 @@ import 'package:admin/screens/main/main_screen.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import '../preparacao/presentation/preparacao_page.dart';
 import '../operador/presentation/operador_page.dart';
+import '../finalizar_os/presentation/finalizar_os_page.dart';
 
 class MainMenuPage extends StatelessWidget {
   const MainMenuPage({super.key});
@@ -37,6 +38,17 @@ class MainMenuPage extends StatelessWidget {
                 );
               },
               child: const Text('Operador'),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const FinalizarOsPage(),
+                  ),
+                );
+              },
+              child: const Text('Finalizar OS'),
             ),
             const SizedBox(height: 16),
             FilledButton(
