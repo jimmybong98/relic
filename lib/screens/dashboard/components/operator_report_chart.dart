@@ -36,6 +36,7 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
 
   double _statusToValue(String status) {
     final st = status.toLowerCase();
+
     switch (st) {
       case 'pendente':
         return 1;

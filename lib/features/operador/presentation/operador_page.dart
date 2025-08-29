@@ -153,7 +153,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       map['max'] = m.maximo;
       // escolha = texto selecionado (OK / Aprovado / Reprovado / pílula etc.)
       map['escolha'] = m.medicao ?? '';
+
       // status como string; tampão envia "aprovado|reprovado" com ambos os lados
+
       String status;
       final med = m.medicao ?? '';
       if (med.contains('Lado passa') && med.contains('Lado não passa')) {

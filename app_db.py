@@ -588,6 +588,7 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             SELECT
               SUM(CASE WHEN LOWER(COALESCE(status,''))='ok' OR LOWER(COALESCE(status,'')) LIKE '%aprovado%'
                       THEN 1 ELSE 0 END) AS ok_cnt,
+
               COUNT(*) AS total
             FROM preparador_registro_item
             WHERE registro_id=%s
@@ -595,6 +596,7 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             (reg_id,),
         )
         stats = cur.fetchone() or {}
+
         ok_cnt = int(stats.get("ok_cnt") or 0)
         total = int(stats.get("total") or 0)
         if total > 0 and ok_cnt == total:
@@ -607,7 +609,9 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             return (
                 False,
                 "preparador_registro",
+
                 f"registro_id={reg_id}; {ok_cnt}/{total} aprovadas",
+
             )
 
 
@@ -811,6 +815,7 @@ def resultado_preparador():
           "medicao": "1.30",
           "status": "ok|reprovada_acima|reprovada_abaixo|alerta|pendente",
           "observacao": ""
+
         }, ...
       ]
     }
@@ -912,11 +917,13 @@ def resultado_preparador():
 
                 # Consolida liberação
                 has_reprov = any(
+
                     any(parte.strip().startswith("reprov") for parte in s.split("|"))
                     for s in all_status
                 )
                 all_ok = len(all_status) > 0 and all(
                     all(parte.strip() in ("ok", "aprovado") for parte in s.split("|"))
+
                     for s in all_status
                 )
                 status_geral = (
@@ -1006,6 +1013,7 @@ def operador_registrar():
     Payload:
     {
       "os": "...", "re": "...", "partnumber": "...", "operacao": "...",
+
       "itens": [
         {
           "indice": 0, "titulo": "...", "instrumento": "...",
@@ -1019,6 +1027,7 @@ def operador_registrar():
     (Para medições de tampão, o campo `status` envia os dois lados como
     "aprovado|reprovado".)
     """
+
     payload = request.get_json(silent=True) or {}
 
     os_num = _norm(payload.get("os"))
@@ -1282,8 +1291,10 @@ def listar_relatorios_operador():
                     f"""
                     SELECT a.os, a.partnumber, a.operacao, a.re_operador,
                            CASE
+
                              WHEN SUM(CASE WHEN LOWER(i.status) LIKE '%reprov%' THEN 1 ELSE 0 END) > 0 THEN 'reprovado'
                              WHEN SUM(CASE WHEN LOWER(i.status) LIKE '%aprov%' OR LOWER(i.status) = 'ok' THEN 1 ELSE 0 END) = COUNT(i.id) THEN 'aprovado'
+
                              ELSE 'pendente'
                            END AS status_geral,
                            a.created_at
