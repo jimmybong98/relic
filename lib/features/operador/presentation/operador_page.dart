@@ -821,7 +821,9 @@ class _MeasurementTile extends StatelessWidget {
                         bd = Colors.red.shade400;
                         break;
                       default:
-                        st = StatusMedida.alerta;
+
+                        st = StatusMedida.alertaAbaixo;
+
                         bg = Colors.amber.shade100;
                         bd = Colors.amber.shade400;
                     }

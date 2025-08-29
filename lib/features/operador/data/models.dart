@@ -7,7 +7,6 @@ enum StatusMedida {
   ok,
   alertaAcima,
   alertaAbaixo,
-  alerta,
   reprovadaAcima,
   reprovadaAbaixo,
   pendente
@@ -18,14 +17,15 @@ StatusMedida statusFromString(String? s) {
     case 'ok':
     case 'aprovado':
       return StatusMedida.ok;
-    case 'alerta':
-      return StatusMedida.alerta;
     case 'alerta_acima':
     case 'alerta acima':
       return StatusMedida.alertaAcima;
     case 'alerta_abaixo':
     case 'alerta abaixo':
       return StatusMedida.alertaAbaixo;
+      // dados antigos sem direção
+      return StatusMedida.alertaAcima;
+
     case 'reprovada_acima':
     case 'acima':
     case 'reprovada':
@@ -49,8 +49,6 @@ String statusToString(StatusMedida s) {
     case StatusMedida.alertaAbaixo:
       return 'alerta_abaixo';
 
-    case StatusMedida.alerta:
-      return 'aprovado';
     case StatusMedida.reprovadaAcima:
     case StatusMedida.reprovadaAbaixo:
       return 'reprovado';

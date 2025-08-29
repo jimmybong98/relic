@@ -583,7 +583,6 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             return (False, "", "Sem registro do preparador para esta OS/peça/operação.")
 
         reg_id = reg["id"]
-
         cur.execute(
             """
             SELECT
@@ -610,6 +609,7 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
                 "preparador_registro",
                 f"registro_id={reg_id}; {ok_cnt}/{total} aprovadas",
             )
+
 
 
 
@@ -809,10 +809,9 @@ def resultado_preparador():
           "indice": 0,
           "titulo": "...",
           "faixaTexto": "...",
-
           "min": 1.23, "max": 4.56, "unidade": "mm",
           "medicao": "1.30",
-          "status": "ok|reprovada_acima|reprovada_abaixo|alerta_acima|alerta_abaixo|alerta|pendente",
+          "status": "ok|reprovada_acima|reprovada_abaixo|alerta_acima|alerta_abaixo|pendente",
           "observacao": ""
         }, ...
       ]
@@ -914,6 +913,7 @@ def resultado_preparador():
                     )
                     all_status.append(status)
 
+
                 # Consolida liberação
                 has_reprov = any(
                     any(parte.strip().startswith("reprov") for parte in s.split("|"))
@@ -928,6 +928,7 @@ def resultado_preparador():
                     if all_ok
                     else ("reprovada" if has_reprov else "pendente")
                 )
+
 
 
                 # upsert simples em preparador_liberacao (não cria itens aqui)
@@ -1011,13 +1012,12 @@ def operador_registrar():
     Payload:
     {
       "os": "...", "re": "...", "partnumber": "...", "operacao": "...",
-
       "itens": [
         {
           "indice": 0, "titulo": "...", "instrumento": "...",
           "faixaTexto": "...", "min": 1.23, "max": 4.56, "unidade": "mm",
           "periodicidade": "5 peças", "tolerancias": [..],
-          "escolha": "OK", "status": "ok|reprovada_acima|reprovada_abaixo|alerta_acima|alerta_abaixo|alerta",
+          "escolha": "OK", "status": "ok|reprovada_acima|reprovada_abaixo|alerta_acima|alerta_abaixo",
           "observacao": "..."
         }, ...
       ]
@@ -1385,6 +1385,7 @@ def exportar_relatorio_excel():
     except Exception as e:
         return jsonify({"error": f"Falha ao exportar relatório: {e}"}), 500
 
+
 @app.route("/relatorios/sql")
 def relatorio_sql():
     path = request.args.get("path")
@@ -1433,7 +1434,6 @@ def _mensagem_bloqueio(
         m = re.search(r"status_geral=([a-z_]+)", det, re.I)
         status = (m.group(1) if m else "pendente").replace("_", " ")
         return base + f"\nSituação da liberação: {status}. Procure o Preparador."
-
 
     if fonte == "preparador_registro":
         import re

@@ -155,9 +155,6 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
         return 'alerta_abaixo';
       case StatusMedida.alertaAcima:
         return 'alerta_acima';
-      case StatusMedida.alerta:
-        return 'alerta';
-
       case StatusMedida.pendente:
         return 'pendente';
     }
@@ -530,7 +527,6 @@ class _MeasurementTilePrepState extends State<_MeasurementTilePrep> {
         return Colors.red.shade400;
       case StatusMedida.alertaAbaixo:
       case StatusMedida.alertaAcima:
-      case StatusMedida.alerta:
         return Colors.amber.shade700;
       case StatusMedida.pendente:
         return Colors.grey;
