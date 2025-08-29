@@ -586,7 +586,7 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
         cur.execute(
             """
             SELECT
-              SUM(CASE WHEN LOWER(COALESCE(status,''))='ok' THEN 1 ELSE 0 END) AS ok_cnt,
+              SUM(CASE WHEN LOWER(COALESCE(status,'')) LIKE '%aprovado%' THEN 1 ELSE 0 END) AS aprov_cnt,
               COUNT(*) AS total
             FROM preparador_registro_item
             WHERE registro_id=%s
@@ -594,19 +594,19 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             (reg_id,),
         )
         stats = cur.fetchone() or {}
-        ok_cnt = int(stats.get("ok_cnt") or 0)
+        aprov_cnt = int(stats.get("aprov_cnt") or 0)
         total = int(stats.get("total") or 0)
-        if total > 0 and ok_cnt == total:
+        if total > 0 and aprov_cnt == total:
             return (
                 True,
                 "preparador_registro",
-                f"registro_id={reg_id}; {ok_cnt}/{total} OK",
+                f"registro_id={reg_id}; {aprov_cnt}/{total} aprovadas",
             )
         else:
             return (
                 False,
                 "preparador_registro",
-                f"registro_id={reg_id}; {ok_cnt}/{total} OK",
+                f"registro_id={reg_id}; {aprov_cnt}/{total} aprovadas",
             )
 
 
@@ -808,7 +808,7 @@ def resultado_preparador():
           "faixaTexto": "...",
           "min": 1.23, "max": 4.56, "unidade": "mm",
           "medicao": "1.30",
-          "status": "ok|reprovada_acima|reprovada_abaixo|alerta|pendente",
+          "status": "aprovado|reprovado|pendente",
           "observacao": ""
         }, ...
       ]
@@ -908,8 +908,15 @@ def resultado_preparador():
                     all_status.append(status)
 
                 # Consolida liberação
-                has_reprov = any(s.startswith("reprovada") for s in all_status)
-                all_ok = len(all_status) > 0 and all(s == "ok" for s in all_status)
+                has_reprov = any(
+                    "reprovado" in parte
+                    for s in all_status
+                    for parte in s.split("|")
+                )
+                all_ok = len(all_status) > 0 and all(
+                    all(parte.strip() == "aprovado" for parte in s.split("|"))
+                    for s in all_status
+                )
                 status_geral = (
                     "liberada"
                     if all_ok
@@ -1002,7 +1009,7 @@ def operador_registrar():
           "indice": 0, "titulo": "...", "instrumento": "...",
           "faixaTexto": "...", "min": 1.23, "max": 4.56, "unidade": "mm",
           "periodicidade": "5 peças", "tolerancias": [..],
-          "escolha": "OK", "status": "ok|reprovada_acima|reprovada_abaixo|alerta",
+          "escolha": "OK", "status": "aprovado|reprovado",
           "observacao": "..."
         }, ...
       ]
@@ -1271,8 +1278,8 @@ def listar_relatorios_operador():
                     f"""
                     SELECT a.os, a.partnumber, a.operacao, a.re_operador,
                            CASE
-                             WHEN SUM(CASE WHEN LOWER(i.status)='reprovado' THEN 1 ELSE 0 END) > 0 THEN 'reprovado'
-                             WHEN SUM(CASE WHEN LOWER(i.status)='ok' THEN 1 ELSE 0 END) = COUNT(i.id) THEN 'aprovado'
+                             WHEN SUM(CASE WHEN LOWER(i.status) LIKE '%reprovado%' THEN 1 ELSE 0 END) > 0 THEN 'reprovado'
+                             WHEN SUM(CASE WHEN LOWER(i.status) LIKE '%aprovado%' THEN 1 ELSE 0 END) = COUNT(i.id) THEN 'aprovado'
                              ELSE 'pendente'
                            END AS status_geral,
                            a.created_at
@@ -1418,14 +1425,14 @@ def _mensagem_bloqueio(
     if fonte == "preparador_registro":
         import re
 
-        m = re.search(r"(\d+)\s*/\s*(\d+)", det)  # ex.: "3/4 OK"
+        m = re.search(r"(\d+)\s*/\s*(\d+)", det)  # ex.: "3/4 aprovadas"
         if m:
-            ok_cnt, total = m.group(1), m.group(2)
+            aprov_cnt, total = m.group(1), m.group(2)
             return (
                 base
-                + f"\nProgresso do registro do Preparador: {ok_cnt}/{total} medidas OK. Aguarde até todas estarem OK."
+                + f"\nProgresso do registro do Preparador: {aprov_cnt}/{total} medidas aprovadas. Aguarde até todas estarem aprovadas."
             )
-        return base + "\nO registro do Preparador ainda não está 100% OK."
+        return base + "\nO registro do Preparador ainda não está 100% aprovado."
 
     return base
 
