@@ -147,8 +147,8 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
       case StatusMedida.ok:
         return 'aprovado';
       case StatusMedida.reprovadaAbaixo:
+        return 'reprovada_abaixo';
       case StatusMedida.reprovadaAcima:
-
         return 'reprovada_acima';
       case StatusMedida.alertaAbaixo:
         return 'alerta_abaixo';
