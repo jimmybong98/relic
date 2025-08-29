@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:admin/utils/string_utils.dart';
+
 import 'medidas_repository.dart';
 import 'models.dart';
 
@@ -49,8 +51,8 @@ class ApiMedidasRepository implements MedidasRepository {
   }) async {
     // Se seu Flask espera "peca" em vez de "partnumber", troque a chave abaixo.
     final uri = _buildUri(medidasPath, {
-      'partnumber': partnumber,
-      'operacao': operacao,
+      'partnumber': normalizeCode(partnumber),
+      'operacao': normalizeCode(operacao),
     });
 
     if (kDebugMode) debugPrint('GET $uri');
