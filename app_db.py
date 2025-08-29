@@ -266,8 +266,8 @@ def _norm(text):
 
 
 def _strip_leading_zeros(t: str) -> str:
-    t = re.sub(r"^0+", "", t)
-    return t or "0"
+    t = re.sub(r"^0+", "", t or "")
+    return t
 
 
 def _norm_part(text):
