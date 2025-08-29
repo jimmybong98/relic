@@ -249,8 +249,7 @@ def _norm(text):
     return (str(text or "")).strip()
 
 def _norm_part(text):
-    t = _norm(text)
-    return t.zfill(12) if t.isdigit() else t
+    return _norm(text)
 
 def _norm_op(text):
     t = _norm(text)
@@ -338,18 +337,27 @@ def _parse_range_any(texto: str):
 def _medidas_preparador_db(part: str, op: str):
     part = _norm_part(part)
     op = _norm_op(op)
+    rows = []
+    candidates = [part]
+    if part.isdigit():
+        pad = part.zfill(12)
+        if pad != part:
+            candidates.append(pad)
     with _conn_db(DB_NAME) as c:
         with c.cursor() as cur:
-            cur.execute(
-                """
-                SELECT idx_medida, titulo, faixa_texto, instrumento, minimo, maximo
-                FROM for07_norm
-                WHERE partnumber=%s AND operacao=%s
-                ORDER BY idx_medida
-                """,
-                (part, op),
-            )
-            rows = cur.fetchall()
+            for p in candidates:
+                cur.execute(
+                    """
+                    SELECT idx_medida, titulo, faixa_texto, instrumento, minimo, maximo
+                    FROM for07_norm
+                    WHERE partnumber=%s AND operacao=%s
+                    ORDER BY idx_medida
+                    """,
+                    (p, op),
+                )
+                rows = cur.fetchall()
+                if rows:
+                    break
     medidas = []
     for row in rows:
         titulo = row.get("titulo") or ""
@@ -384,20 +392,29 @@ def _medidas_preparador_db(part: str, op: str):
 def _medidas_operador_db(part: str, op: str):
     part = _norm_part(part)
     op = _norm_op(op)
+    rows = []
+    candidates = [part]
+    if part.isdigit():
+        pad = part.zfill(12)
+        if pad != part:
+            candidates.append(pad)
     with _conn_db(DB_NAME) as c:
         with c.cursor() as cur:
-            cur.execute(
-                """
-                SELECT idx_medida, titulo, faixa_texto, minimo, maximo,
-                       periodicidade, instrumento,
-                       reprovada_abaixo, alerta_abaixo, alerta_acima, reprovada_acima
-                FROM for09_norm
-                WHERE partnumber=%s AND operacao=%s
-                ORDER BY idx_medida
-                """,
-                (part, op),
-            )
-            rows = cur.fetchall()
+            for p in candidates:
+                cur.execute(
+                    """
+                    SELECT idx_medida, titulo, faixa_texto, minimo, maximo,
+                           periodicidade, instrumento,
+                           reprovada_abaixo, alerta_abaixo, alerta_acima, reprovada_acima
+                    FROM for09_norm
+                    WHERE partnumber=%s AND operacao=%s
+                    ORDER BY idx_medida
+                    """,
+                    (p, op),
+                )
+                rows = cur.fetchall()
+                if rows:
+                    break
     medidas = []
     for row in rows:
         titulo = row.get("titulo") or ""
