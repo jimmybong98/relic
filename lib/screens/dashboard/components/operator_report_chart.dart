@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../constants.dart';
 import '../../../models/report.dart';
 import '../../../services/report_service.dart';
+import '../../../features/operador/data/models.dart';
 
 /// Displays a line chart showing the progression of operator samplings.
 /// The user must provide an OS number to fetch the report. End-of-shift
@@ -41,6 +42,22 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
     if (st.contains('alerta') && st.contains('acima')) return 1;
     if (st.contains('reprov') && st.contains('acima')) return 2;
     return 0; // ok/aprovado/pendente
+  }
+
+  Color _statusColor(StatusMedida st) {
+    switch (st) {
+      case StatusMedida.ok:
+        return Colors.green.shade600;
+      case StatusMedida.reprovadaAbaixo:
+        return Colors.red.shade400;
+      case StatusMedida.reprovadaAcima:
+        return Colors.red.shade400;
+      case StatusMedida.alertaAbaixo:
+      case StatusMedida.alertaAcima:
+        return Colors.amber.shade700;
+      case StatusMedida.pendente:
+        return Colors.grey;
+    }
   }
 
   @override
@@ -167,20 +184,48 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                                 leftTitles: AxisTitles(
                                   sideTitles: SideTitles(
                                     showTitles: true,
+                                    reservedSize: 72,
                                     getTitlesWidget: (value, meta) {
+                                      late final StatusMedida st;
+                                      late final String text;
                                       switch (value.toInt()) {
                                         case -2:
-                                          return const Text('Repr. -');
+                                          st = StatusMedida.reprovadaAbaixo;
+                                          text = 'Repr. -';
+                                          break;
                                         case -1:
-                                          return const Text('Alerta -');
+                                          st = StatusMedida.alertaAbaixo;
+                                          text = 'Alerta -';
+                                          break;
                                         case 0:
-                                          return const Text('OK');
+                                          st = StatusMedida.ok;
+                                          text = 'OK';
+                                          break;
                                         case 1:
-                                          return const Text('Alerta +');
+                                          st = StatusMedida.alertaAcima;
+                                          text = 'Alerta +';
+                                          break;
                                         case 2:
-                                          return const Text('Repr. +');
+                                          st = StatusMedida.reprovadaAcima;
+                                          text = 'Repr. +';
+                                          break;
+                                        default:
+                                          return const SizedBox.shrink();
                                       }
-                                      return const SizedBox.shrink();
+                                      return Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 10,
+                                            height: 10,
+                                            decoration: BoxDecoration(
+                                                color: _statusColor(st),
+                                                shape: BoxShape.circle),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(text),
+                                        ],
+                                      );
                                     },
                                   ),
                                 ),
