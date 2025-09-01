@@ -1642,12 +1642,6 @@ def machines():
     with _conn_db(DB_NAME) as c:
         with c.cursor() as cur:
             cur.execute(
-                "SELECT 1 FROM for07_norm WHERE tipo_maquina=%s LIMIT 1",
-                (codigo,),
-            )
-            if not cur.fetchone():
-                return jsonify({"error": "máquina não encontrada"}), 400
-            cur.execute(
                 "INSERT INTO maquinas (codigo) VALUES (%s) ON DUPLICATE KEY UPDATE codigo=codigo",
                 (codigo,),
             )
