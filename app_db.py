@@ -1663,7 +1663,6 @@ def relatorio_os():
     except Exception as e:
         return jsonify({"error": f"Falha ao gerar relatório: {e}"}), 500
 
-
 @app.route("/reports/export")
 def exportar_relatorio_excel():
     os_num = _norm(request.args.get("os"))
@@ -1727,6 +1726,7 @@ def exportar_relatorio_excel():
                                i.created_at
                         FROM operador_amostragem a
                         JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+
                         WHERE a.os=%s
                         ORDER BY a.created_at DESC, i.idx_medida ASC
                         """,
