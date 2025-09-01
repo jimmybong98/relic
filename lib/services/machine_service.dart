@@ -18,6 +18,7 @@ class MachineService {
     final resp = await _client.get(uri);
     if (resp.statusCode != 200) {
       throw Exception('Falha ao carregar máquinas');
+
     }
 
     final body = jsonDecode(resp.body);
