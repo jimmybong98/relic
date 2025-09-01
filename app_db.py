@@ -1038,6 +1038,7 @@ def resultado_preparador():
         _ensure_column(c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL")
         _ensure_column(c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL")
 
+
         c.commit()
 
         return jsonify(
