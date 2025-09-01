@@ -49,4 +49,27 @@ class MachineController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> updateMaquina(
+      String oldCodigo, String codigo, String categoria) async {
+    try {
+      isSaving = true;
+      notifyListeners();
+      final ok = await _service.updateMaquina(oldCodigo, codigo, categoria);
+      if (ok) {
+        final idx = maquinas.indexWhere((m) => m.codigo == oldCodigo);
+        if (idx != -1) {
+          maquinas[idx] = Machine(codigo: codigo, categoria: categoria);
+        }
+        error = null;
+      } else {
+        error = 'Falha ao atualizar';
+      }
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      isSaving = false;
+      notifyListeners();
+    }
+  }
 }

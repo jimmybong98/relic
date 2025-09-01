@@ -1658,6 +1658,23 @@ def machines():
     return jsonify({"status": "ok", "codigo": codigo, "categoria": categoria})
 
 
+@app.route("/machines/<codigo>", methods=["PUT"])
+def update_machine(codigo: str):
+    data = request.get_json(silent=True) or {}
+    new_codigo = (data.get("codigo") or "").strip()
+    categoria = (data.get("categoria") or "").strip()
+    if not new_codigo or not categoria:
+        return jsonify({"error": "campos 'codigo' e 'categoria' obrigatórios"}), 400
+    with _conn_db(DB_NAME) as c:
+        with c.cursor() as cur:
+            cur.execute(
+                "UPDATE maquinas SET codigo=%s, categoria=%s WHERE codigo=%s",
+                (new_codigo, categoria, codigo),
+            )
+        c.commit()
+    return jsonify({"status": "ok", "codigo": new_codigo, "categoria": categoria})
+
+
 @app.route("/relatorios/sql")
 def relatorio_sql():
     path = request.args.get("path")
