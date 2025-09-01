@@ -1519,6 +1519,7 @@ def operador_encerrar_producao():
         return jsonify({"error": f"Falha ao encerrar produção: {e}"}), 500
 
 
+
 @app.route("/reports")
 def listar_relatorios():
     try:
@@ -1539,6 +1540,7 @@ def listar_relatorios():
         return jsonify(rows)
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar relatórios: {e}"}), 500
+
 
 
 @app.route("/reports/operador")
