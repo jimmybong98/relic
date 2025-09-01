@@ -1036,18 +1036,13 @@ def resultado_preparador():
                     all(parte.strip() in ("ok", "aprovado") for parte in s.split("|"))
                     for s in all_status
                 )
-                status_geral = (
-                    "Liberada"
-                    if all_ok
-                    else ("Não liberada" if has_reprov else "Pendente")
-                )
+                status_geral = "Liberada" if all_ok else "Pendente"
 
-                # upsert simples em preparador_liberacao (não cria itens aqui)
+                # upsert em preparador_liberacao e obtém id para itens
                 cur.execute(
                     """
                     SELECT id FROM preparador_liberacao
                     WHERE os=%s
-
                       AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
                       AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
                       AND maquina=%s
@@ -1061,6 +1056,7 @@ def resultado_preparador():
                         "UPDATE preparador_liberacao SET re_preparador=%s, status_geral=%s, maquina=%s WHERE id=%s",
                         (re_prep, status_geral, maquina, row["id"]),
                     )
+                    liberacao_id = row["id"]
                 else:
                     cur.execute(
                         """
@@ -1069,6 +1065,52 @@ def resultado_preparador():
                         VALUES (%s, %s, %s, %s, %s, %s)
                         """,
                         (os_num, part, op, re_prep, status_geral, maquina),
+                    )
+                    liberacao_id = cur.lastrowid
+
+                # guarda itens consolidados
+                cur.execute(
+                    "DELETE FROM preparador_liberacao_item WHERE liberacao_id=%s",
+                    (liberacao_id,),
+                )
+                for it in itens:
+                    idx = int(it.get("indice", 0))
+                    titulo = _norm(it.get("titulo"))
+                    faixa_texto = _norm(it.get("faixaTexto"))
+                    minimo = it.get("min")
+                    maximo = it.get("max")
+                    unidade = _norm(it.get("unidade"))
+                    medicao_raw = _norm(it.get("medicao"))
+                    status = _norm(it.get("status")).lower()
+                    observacao = _norm(it.get("observacao"))
+                    medicao_val = None
+                    try:
+                        medicao_val = float(medicao_raw) if medicao_raw else None
+                    except Exception:
+                        medicao_val = None
+                    cur.execute(
+                        """
+                        INSERT INTO preparador_liberacao_item
+                          (liberacao_id, idx_medida, titulo, faixa_texto, minimo, maximo, unidade,
+                           medicao, status, periodicidade, instrumento, observacao)
+                        VALUES
+                          (%s, %s, %s, %s, %s, %s, %s,
+                           %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            liberacao_id,
+                            idx,
+                            titulo,
+                            faixa_texto,
+                            minimo,
+                            maximo,
+                            unidade,
+                            medicao_val,
+                            status,
+                            None,
+                            None,
+                            observacao,
+                        ),
                     )
 
             c.commit()
@@ -1194,25 +1236,27 @@ def preparador_finalizar_os():
                     all(parte.strip() in ("ok", "aprovado") for parte in s.split("|"))
                     for s in all_status
                 )
-                status_geral = (
-                    "Finalizada"
-                    if all_ok
-                    else ("Não liberada" if has_reprov else "Pendente")
-                )
+                status_geral = "Liberada" if all_ok else "Pendente"
 
                 cur.execute(
                     """
-                    UPDATE preparador_liberacao
-                    SET re_preparador=%s, status_geral=%s, maquina=%s
+                    SELECT id FROM preparador_liberacao
                     WHERE os=%s
                       AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
                       AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
                       AND maquina=%s
                     ORDER BY id DESC LIMIT 1
                     """,
-                    (re_prep, status_geral, maquina, os_num, part, op, maquina),
+                    (os_num, part, op, maquina),
                 )
-                if cur.rowcount == 0:
+                row = cur.fetchone()
+                if row:
+                    cur.execute(
+                        "UPDATE preparador_liberacao SET re_preparador=%s, status_geral=%s, maquina=%s WHERE id=%s",
+                        (re_prep, status_geral, maquina, row["id"]),
+                    )
+                    liberacao_id = row["id"]
+                else:
                     cur.execute(
                         """
                         INSERT INTO preparador_liberacao
@@ -1220,6 +1264,51 @@ def preparador_finalizar_os():
                         VALUES (%s, %s, %s, %s, %s, %s)
                         """,
                         (os_num, part, op, re_prep, status_geral, maquina),
+                    )
+                    liberacao_id = cur.lastrowid
+
+                cur.execute(
+                    "DELETE FROM preparador_liberacao_item WHERE liberacao_id=%s",
+                    (liberacao_id,),
+                )
+                for it in itens:
+                    idx = int(it.get("indice", 0))
+                    titulo = _norm(it.get("titulo"))
+                    faixa_texto = _norm(it.get("faixaTexto"))
+                    minimo = it.get("min")
+                    maximo = it.get("max")
+                    unidade = _norm(it.get("unidade"))
+                    medicao_raw = _norm(it.get("medicao"))
+                    status = _norm(it.get("status")).lower()
+                    observacao = _norm(it.get("observacao"))
+                    medicao_val = None
+                    try:
+                        medicao_val = float(medicao_raw) if medicao_raw else None
+                    except Exception:
+                        medicao_val = None
+                    cur.execute(
+                        """
+                        INSERT INTO preparador_liberacao_item
+                          (liberacao_id, idx_medida, titulo, faixa_texto, minimo, maximo, unidade,
+                           medicao, status, periodicidade, instrumento, observacao)
+                        VALUES
+                          (%s, %s, %s, %s, %s, %s, %s,
+                           %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            liberacao_id,
+                            idx,
+                            titulo,
+                            faixa_texto,
+                            minimo,
+                            maximo,
+                            unidade,
+                            medicao_val,
+                            status,
+                            None,
+                            None,
+                            observacao,
+                        ),
                     )
 
                 cur.execute(
