@@ -14,6 +14,7 @@ class CadastroMaquinasPage extends StatefulWidget {
 
 class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
   final _codigoCtrl = TextEditingController();
+  final _categoriaCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -36,6 +37,7 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
   void dispose() {
     widget.controller.removeListener(_onChanged);
     _codigoCtrl.dispose();
+    _categoriaCtrl.dispose();
     super.dispose();
   }
 
@@ -54,6 +56,14 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
                     children: [
                       Expanded(
                         child: TextField(
+                          controller: _categoriaCtrl,
+                          decoration:
+                              const InputDecoration(labelText: 'Categoria'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
                           controller: _codigoCtrl,
                           decoration:
                               const InputDecoration(labelText: 'Código da máquina'),
@@ -69,9 +79,13 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
                           : FilledButton(
                               onPressed: () async {
                                 final codigo = _codigoCtrl.text.trim();
-                                if (codigo.isEmpty) return;
-                                await ctrl.addMaquina(codigo);
-                                if (ctrl.error == null) _codigoCtrl.clear();
+                                final categoria = _categoriaCtrl.text.trim();
+                                if (codigo.isEmpty || categoria.isEmpty) return;
+                                await ctrl.addMaquina(codigo, categoria);
+                                if (ctrl.error == null) {
+                                  _codigoCtrl.clear();
+                                  _categoriaCtrl.clear();
+                                }
                               },
                               child: const Text('Adicionar'),
                             ),
@@ -83,7 +97,8 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
                     itemCount: ctrl.maquinas.length,
                     itemBuilder: (context, index) {
                       final m = ctrl.maquinas[index];
-                      return ListTile(title: Text(m));
+                      return ListTile(
+                          title: Text('${m.codigo} (${m.categoria})'));
                     },
                   ),
                 ),

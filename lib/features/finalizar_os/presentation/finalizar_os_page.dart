@@ -12,6 +12,7 @@ import 'package:admin/features/preparacao/data/repository_provider.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import 'package:admin/utils/string_utils.dart';
 import 'package:admin/services/machine_service.dart';
+import 'package:admin/models/machine.dart';
 
 /// Mesmo base URL usado no Operador
 const String kBaseUrl = 'http://192.168.0.241:5005';
@@ -116,7 +117,9 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
   final _partCtrl = TextEditingController();
   final _opCtrl = TextEditingController();
 
-  final List<String> _maquinas = [];
+  final List<Machine> _maquinas = [];
+  final List<String> _categorias = [];
+  String? _categoriaSel;
   String? _maquinaSel;
 
   bool _registrando = false;
@@ -138,7 +141,13 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
   Future<void> _carregarMaquinas() async {
     try {
       final list = await MachineService().fetchMaquinas();
-      if (mounted) setState(() => _maquinas.addAll(list));
+      if (mounted) {
+        setState(() {
+          _maquinas.addAll(list);
+          _categorias.addAll(
+              _maquinas.map((e) => e.categoria).toSet().toList()..sort());
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -370,14 +379,35 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                     const SizedBox(height: 12),
 
                     DropdownButtonFormField<String>(
+                      value: _categoriaSel,
+                      decoration: const InputDecoration(
+                        labelText: 'Categoria',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _categorias
+                          .map((c) =>
+                              DropdownMenuItem(value: c, child: Text(c)))
+                          .toList(),
+                      onChanged: (v) => setState(() {
+                        _categoriaSel = v;
+                        _maquinaSel = null;
+                      }),
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Obrigatório' : null,
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    DropdownButtonFormField<String>(
                       value: _maquinaSel,
                       decoration: const InputDecoration(
                         labelText: 'Código da máquina',
                         border: OutlineInputBorder(),
                       ),
                       items: _maquinas
+                          .where((m) => m.categoria == _categoriaSel)
                           .map((m) =>
-                              DropdownMenuItem(value: m, child: Text(m)))
+                              DropdownMenuItem(value: m.codigo, child: Text(m.codigo)))
                           .toList(),
                       onChanged: (v) => setState(() => _maquinaSel = v),
                       validator: (v) =>

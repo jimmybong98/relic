@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../services/machine_service.dart';
+import '../models/machine.dart';
 
 class MachineController extends ChangeNotifier {
   MachineController({MachineService? service})
@@ -8,7 +9,7 @@ class MachineController extends ChangeNotifier {
 
   final MachineService _service;
 
-  final List<String> maquinas = [];
+  final List<Machine> maquinas = [];
   bool isLoading = false;
   bool isSaving = false;
   String? error;
@@ -30,13 +31,13 @@ class MachineController extends ChangeNotifier {
     }
   }
 
-  Future<void> addMaquina(String codigo) async {
+  Future<void> addMaquina(String codigo, String categoria) async {
     try {
       isSaving = true;
       notifyListeners();
-      final ok = await _service.addMaquina(codigo);
+      final ok = await _service.addMaquina(codigo, categoria);
       if (ok) {
-        maquinas.add(codigo);
+        maquinas.add(Machine(codigo: codigo, categoria: categoria));
         error = null;
       } else {
         error = 'Falha ao adicionar';

@@ -253,9 +253,14 @@ def _ensure_schema():
                 """
                   CREATE TABLE IF NOT EXISTS maquinas (
                     codigo VARCHAR(64) NOT NULL PRIMARY KEY,
+                    categoria VARCHAR(128) DEFAULT NULL,
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
+            )
+            cur.execute(
+                """ALTER TABLE maquinas
+                      ADD COLUMN IF NOT EXISTS categoria VARCHAR(128) DEFAULT NULL"""
             )
             cur.execute(
                 """
@@ -636,8 +641,6 @@ def _maquina_liberada(
             )
 
 
-
-
 # ========= Rotas de Leitura =========
 # ========= Supervisão =========
 
@@ -669,9 +672,7 @@ def supervisor_registros():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 cur.execute(
-
                     f"SELECT * FROM {tabela} WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=%s AND TRIM(LEADING '0' FROM TRIM(operacao))=%s ORDER BY idx_medida",
-
                     (part, op),
                 )
                 rows = cur.fetchall()
@@ -702,9 +703,7 @@ def supervisor_inserir():
                             400,
                         )
                     cur.execute(
-
                         f"SELECT COALESCE(MAX(idx_medida),0)+1 FROM {tabela} WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=%s AND TRIM(LEADING '0' FROM TRIM(operacao))=%s",
-
                         (part, op),
                     )
                     dados["idx_medida"] = cur.fetchone()[0]
@@ -743,17 +742,13 @@ def supervisor_atualizar():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 cur.execute(
-
                     f"SELECT * FROM {tabela} WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=%s AND TRIM(LEADING '0' FROM TRIM(operacao))=%s AND idx_medida=%s",
-
                     (part, op, idx),
                 )
                 antes = cur.fetchone()
                 set_sql = ", ".join([f"{k}=%s" for k in updates.keys()])
                 cur.execute(
-
                     f"UPDATE {tabela} SET {set_sql} WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=%s AND TRIM(LEADING '0' FROM TRIM(operacao))=%s AND idx_medida=%s",
-
                     list(updates.values()) + [part, op, idx],
                 )
                 _log_supervisao(
@@ -971,7 +966,6 @@ def resultado_preparador():
                     )
                     all_status.append(status)
 
-
                 # Consolida liberação
                 has_reprov = any(
                     any(parte.strip().startswith("reprov") for parte in s.split("|"))
@@ -986,8 +980,6 @@ def resultado_preparador():
                     if all_ok
                     else ("nao_liberada" if has_reprov else "pendente")
                 )
-
-
 
                 # upsert simples em preparador_liberacao (não cria itens aqui)
                 cur.execute(
@@ -1073,13 +1065,13 @@ def preparador_finalizar_os():
                 if not cur.fetchone():
                     return jsonify({"error": "máquina não cadastrada"}), 400
 
-                cur.execute(
-                    "SELECT status FROM ordem_servico WHERE os=%s", (os_num,)
-                )
+                cur.execute("SELECT status FROM ordem_servico WHERE os=%s", (os_num,))
                 st = (cur.fetchone() or {}).get("status", "").lower()
                 if st == "encerrada":
                     return (
-                        jsonify({"code": "ja_finalizada", "error": "OS já finalizada."}),
+                        jsonify(
+                            {"code": "ja_finalizada", "error": "OS já finalizada."}
+                        ),
                         409,
                     )
                 if st != "fim_prod":
@@ -1193,6 +1185,8 @@ def preparador_finalizar_os():
         )
     except Exception as e:
         return jsonify({"error": f"Falha ao finalizar OS: {e}"}), 500
+
+
 # ========= CHECAGEM (para UI) =========
 @app.route("/operador/pode")
 def operador_pode():
@@ -1473,7 +1467,6 @@ def operador_encerrar_producao():
         return jsonify({"error": f"Falha ao encerrar produção: {e}"}), 500
 
 
-
 @app.route("/reports")
 def listar_relatorios():
     try:
@@ -1509,7 +1502,10 @@ def listar_relatorios_preparador():
                 rows = cur.fetchall()
         return jsonify(rows)
     except Exception as e:
-        return jsonify({"error": f"Falha ao consultar relatórios do preparador: {e}"}), 500
+        return (
+            jsonify({"error": f"Falha ao consultar relatórios do preparador: {e}"}),
+            500,
+        )
 
 
 @app.route("/reports/operador")
@@ -1546,7 +1542,10 @@ def listar_relatorios_operador():
                 rows = cur.fetchall()
         return jsonify(rows)
     except Exception as e:
-        return jsonify({"error": f"Falha ao consultar relatórios do operador: {e}"}), 500
+        return (
+            jsonify({"error": f"Falha ao consultar relatórios do operador: {e}"}),
+            500,
+        )
 
 
 @app.route("/reports/export")
@@ -1569,7 +1568,14 @@ def exportar_relatorio_excel():
                         (os_num,),
                     )
                     rows = cur.fetchall()
-                    headers = ["os", "partnumber", "operacao", "re_preparador", "status_geral", "created_at"]
+                    headers = [
+                        "os",
+                        "partnumber",
+                        "operacao",
+                        "re_preparador",
+                        "status_geral",
+                        "created_at",
+                    ]
                 else:
                     cur.execute(
                         """
@@ -1630,23 +1636,26 @@ def machines():
     if request.method == "GET":
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
-                cur.execute("SELECT codigo FROM maquinas ORDER BY codigo")
-                rows = [r["codigo"] for r in cur.fetchall()]
+                cur.execute(
+                    "SELECT codigo, categoria FROM maquinas ORDER BY categoria, codigo"
+                )
+                rows = cur.fetchall()
         return jsonify(rows)
 
     data = request.get_json(silent=True) or {}
     codigo = (data.get("codigo") or "").strip()
-    if not codigo:
-        return jsonify({"error": "campo 'codigo' obrigatório"}), 400
+    categoria = (data.get("categoria") or "").strip()
+    if not codigo or not categoria:
+        return jsonify({"error": "campos 'codigo' e 'categoria' obrigatórios"}), 400
 
     with _conn_db(DB_NAME) as c:
         with c.cursor() as cur:
             cur.execute(
-                "INSERT INTO maquinas (codigo) VALUES (%s) ON DUPLICATE KEY UPDATE codigo=codigo",
-                (codigo,),
+                "INSERT INTO maquinas (codigo, categoria) VALUES (%s, %s) ON DUPLICATE KEY UPDATE categoria=VALUES(categoria)",
+                (codigo, categoria),
             )
         c.commit()
-    return jsonify({"status": "ok", "codigo": codigo})
+    return jsonify({"status": "ok", "codigo": codigo, "categoria": categoria})
 
 
 @app.route("/relatorios/sql")
@@ -1709,7 +1718,6 @@ def _mensagem_bloqueio(
                 + f"\nProgresso do registro do Preparador: {aprov_cnt}/{total} medidas aprovadas. Aguarde até todas estarem aprovadas."
             )
         return base + "\nO registro do Preparador ainda não está 100% aprovado."
-
 
     return base
 
