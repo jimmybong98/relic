@@ -55,7 +55,14 @@ class StorageInfoCard extends StatelessWidget {
               ),
             ),
           ),
-          Text(amountOfFiles)
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              amountOfFiles,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+            ),
+          )
         ],
       ),
     );
