@@ -36,26 +36,11 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
 
   double _statusToValue(String status) {
     final st = status.toLowerCase();
-    switch (st) {
-      case 'pendente':
-        return 1;
-      case 'alerta':
-      case 'alerta_acima':
-      case 'alerta_abaixo':
-        return 1;
-      case 'reprovado':
-      case 'reprovada':
-      case 'reprovada acima':
-      case 'reprovada_acima':
-      case 'reprovada abaixo':
-      case 'reprovada_abaixo':
-        return 2;
-      default:
-        if (st.contains('reprovado')) return 2; // covers "aprovado|reprovado"
-        if (st.contains('alerta')) return 1;
-        return 0; // "ok"/"aprovado" treated como bom
-
-    }
+    if (st.contains('reprov') && st.contains('abaixo')) return -2;
+    if (st.contains('alerta') && st.contains('abaixo')) return -1;
+    if (st.contains('alerta') && st.contains('acima')) return 1;
+    if (st.contains('reprov') && st.contains('acima')) return 2;
+    return 0; // ok/aprovado/pendente
   }
 
   @override
@@ -122,71 +107,109 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                 return const Text('Nenhum dado encontrado para a OS.');
               }
 
-              final spots = <FlSpot>[];
-              final verticalLines = <VerticalLine>[];
-
-              for (var i = 0; i < data.length; i++) {
-                final r = data[i];
-                final status = r.status.toLowerCase();
-                spots.add(FlSpot(i.toDouble(), _statusToValue(status)));
-                if (status.contains('fim') && status.contains('jornada')) {
-                  verticalLines.add(VerticalLine(
-                      x: i.toDouble(),
-                      color: Colors.orange,
-                      strokeWidth: 2));
-                } else if (status.contains('encerrar') ||
-                    status.contains('encerramento')) {
-                  verticalLines.add(VerticalLine(
-                      x: i.toDouble(),
-                      color: Colors.red,
-                      strokeWidth: 2));
-                }
+              final grouped = <int, List<Report>>{};
+              for (final r in data) {
+                if (r.idxMedida == null) continue;
+                grouped.putIfAbsent(r.idxMedida!, () => []).add(r);
+              }
+              if (grouped.isEmpty) {
+                return const Text('Nenhum dado encontrado para a OS.');
               }
 
-              return SizedBox(
-                height: 200,
-                width: double.infinity,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: grouped.entries.map((entry) {
+                  final reports = entry.value
+                    ..sort((a, b) =>
+                        (DateTime.tryParse(a.createdAt) ?? DateTime(0))
+                            .compareTo(
+                                DateTime.tryParse(b.createdAt) ?? DateTime(0)));
+                  final spots = <FlSpot>[];
+                  final verticalLines = <VerticalLine>[];
+                  for (var i = 0; i < reports.length; i++) {
+                    final r = reports[i];
+                    final status = r.status.toLowerCase();
+                    spots.add(FlSpot(i.toDouble(), _statusToValue(status)));
+                    if (status.contains('fim') && status.contains('jornada')) {
+                      verticalLines.add(VerticalLine(
+                          x: i.toDouble(),
+                          color: Colors.orange,
+                          strokeWidth: 2));
+                    } else if (status.contains('encerrar') ||
+                        status.contains('encerramento')) {
+                      verticalLines.add(VerticalLine(
+                          x: i.toDouble(),
+                          color: Colors.red,
+                          strokeWidth: 2));
+                    }
+                  }
 
-                child: LineChart(
-                  LineChartData(
-                    minY: 0,
-                    maxY: 2,
-                    titlesData: FlTitlesData(
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (value, meta) {
-                            switch (value.toInt()) {
-                              case 0:
-                                return const Text('Boa');
-                              case 1:
-                                return const Text('Alerta');
-                              case 2:
-                                return const Text('Reprovada');
-                            }
-                            return const SizedBox.shrink();
-                          },
+                  final title = reports.first.titulo.isNotEmpty
+                      ? reports.first.titulo
+                      : 'Medida ${entry.key}';
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: defaultPadding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            style: Theme.of(context).textTheme.titleSmall),
+                        const SizedBox(height: defaultPadding / 2),
+                        SizedBox(
+                          height: 200,
+                          width: double.infinity,
+                          child: LineChart(
+                            LineChartData(
+                              minY: -2,
+                              maxY: 2,
+                              titlesData: FlTitlesData(
+                                leftTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    getTitlesWidget: (value, meta) {
+                                      switch (value.toInt()) {
+                                        case -2:
+                                          return const Text('Repr. -');
+                                        case -1:
+                                          return const Text('Alerta -');
+                                        case 0:
+                                          return const Text('OK');
+                                        case 1:
+                                          return const Text('Alerta +');
+                                        case 2:
+                                          return const Text('Repr. +');
+                                      }
+                                      return const SizedBox.shrink();
+                                    },
+                                  ),
+                                ),
+                                bottomTitles: AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
+                                topTitles: AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false)),
+                                rightTitles: AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false)),
+                              ),
+                              lineBarsData: [
+                                LineChartBarData(
+                                  spots: spots,
+                                  isCurved: false,
+                                  barWidth: 3,
+                                  color: Colors.blue,
+                                  dotData: FlDotData(show: true),
+                                )
+                              ],
+                              extraLinesData:
+                                  ExtraLinesData(verticalLines: verticalLines),
+                            ),
+                          ),
                         ),
-                      ),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      rightTitles:
-                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      ],
                     ),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: spots,
-                        isCurved: false,
-                        barWidth: 3,
-                        color: Colors.blue,
-                        dotData: FlDotData(show: true),
-                      )
-                    ],
-                    extraLinesData: ExtraLinesData(verticalLines: verticalLines),
-                  ),
-                ),
+                  );
+                }).toList(),
               );
             },
           )

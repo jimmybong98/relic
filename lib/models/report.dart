@@ -14,6 +14,12 @@ class Report {
   /// Registration number (RE) of the operator who handled this report.
   final String reOperador;
 
+  /// Measurement index when the report represents a specific measure.
+  final int? idxMedida;
+
+  /// Measurement title associated with [idxMedida].
+  final String titulo;
+
   Report({
     required this.os,
     required this.partnumber,
@@ -22,6 +28,8 @@ class Report {
     required this.createdAt,
     this.rePreparador = '',
     this.reOperador = '',
+    this.idxMedida,
+    this.titulo = '',
   });
 
   factory Report.fromJson(Map<String, dynamic> json) {
@@ -29,10 +37,15 @@ class Report {
       os: json['os']?.toString() ?? '',
       partnumber: json['partnumber']?.toString() ?? '',
       operacao: json['operacao']?.toString() ?? '',
-      status: json['status_geral']?.toString() ?? '',
+      status:
+          (json['status_geral'] ?? json['status'])?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',
       rePreparador: json['re_preparador']?.toString() ?? '',
       reOperador: json['re_operador']?.toString() ?? '',
+      idxMedida: json['idx_medida'] != null
+          ? int.tryParse(json['idx_medida'].toString())
+          : null,
+      titulo: json['titulo']?.toString() ?? '',
     );
   }
 
