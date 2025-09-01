@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:admin/screens/main/main_screen.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import '../preparacao/presentation/preparacao_page.dart';
 import '../operador/presentation/operador_page.dart';
 import '../finalizar_os/presentation/finalizar_os_page.dart';
+import '../login/login_page.dart';
+import '../../services/auth_service.dart';
 
-class MainMenuPage extends StatelessWidget {
+class MainMenuPage extends ConsumerWidget {
   const MainMenuPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     void open(BuildContext context, Widget page) {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => page),
@@ -46,7 +49,17 @@ class MainMenuPage extends StatelessWidget {
                 ),
                 _MenuCard(
                   title: 'Administração',
-                  onTap: () => open(context, MainScreen()),
+                  onTap: () async {
+                    final auth = ref.read(authServiceProvider);
+                    if (auth == null) {
+                      final ok = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(
+                            builder: (_) => const LoginPage()),
+                      );
+                      if (ok != true) return;
+                    }
+                    open(context, MainScreen());
+                  },
                 ),
               ],
             ),
