@@ -1023,7 +1023,8 @@ def resultado_preparador():
 
         # DDL statements can implicitly close the current cursor on some MySQL
         # servers. Execute each `ALTER TABLE` using a fresh cursor to avoid
-        # "cursor closed" errors on subsequent statements.
+        # "cursor closed" errors on subsequent statements. This must run while
+        # the connection is still open.
         ddl_statements = (
             "ALTER TABLE preparador_liberacao ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL",
             "ALTER TABLE operador_amostragem ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL",
