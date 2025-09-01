@@ -926,7 +926,7 @@ def resultado_preparador():
                 status_geral = (
                     "liberada"
                     if all_ok
-                    else ("reprovada" if has_reprov else "pendente")
+                    else ("nao_liberada" if has_reprov else "pendente")
                 )
 
 
@@ -1078,7 +1078,7 @@ def preparador_finalizar_os():
                 status_geral = (
                     "finalizada"
                     if all_ok
-                    else ("reprovada" if has_reprov else "pendente")
+                    else ("nao_liberada" if has_reprov else "pendente")
                 )
 
                 cur.execute(
