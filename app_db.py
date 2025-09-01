@@ -861,6 +861,30 @@ def resultado_preparador():
                 )
 
             with c.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT partnumber, operacao, status_geral
+                    FROM preparador_liberacao
+                    WHERE os=%s
+                      AND status_geral IN ('liberada','liberado','ok','aprovada','aprovado')
+                    ORDER BY id DESC LIMIT 1
+                    """,
+                    (os_num,),
+                )
+                row_os = cur.fetchone()
+                if row_os:
+                    return (
+                        jsonify(
+                            {
+                                "code": "ja_liberada",
+                                "error": "OS já liberada pelo preparador. Novos registros não são permitidos.",
+                                "fonte": "preparador_liberacao",
+                                "detalhe": f"status_geral={row_os.get('status_geral')}",
+                            }
+                        ),
+                        409,
+                    )
+
                 # garante OS na mestre (por causa de FKs futuras)
                 cur.execute(
                     "INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,)
