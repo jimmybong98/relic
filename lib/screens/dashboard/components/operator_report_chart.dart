@@ -36,12 +36,19 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
   }
 
   double _statusToValue(String status) {
-    final st = status.toLowerCase();
-    if (st.contains('reprov') && st.contains('abaixo')) return -2;
-    if (st.contains('alerta') && st.contains('abaixo')) return -1;
-    if (st.contains('alerta') && st.contains('acima')) return 1;
-    if (st.contains('reprov') && st.contains('acima')) return 2;
-    return 0; // ok/aprovado/pendente
+    switch (statusFromString(status)) {
+      case StatusMedida.reprovadaAbaixo:
+        return -2;
+      case StatusMedida.alertaAbaixo:
+        return -1;
+      case StatusMedida.ok:
+      case StatusMedida.pendente:
+        return 0;
+      case StatusMedida.alertaAcima:
+        return 1;
+      case StatusMedida.reprovadaAcima:
+        return 2;
+    }
   }
 
   Color _statusColor(StatusMedida st) {
