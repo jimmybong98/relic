@@ -228,21 +228,31 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         final statusGeral = (data['status_geral'] ?? '').toString().toLowerCase();
-        if (statusGeral == 'liberada') {
+        final liberada = statusGeral == 'liberada';
+        if (liberada) {
           setState(() => _osLiberada = true);
         }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Resultado registrado com sucesso!')),
         );
         ref.read(medidasPreparadorControllerProvider.notifier).resetSelecoes();
+        if (liberada) {
+          await Future.delayed(const Duration(seconds: 1));
+          if (mounted) Navigator.of(context).pop();
+        }
       } else if (resp.statusCode == 409) {
         final data = jsonDecode(resp.body);
-        if ((data['code'] ?? '') == 'ja_liberada') {
+        final liberada = (data['code'] ?? '') == 'ja_liberada';
+        if (liberada) {
           setState(() => _osLiberada = true);
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falha ao registrar: ${data['error'] ?? resp.body}')),
         );
+        if (liberada) {
+          await Future.delayed(const Duration(seconds: 1));
+          if (mounted) Navigator.of(context).pop();
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
