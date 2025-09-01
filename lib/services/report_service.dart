@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
@@ -62,6 +63,21 @@ class ReportService {
       }
     } catch (_) {}
     return [];
+  }
+
+  /// Fetch a comprehensive report for a specific OS.
+  /// [section] can be `full`, `amostragem` or `liberacao`.
+  Future<Map<String, dynamic>?> fetchOsReport(String os,
+      {String section = 'full'}) async {
+    try {
+      final uri =
+          Uri.parse('$_baseUrl/reports/os?os=$os&section=$section');
+      final response = await _client.get(uri);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
   }
 
   /// Downloads the Excel report for a given OS and type.
