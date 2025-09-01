@@ -80,6 +80,24 @@ def _ensure_column(conn, table: str, column: str, definition: str) -> None:
             cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
+def _ensure_fk(conn, table: str, constraint: str, definition: str) -> None:
+    """Adiciona uma constraint de chave estrangeira se ela não existir."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT CONSTRAINT_NAME
+              FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME=%s AND CONSTRAINT_NAME=%s
+            """,
+            (table, constraint),
+        )
+        if not cur.fetchone():
+            cur.execute(
+                f"ALTER TABLE {table} ADD CONSTRAINT {constraint} {definition}"
+            )
+
+
 def _ensure_schema():
 
     """Garante que o banco e as tabelas principais existam (sem DDL agressivo)."""
@@ -194,6 +212,12 @@ def _ensure_schema():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
             )
+            _ensure_fk(
+                c,
+                "preparador_registro",
+                "fk_pr_os",
+                "FOREIGN KEY (os) REFERENCES ordem_servico(os) ON UPDATE CASCADE",
+            )
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS preparador_registro_item (
@@ -236,6 +260,12 @@ def _ensure_schema():
                   KEY idx_pl_created (created_at)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
+            )
+            _ensure_fk(
+                c,
+                "preparador_liberacao",
+                "fk_pl_os",
+                "FOREIGN KEY (os) REFERENCES ordem_servico(os) ON UPDATE CASCADE",
             )
             cur.execute(
                 """
@@ -1533,34 +1563,38 @@ def listar_relatorios_preparador():
 @app.route("/reports/operador")
 def listar_relatorios_operador():
     os_num = _norm(request.args.get("os"))
-    where = ""
-    params = []
-    order_by = "ORDER BY a.created_at DESC"
-    if os_num:
-        where = "WHERE a.os = %s"
-        params.append(os_num)
-        order_by = "ORDER BY a.created_at ASC"
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT a.os, a.partnumber, a.operacao, a.re_operador,
-                           CASE
-                             WHEN SUM(CASE WHEN LOWER(i.status) LIKE '%reprov%' THEN 1 ELSE 0 END) > 0 THEN 'reprovado'
-                             WHEN SUM(CASE WHEN LOWER(i.status) LIKE '%aprov%' OR LOWER(i.status) = 'ok' THEN 1 ELSE 0 END) = COUNT(i.id) THEN 'aprovado'
-                             ELSE 'pendente'
-                           END AS status_geral,
-                           a.created_at
-                    FROM operador_amostragem a
-                    LEFT JOIN operador_amostragem_item i ON i.amostragem_id = a.id
-                    {where}
-                    GROUP BY a.id
-                    {order_by}
-                    LIMIT 200
-                    """,
-                    params,
-                )
+                if os_num:
+                    cur.execute(
+                        """
+                        SELECT a.os, a.partnumber, a.operacao, a.re_operador,
+                               i.idx_medida, i.titulo, i.status, i.created_at
+                          FROM operador_amostragem a
+                          JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+                         WHERE a.os = %s
+                         ORDER BY i.idx_medida, i.created_at
+                        """,
+                        (os_num,),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT a.os, a.partnumber, a.operacao, a.re_operador,
+                               CASE
+                                 WHEN SUM(CASE WHEN LOWER(i.status) LIKE '%reprov%' THEN 1 ELSE 0 END) > 0 THEN 'reprovado'
+                                 WHEN SUM(CASE WHEN LOWER(i.status) LIKE '%aprov%' OR LOWER(i.status) = 'ok' THEN 1 ELSE 0 END) = COUNT(i.id) THEN 'aprovado'
+                                 ELSE 'pendente'
+                               END AS status_geral,
+                               a.created_at
+                          FROM operador_amostragem a
+                          LEFT JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+                          GROUP BY a.id
+                          ORDER BY a.created_at DESC
+                          LIMIT 200
+                        """,
+                    )
                 rows = cur.fetchall()
         return jsonify(rows)
     except Exception as e:
@@ -1568,6 +1602,60 @@ def listar_relatorios_operador():
             jsonify({"error": f"Falha ao consultar relatórios do operador: {e}"}),
             500,
         )
+
+
+@app.route("/reports/os")
+def relatorio_os():
+    os_num = _norm(request.args.get("os"))
+    section = (_norm(request.args.get("section")) or "full").lower()
+    if not os_num:
+        return jsonify({"error": "os inválida"}), 400
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                os_data = None
+                amostragem = []
+                liberacao = []
+                if section in ("full", "ordem_servico"):
+                    cur.execute(
+                        "SELECT * FROM ordem_servico WHERE os=%s", (os_num,)
+                    )
+                    os_data = cur.fetchone()
+                if section in ("full", "amostragem"):
+                    cur.execute(
+                        """
+                        SELECT a.os, a.partnumber, a.operacao, a.re_operador,
+                               i.idx_medida, i.titulo, i.status, i.created_at
+                          FROM operador_amostragem a
+                          JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+                         WHERE a.os=%s
+                         ORDER BY i.idx_medida, i.created_at
+                        """,
+                        (os_num,),
+                    )
+                    amostragem = cur.fetchall()
+                if section in ("full", "liberacao"):
+                    cur.execute(
+                        """
+                        SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
+                               l.status_geral, li.idx_medida, li.titulo, li.status, li.created_at
+                          FROM preparador_liberacao l
+                          LEFT JOIN preparador_liberacao_item li ON li.liberacao_id = l.id
+                         WHERE l.os=%s
+                         ORDER BY li.idx_medida, li.created_at
+                        """,
+                        (os_num,),
+                    )
+                    liberacao = cur.fetchall()
+        return jsonify(
+            {
+                "ordem_servico": os_data,
+                "amostragem": amostragem,
+                "liberacao": liberacao,
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": f"Falha ao gerar relatório: {e}"}), 500
 
 
 @app.route("/reports/export")
