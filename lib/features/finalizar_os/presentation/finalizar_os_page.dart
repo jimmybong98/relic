@@ -11,6 +11,7 @@ import 'package:admin/features/preparacao/data/models.dart';
 import 'package:admin/features/preparacao/data/repository_provider.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import 'package:admin/utils/string_utils.dart';
+import 'package:admin/services/machine_service.dart';
 
 /// Mesmo base URL usado no Operador
 const String kBaseUrl = 'http://192.168.0.241:5005';
@@ -115,6 +116,9 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
   final _partCtrl = TextEditingController();
   final _opCtrl = TextEditingController();
 
+  final List<String> _maquinas = [];
+  String? _maquinaSel;
+
   bool _registrando = false;
   bool _osFinalizada = false;
 
@@ -128,6 +132,19 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     _osCtrl.addListener(_resetFinalizada);
     _partCtrl.addListener(_resetFinalizada);
     _opCtrl.addListener(_resetFinalizada);
+    _carregarMaquinas();
+  }
+
+  Future<void> _carregarMaquinas() async {
+    try {
+      final list = await MachineService().fetchMaquinas();
+      if (mounted) setState(() => _maquinas.addAll(list));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erro ao carregar máquinas: $e')));
+      }
+    }
   }
 
   @override
@@ -162,11 +179,13 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
   Future<void> _registrarFinalizacao() async {
     final medidas = ref.read(medidasFinalizadorControllerProvider).value ?? [];
 
-    // Valida RE / OS
-    if (_reCtrl.text.trim().isEmpty || _osCtrl.text.trim().isEmpty) {
+    // Valida RE / OS / Máquina
+    if (_reCtrl.text.trim().isEmpty ||
+        _osCtrl.text.trim().isEmpty ||
+        (_maquinaSel ?? '').isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preencha RE e O.S. para registrar.')),
+        const SnackBar(content: Text('Preencha RE, O.S. e máquina para registrar.')),
       );
       return;
     }
@@ -212,6 +231,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
       'os': _osCtrl.text.trim(),
       'partnumber': normalizeCode(_partCtrl.text),
       'operacao': normalizeCode(_opCtrl.text),
+      'maquina': _maquinaSel,
       'itens': itens,
     });
 
@@ -271,12 +291,13 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     // Pode registrar quando: RE e OS preenchidos + todas as medições preenchidas
     final reOk = _reCtrl.text.trim().isNotEmpty;
     final osOk = _osCtrl.text.trim().isNotEmpty;
+    final maquinaOk = (_maquinaSel ?? '').isNotEmpty;
     final todasOk = medidas.isNotEmpty &&
         medidas.every((m) =>
             (m.medicao ?? '').isNotEmpty &&
                 m.status != StatusMedida.pendente);
     final podeRegistrar =
-        reOk && osOk && todasOk && !_registrando && !_osFinalizada;
+        reOk && osOk && maquinaOk && todasOk && !_registrando && !_osFinalizada;
 
     return Scaffold(
       appBar: AppBar(
@@ -344,6 +365,23 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                           ),
                         ),
                       ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    DropdownButtonFormField<String>(
+                      value: _maquinaSel,
+                      decoration: const InputDecoration(
+                        labelText: 'Código da máquina',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _maquinas
+                          .map((m) =>
+                              DropdownMenuItem(value: m, child: Text(m)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _maquinaSel = v),
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Obrigatório' : null,
                     ),
 
                     const SizedBox(height: 12),

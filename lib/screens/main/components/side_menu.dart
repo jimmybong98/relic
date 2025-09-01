@@ -8,6 +8,7 @@ import 'package:admin/features/finalizar_os/presentation/finalizar_os_page.dart'
 import 'package:admin/features/cadastro_itens/presentation/cadastro_itens_page.dart';
 import 'package:admin/features/cadastro_preparadores/presentation/cadastro_preparadores_page.dart';
 import 'package:admin/features/export_relatorios/presentation/export_relatorios_page.dart';
+import 'package:admin/features/cadastro_maquinas/presentation/cadastro_maquinas_page.dart';
 import 'package:admin/screens/main/main_screen.dart';
 
 enum SideMenuSection { mainMenu, dashboard, preparador, operador, finalizar }
@@ -65,6 +66,11 @@ class SideMenu extends StatelessWidget {
             title: 'Cadastro de Preparadores',
             svgSrc: 'assets/icons/menu_profile.svg',
             press: () => _navigate(context, const CadastroPreparadoresPage()),
+          ),
+          DrawerListTile(
+            title: 'Cadastro de Máquinas',
+            svgSrc: 'assets/icons/menu_setting.svg',
+            press: () => _navigate(context, const CadastroMaquinasPage()),
           ),
         ]);
         break;
