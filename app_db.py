@@ -291,11 +291,22 @@ def _ensure_schema():
             _ensure_column(
                 c, "preparador_liberacao", "maquina", "VARCHAR(128) DEFAULT NULL"
             )
-            _ensure_column(
-                c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL"
-            )
-            _ensure_column(
-                c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL"
+        _ensure_column(
+            c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL"
+        )
+        _ensure_column(
+            c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL"
+        )
+        with c.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS usuarios (
+                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                  username VARCHAR(64) NOT NULL UNIQUE,
+                  password VARCHAR(255) NOT NULL,
+                  is_admin TINYINT(1) DEFAULT 0
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """
             )
         c.commit()
 
@@ -1640,6 +1651,48 @@ def exportar_relatorio_excel():
         )
     except Exception as e:
         return jsonify({"error": f"Falha ao exportar relatório: {e}"}), 500
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
+    with _conn_db(DB_NAME) as c:
+        with c.cursor() as cur:
+            cur.execute(
+                "SELECT id, username, is_admin FROM usuarios WHERE username=%s AND password=%s",
+                (username, password),
+            )
+            user = cur.fetchone()
+    if user:
+        return jsonify({"user": user})
+    return jsonify({"error": "credenciais inválidas"}), 401
+
+
+@app.route("/usuarios", methods=["GET", "POST"])
+def usuarios():
+    if request.method == "GET":
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute("SELECT id, username, is_admin FROM usuarios")
+                rows = cur.fetchall()
+        return jsonify(rows)
+
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
+    is_admin = int(bool(data.get("is_admin")))
+    if not username or not password:
+        return jsonify({"error": "campos obrigatórios"}), 400
+    with _conn_db(DB_NAME) as c:
+        with c.cursor() as cur:
+            cur.execute(
+                "INSERT INTO usuarios (username, password, is_admin) VALUES (%s, %s, %s)",
+                (username, password, is_admin),
+            )
+        c.commit()
+    return jsonify({"status": "ok"})
 
 
 @app.route("/machines", methods=["GET", "POST"])

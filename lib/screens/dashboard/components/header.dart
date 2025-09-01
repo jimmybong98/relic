@@ -2,9 +2,11 @@ import 'package:admin/controllers/menu_app_controller.dart';
 import 'package:admin/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart';
 
 import '../../../constants.dart';
+import '../../../services/auth_service.dart';
 
 class Header extends StatelessWidget {
   const Header({
@@ -34,38 +36,49 @@ class Header extends StatelessWidget {
   }
 }
 
-class ProfileCard extends StatelessWidget {
-  const ProfileCard({
-    Key? key,
-  }) : super(key: key);
+class ProfileCard extends ConsumerWidget {
+  const ProfileCard({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(left: defaultPadding),
-      padding: EdgeInsets.symmetric(
-        horizontal: defaultPadding,
-        vertical: defaultPadding / 2,
-      ),
-      decoration: BoxDecoration(
-        color: secondaryColor,
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Row(
-        children: [
-          Image.asset(
-            "assets/images/profile_pic.png",
-            height: 38,
-          ),
-          if (!Responsive.isMobile(context))
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: defaultPadding / 2),
-              child: Text("Angelina Jolie"),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authServiceProvider);
+    if (auth == null) return const SizedBox.shrink();
+    return PopupMenuButton<String>(
+      onSelected: (value) {
+        if (value == 'logout') {
+          ref.read(authServiceProvider.notifier).logout();
+          Navigator.of(context).pop();
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(value: 'logout', child: Text('Logout')),
+      ],
+      child: Container(
+        margin: EdgeInsets.only(left: defaultPadding),
+        padding: EdgeInsets.symmetric(
+          horizontal: defaultPadding,
+          vertical: defaultPadding / 2,
+        ),
+        decoration: BoxDecoration(
+          color: secondaryColor,
+          borderRadius: const BorderRadius.all(Radius.circular(10)),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              "assets/images/profile_pic.png",
+              height: 38,
             ),
-          Icon(Icons.keyboard_arrow_down),
-        ],
+            if (!Responsive.isMobile(context))
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: defaultPadding / 2),
+                child: Text(auth.username),
+              ),
+            const Icon(Icons.keyboard_arrow_down),
+          ],
+        ),
       ),
     );
   }
