@@ -16,25 +16,50 @@ class MachineService {
   Future<List<Machine>> fetchMaquinas() async {
     final uri = Uri.parse('$_baseUrl/machines');
     final resp = await _client.get(uri);
-    if (resp.statusCode == 200) {
-      final body = jsonDecode(resp.body);
-      if (body is List) {
-        return body.map<Machine>((e) {
-          if (e is Map<String, dynamic>) {
-            return Machine.fromJson(e);
-          }
-          if (e is List && e.length >= 2) {
-            return Machine(
-              codigo: e[0].toString(),
-              categoria: e[1].toString(),
-            );
-          }
-          throw Exception('Formato de máquina inválido');
-        }).toList();
-      }
+    if (resp.statusCode != 200) {
+      throw Exception('Falha ao carregar máquinas');
+
+    }
+
+    final body = jsonDecode(resp.body);
+    dynamic raw = body;
+    if (body is Map) {
+      final candidates = [
+        body['machines'],
+        body['data'],
+        body.values.firstWhere((v) => v is List, orElse: () => null),
+      ];
+      raw = candidates.firstWhere((v) => v is List, orElse: () => null);
+    }
+
+    if (raw is! List) {
       throw Exception('Formato de resposta inválido');
     }
-    throw Exception('Falha ao carregar máquinas');
+
+    final list = raw as List;
+    return list.where((e) => e != null).map<Machine>((e) {
+      if (e is Map) {
+        final values = e.values.toList();
+        final codigo = e['codigo'] ??
+            e['code'] ??
+            e['0'] ??
+            (values.isNotEmpty ? values[0] : '');
+        final categoria = e['categoria'] ??
+            e['category'] ??
+            e['1'] ??
+            (values.length > 1 ? values[1] : '');
+        return Machine(
+            codigo: codigo.toString(),
+            categoria: categoria.toString());
+      }
+      if (e is List || e is Iterable) {
+        final list = e is List ? e : e.toList();
+        final codigo = list.isNotEmpty ? list[0].toString() : '';
+        final categoria = list.length > 1 ? list[1].toString() : '';
+        return Machine(codigo: codigo, categoria: categoria);
+      }
+      return Machine(codigo: e.toString(), categoria: '');
+    }).toList();
   }
 
   Future<bool> addMaquina(String codigo, String categoria) async {
