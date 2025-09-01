@@ -54,8 +54,8 @@ class MachineService {
       }
       if (e is List || e is Iterable) {
         final list = e is List ? e : e.toList();
-        final codigo = list.isNotEmpty ? list[0].toString() : '';
-        final categoria = list.length > 1 ? list[1].toString() : '';
+        final categoria = list.isNotEmpty ? list[0].toString() : '';
+        final codigo = list.length > 1 ? list[1].toString() : '';
         return Machine(codigo: codigo, categoria: categoria);
       }
       return Machine(codigo: e.toString(), categoria: '');
