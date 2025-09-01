@@ -1518,7 +1518,6 @@ def operador_encerrar_producao():
     except Exception as e:
         return jsonify({"error": f"Falha ao encerrar produção: {e}"}), 500
 
-
 @app.route("/reports")
 def listar_relatorios():
     try:
@@ -1625,7 +1624,8 @@ def relatorio_os():
                     cur.execute(
                         """
                         SELECT t.os, t.partnumber, t.operacao, t.re_preparador,
-                               t.idx_medida, t.titulo, t.medicao,
+                               t.idx_medida, t.titulo, t.faixa_texto,
+                               t.minimo, t.maximo, t.unidade, t.medicao,
                                CASE
                                  WHEN LOWER(t.status) LIKE '%reprov%'
                                       OR LOWER(t.status) LIKE '%recus%'
@@ -1635,14 +1635,18 @@ def relatorio_os():
                                t.observacao, t.created_at
                           FROM (
                                 SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
-                                       i.idx_medida, i.titulo, i.medicao,
+                                       i.idx_medida, i.titulo, i.faixa_texto,
+                                       i.minimo, i.maximo, i.unidade,
+                                       CAST(i.medicao AS CHAR) AS medicao,
                                        i.status, i.observacao, i.created_at
                                   FROM preparador_registro r
                                   JOIN preparador_registro_item i ON i.registro_id = r.id
                                  WHERE r.os=%s
                                 UNION ALL
                                 SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
-                                       i.idx_medida, i.titulo, CAST(i.medicao AS CHAR) AS medicao,
+                                       i.idx_medida, i.titulo, i.faixa_texto,
+                                       i.minimo, i.maximo, i.unidade,
+                                       CAST(i.medicao AS CHAR) AS medicao,
                                        i.status, i.observacao, i.created_at
                                   FROM preparador_liberacao l
                                   JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
@@ -1663,6 +1667,8 @@ def relatorio_os():
     except Exception as e:
         return jsonify({"error": f"Falha ao gerar relatório: {e}"}), 500
 
+
+
 @app.route("/reports/export")
 def exportar_relatorio_excel():
     os_num = _norm(request.args.get("os"))
@@ -1676,7 +1682,8 @@ def exportar_relatorio_excel():
                     cur.execute(
                         """
                         SELECT t.os, t.partnumber, t.operacao, t.re_preparador,
-                               t.idx_medida, t.titulo, t.medicao,
+                               t.idx_medida, t.titulo, t.faixa_texto,
+                               t.minimo, t.maximo, t.unidade, t.medicao,
                                CASE
                                  WHEN LOWER(t.status) LIKE '%reprov%'
                                       OR LOWER(t.status) LIKE '%recus%'
@@ -1686,14 +1693,18 @@ def exportar_relatorio_excel():
                                t.observacao, t.created_at
                           FROM (
                                 SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
-                                       i.idx_medida, i.titulo, i.medicao,
+                                       i.idx_medida, i.titulo, i.faixa_texto,
+                                       i.minimo, i.maximo, i.unidade,
+                                       CAST(i.medicao AS CHAR) AS medicao,
                                        i.status, i.observacao, i.created_at
                                   FROM preparador_registro r
                                   JOIN preparador_registro_item i ON i.registro_id = r.id
                                  WHERE r.os=%s
                                 UNION ALL
                                 SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
-                                       i.idx_medida, i.titulo, CAST(i.medicao AS CHAR) AS medicao,
+                                       i.idx_medida, i.titulo, i.faixa_texto,
+                                       i.minimo, i.maximo, i.unidade,
+                                       CAST(i.medicao AS CHAR) AS medicao,
                                        i.status, i.observacao, i.created_at
                                   FROM preparador_liberacao l
                                   JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
@@ -1711,6 +1722,10 @@ def exportar_relatorio_excel():
                         "re_preparador",
                         "idx_medida",
                         "titulo",
+                        "faixa_texto",
+                        "minimo",
+                        "maximo",
+                        "unidade",
                         "medicao",
                         "status",
                         "observacao",
