@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 
 import '../../../constants.dart';
 import '../../../services/auth_service.dart';
+import '../../../features/users/users_page.dart';
+
 
 class Header extends StatelessWidget {
   const Header({
@@ -48,9 +50,15 @@ class ProfileCard extends ConsumerWidget {
         if (value == 'logout') {
           ref.read(authServiceProvider.notifier).logout();
           Navigator.of(context).pop();
+        } else if (value == 'manage') {
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const UsersPage()));
         }
       },
       itemBuilder: (context) => [
+        if (auth.isAdmin)
+          const PopupMenuItem(
+              value: 'manage', child: Text('Gerenciar Acessos')),
         const PopupMenuItem(value: 'logout', child: Text('Logout')),
       ],
       child: Container(

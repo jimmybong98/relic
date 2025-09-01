@@ -1663,6 +1663,19 @@ def exportar_relatorio_excel():
     except Exception as e:
         return jsonify({"error": f"Falha ao exportar relatório: {e}"}), 500
 
+def _is_admin_request() -> bool:
+    """Check HTTP Basic credentials and confirm admin user."""
+    auth = request.authorization
+    if not auth:
+        return False
+    with _conn_db(DB_NAME) as c:
+        with c.cursor() as cur:
+            cur.execute(
+                "SELECT is_admin FROM usuarios WHERE username=%s AND password=%s",
+                (auth.username, auth.password),
+            )
+            row = cur.fetchone()
+    return bool(row and row.get("is_admin"))
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -1683,6 +1696,8 @@ def login():
 
 @app.route("/usuarios", methods=["GET", "POST"])
 def usuarios():
+    if not _is_admin_request():
+        return jsonify({"error": "unauthorized"}), 401
     if request.method == "GET":
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:

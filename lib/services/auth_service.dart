@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 class AuthState {
-  const AuthState({required this.username, required this.isAdmin});
+  const AuthState(
+      {required this.username, required this.password, required this.isAdmin});
 
   final String username;
+  final String password;
   final bool isAdmin;
 }
 
@@ -27,6 +29,7 @@ class AuthService extends StateNotifier<AuthState?> {
       final user = data['user'] as Map<String, dynamic>;
       state = AuthState(
           username: user['username'] as String,
+          password: password,
           isAdmin: (user['is_admin'] as int) == 1);
       return true;
     }
