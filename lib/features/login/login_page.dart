@@ -18,40 +18,45 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _userCtrl,
-              decoration: const InputDecoration(labelText: 'Usuário'),
-            ),
-            TextField(
-              controller: _passCtrl,
-              decoration: const InputDecoration(labelText: 'Senha'),
-              obscureText: true,
-            ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(_error!, style: const TextStyle(color: Colors.red)),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/images/logo.png', height: 120),
+              const SizedBox(height: 32),
+              TextField(
+                controller: _userCtrl,
+                decoration: const InputDecoration(labelText: 'Usuário'),
               ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () async {
-                final ok = await ref
-                    .read(authServiceProvider.notifier)
-                    .login(_userCtrl.text, _passCtrl.text);
-                if (ok) {
-                  Navigator.of(context).pop(true);
-                } else {
-                  setState(() => _error = 'Credenciais inválidas');
-                }
-              },
-              child: const Text('Entrar'),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextField(
+                controller: _passCtrl,
+                decoration: const InputDecoration(labelText: 'Senha'),
+                obscureText: true,
+              ),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () async {
+                  final ok = await ref
+                      .read(authServiceProvider.notifier)
+                      .login(_userCtrl.text, _passCtrl.text);
+                  if (ok) {
+                    Navigator.of(context).pop(true);
+                  } else {
+                    setState(() => _error = 'Credenciais inválidas');
+                  }
+                },
+                child: const Text('Entrar'),
+              ),
+            ],
+          ),
         ),
       ),
     );
