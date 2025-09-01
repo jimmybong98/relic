@@ -6,7 +6,8 @@ import 'package:admin/services/machine_service.dart';
 
 void main() {
   test('parses list responses', () async {
-    final client = MockClient((req) async => http.Response('[["M1","C1"]]', 200));
+    final client =
+        MockClient((req) async => http.Response('[["C1","M1"]]', 200));
     final service = MachineService(client: client, baseUrl: 'http://dummy');
     final machines = await service.fetchMaquinas();
     expect(machines.single.codigo, 'M1');
