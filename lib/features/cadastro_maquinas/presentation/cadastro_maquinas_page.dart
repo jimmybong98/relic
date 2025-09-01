@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../controllers/machine_controller.dart';
 
 class CadastroMaquinasPage extends StatefulWidget {
-  const CadastroMaquinasPage({super.key, MachineController? controller})
+  CadastroMaquinasPage({super.key, MachineController? controller})
       : controller = controller ?? MachineController();
 
   final MachineController controller;
