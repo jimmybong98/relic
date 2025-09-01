@@ -49,7 +49,7 @@ class MainMenuPage extends ConsumerWidget {
                 ),
                 _MenuCard(
                   title: 'Administração',
-
+                    onTap: () async {
                     var auth = ref.read(authServiceProvider);
                     if (auth == null) {
                       final ok = await Navigator.of(context).push<bool>(

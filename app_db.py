@@ -1007,9 +1007,9 @@ def resultado_preparador():
                     for s in all_status
                 )
                 status_geral = (
-                    "liberada"
+                    "Liberada"
                     if all_ok
-                    else ("nao_liberada" if has_reprov else "pendente")
+                    else ("Não liberada" if has_reprov else "Pendente")
                 )
 
                 # upsert simples em preparador_liberacao (não cria itens aqui)
@@ -1165,9 +1165,9 @@ def preparador_finalizar_os():
                     for s in all_status
                 )
                 status_geral = (
-                    "finalizada"
+                    "Finalizada"
                     if all_ok
-                    else ("nao_liberada" if has_reprov else "pendente")
+                    else ("Não liberada" if has_reprov else "Pendente")
                 )
 
                 cur.execute(
