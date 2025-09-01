@@ -378,40 +378,47 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
 
                     const SizedBox(height: 12),
 
-                    DropdownButtonFormField<String>(
-                      value: _categoriaSel,
-                      decoration: const InputDecoration(
-                        labelText: 'Categoria',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _categorias
-                          .map((c) =>
-                              DropdownMenuItem(value: c, child: Text(c)))
-                          .toList(),
-                      onChanged: (v) => setState(() {
-                        _categoriaSel = v;
-                        _maquinaSel = null;
-                      }),
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? 'Obrigatório' : null,
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    DropdownButtonFormField<String>(
-                      value: _maquinaSel,
-                      decoration: const InputDecoration(
-                        labelText: 'Código da máquina',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _maquinas
-                          .where((m) => m.categoria == _categoriaSel)
-                          .map((m) =>
-                              DropdownMenuItem(value: m.codigo, child: Text(m.codigo)))
-                          .toList(),
-                      onChanged: (v) => setState(() => _maquinaSel = v),
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? 'Obrigatório' : null,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _categoriaSel,
+                            decoration: const InputDecoration(
+                              labelText: 'Categoria',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: _categorias
+                                .map((c) =>
+                                    DropdownMenuItem(value: c, child: Text(c)))
+                                .toList(),
+                            onChanged: (v) => setState(() {
+                              _categoriaSel = v;
+                              _maquinaSel = null;
+                            }),
+                            validator: (v) =>
+                                (v == null || v.isEmpty) ? 'Obrigatório' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _maquinaSel,
+                            decoration: const InputDecoration(
+                              labelText: 'Código da máquina',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: _maquinas
+                                .where((m) => m.categoria == _categoriaSel)
+                                .map((m) => DropdownMenuItem(
+                                    value: m.codigo, child: Text(m.codigo)))
+                                .toList(),
+                            onChanged: (v) =>
+                                setState(() => _maquinaSel = v),
+                            validator: (v) =>
+                                (v == null || v.isEmpty) ? 'Obrigatório' : null,
+                          ),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 12),
