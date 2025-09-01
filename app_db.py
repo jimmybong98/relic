@@ -6,6 +6,8 @@ import os
 import re
 import json
 import io
+from decimal import Decimal
+from datetime import date, datetime
 
 from openpyxl import Workbook
 
@@ -374,6 +376,19 @@ def _to_float(s):
         return float(str(s).replace(",", ".").strip())
     except Exception:
         return None
+
+
+def _serialize(obj):
+    """Converte Decimals e datas para tipos compatíveis com JSON."""
+    if isinstance(obj, list):
+        return [_serialize(v) for v in obj]
+    if isinstance(obj, dict):
+        return {k: _serialize(v) for k, v in obj.items()}
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    return obj
 
 
 def _log_supervisao(cur, tabela: str, acao: str, antes, depois):
@@ -1748,9 +1763,9 @@ def relatorio_os():
                     liberacao = cur.fetchall()
         return jsonify(
             {
-                "ordem_servico": os_data,
-                "amostragem": amostragem,
-                "liberacao": liberacao,
+                "ordem_servico": _serialize(os_data) if os_data else None,
+                "amostragem": _serialize(amostragem),
+                "liberacao": _serialize(liberacao),
             }
         )
     except Exception as e:
