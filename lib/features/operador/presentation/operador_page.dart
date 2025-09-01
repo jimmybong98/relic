@@ -12,6 +12,7 @@ import '../../preparacao/data/models.dart';
 import '../data/repository_provider.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import 'package:admin/utils/string_utils.dart';
+import 'package:admin/services/machine_service.dart';
 
 /// >>>>> Ajuste para o endereço/porta do seu Flask <<<<<
 const String kBaseUrl = 'http://192.168.0.241:5005';
@@ -99,7 +100,28 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
   final _partCtrl = TextEditingController();
   final _opCtrl = TextEditingController();
 
+  final List<String> _maquinas = [];
+  String? _maquinaSel;
+
   bool _registrando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarMaquinas();
+  }
+
+  Future<void> _carregarMaquinas() async {
+    try {
+      final list = await MachineService().fetchMaquinas();
+      if (mounted) setState(() => _maquinas.addAll(list));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erro ao carregar máquinas: $e')));
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -113,11 +135,13 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
   Future<void> _registrarAmostragem() async {
     final medidas = ref.read(medidasOperadorControllerProvider).value ?? [];
 
-    // Valida RE/OS
-    if (_reCtrl.text.trim().isEmpty || _osCtrl.text.trim().isEmpty) {
+    // Valida RE/OS/Máquina
+    if (_reCtrl.text.trim().isEmpty ||
+        _osCtrl.text.trim().isEmpty ||
+        (_maquinaSel ?? '').isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preencha RE e O.S. para registrar.')),
+        const SnackBar(content: Text('Preencha RE, O.S. e máquina para registrar.')),
       );
       return;
     }
@@ -184,6 +208,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       'os': _osCtrl.text.trim(),
       'partnumber': normalizeCode(_partCtrl.text),
       'operacao': normalizeCode(_opCtrl.text),
+      'maquina': _maquinaSel,
       // >>> chave correta no backend:
       'itens': itens,
     });
@@ -320,13 +345,15 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     final medidas = medidasAsync.value ?? [];
     final reOk = _reCtrl.text.trim().isNotEmpty;
     final osOk = _osCtrl.text.trim().isNotEmpty;
+    final maquinaOk = (_maquinaSel ?? '').isNotEmpty;
 
     // todas respondidas?
     final todasRespondidas = medidas.isNotEmpty &&
         medidas.every((m) =>
         m.status != StatusMedida.pendente && (m.medicao ?? '').isNotEmpty);
 
-    final podeRegistrar = reOk && osOk && todasRespondidas && !_registrando;
+    final podeRegistrar =
+        reOk && osOk && maquinaOk && todasRespondidas && !_registrando;
 
     return Scaffold(
       appBar: AppBar(
@@ -394,6 +421,23 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                           ),
                         ),
                       ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    DropdownButtonFormField<String>(
+                      value: _maquinaSel,
+                      decoration: const InputDecoration(
+                        labelText: 'Código da máquina',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _maquinas
+                          .map((m) =>
+                              DropdownMenuItem(value: m, child: Text(m)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _maquinaSel = v),
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Obrigatório' : null,
                     ),
 
                     const SizedBox(height: 12),

@@ -108,6 +108,7 @@ def _ensure_schema():
                     partnumber VARCHAR(128) NOT NULL,
                     operacao VARCHAR(64) NOT NULL,
                     re_operador VARCHAR(64) NOT NULL,
+                    maquina VARCHAR(128) DEFAULT NULL,
                     observacao TEXT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     KEY idx_oa_os (os),
@@ -173,6 +174,7 @@ def _ensure_schema():
                   partnumber VARCHAR(128) NOT NULL,
                   operacao VARCHAR(64) NOT NULL,
                   re_preparador VARCHAR(64) NOT NULL,
+                  maquina VARCHAR(128) DEFAULT NULL,
                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                   KEY idx_os (os),
                   KEY idx_part_op (partnumber, operacao)
@@ -212,6 +214,7 @@ def _ensure_schema():
                   partnumber VARCHAR(128) NOT NULL,
                   operacao VARCHAR(64) NOT NULL,
                   re_preparador VARCHAR(64) NOT NULL,
+                  maquina VARCHAR(128) DEFAULT NULL,
                   status_geral VARCHAR(32) DEFAULT NULL,
                   observacao TEXT DEFAULT NULL,
                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -265,6 +268,15 @@ def _ensure_schema():
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                   """
+            )
+            cur.execute(
+                "ALTER TABLE preparador_liberacao ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL"
+            )
+            cur.execute(
+                "ALTER TABLE operador_amostragem ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL"
+            )
+            cur.execute(
+                "ALTER TABLE preparador_registro ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL"
             )
         c.commit()
 
@@ -534,7 +546,9 @@ def _medidas_operador_db(part: str, op: str):
 
 
 # ========= HELPERS DE NEGÓCIO =========
-def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str, str]:
+def _maquina_liberada(
+    conn, os_num: str, part: str, op: str, maquina: str
+) -> Tuple[bool, str, str]:
     """
     Retorna (liberada, fonte, detalhe).
     fonte: 'preparador_liberacao' | 'preparador_registro' | ''
@@ -542,7 +556,8 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
     os_num = _norm(os_num)
     part = _norm_part(part)
     op = _norm_op(op)
-    if not (os_num and part and op):
+    maquina = _norm(maquina)
+    if not (os_num and part and op and maquina):
         return (False, "", "Parâmetros insuficientes para validação.")
 
     with conn.cursor() as cur:
@@ -560,10 +575,11 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
 
               AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
               AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
+              AND maquina=%s
 
             ORDER BY id DESC LIMIT 1
             """,
-            (os_num, part, op),
+            (os_num, part, op, maquina),
         )
         row = cur.fetchone()
         if row:
@@ -581,10 +597,11 @@ def _maquina_liberada(conn, os_num: str, part: str, op: str) -> Tuple[bool, str,
             WHERE os=%s
               AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
               AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
+              AND maquina=%s
 
             ORDER BY created_at DESC, id DESC LIMIT 1
             """,
-            (os_num, part, op),
+            (os_num, part, op, maquina),
         )
         reg = cur.fetchone()
         if not reg:
@@ -835,13 +852,14 @@ def resultado_preparador():
     re_prep = _norm(payload.get("re"))
     part = _norm_part(payload.get("partnumber"))
     op = _norm_op(payload.get("operacao"))
+    maquina = _norm(payload.get("maquina"))
     itens = payload.get("itens", [])
 
-    if not os_num or not re_prep or not part or not op:
+    if not os_num or not re_prep or not part or not op or not maquina:
         return (
             jsonify(
                 {
-                    "error": "Campos 'os', 're', 'partnumber' e 'operacao' são obrigatórios"
+                    "error": "Campos 'os', 're', 'partnumber', 'operacao' e 'maquina' são obrigatórios"
                 }
             ),
             400,
@@ -854,7 +872,12 @@ def resultado_preparador():
 
     try:
         with _conn_db(DB_NAME) as c:
-            ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op)
+            with c.cursor() as cur:
+                cur.execute("SELECT 1 FROM maquinas WHERE codigo=%s", (maquina,))
+                if not cur.fetchone():
+                    return jsonify({"error": "máquina não cadastrada"}), 400
+
+            ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op, maquina)
             if ok:
                 return (
                     jsonify(
@@ -874,10 +897,13 @@ def resultado_preparador():
                     SELECT partnumber, operacao, status_geral
                     FROM preparador_liberacao
                     WHERE os=%s
+                      AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
+                      AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
+                      AND maquina=%s
                       AND status_geral IN ('liberada','liberado','ok','aprovada','aprovado')
                     ORDER BY id DESC LIMIT 1
                     """,
-                    (os_num,),
+                    (os_num, part, op, maquina),
                 )
                 row_os = cur.fetchone()
                 if row_os:
@@ -901,10 +927,10 @@ def resultado_preparador():
                 # cabeçalho
                 cur.execute(
                     """
-                    INSERT INTO preparador_registro (os, partnumber, operacao, re_preparador)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO preparador_registro (os, partnumber, operacao, re_preparador, maquina)
+                    VALUES (%s, %s, %s, %s, %s)
                     """,
-                    (os_num, part, op, re_prep),
+                    (os_num, part, op, re_prep, maquina),
                 )
                 registro_id = cur.lastrowid
 
@@ -971,28 +997,38 @@ def resultado_preparador():
 
                       AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
                       AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
-
+                      AND maquina=%s
                     ORDER BY id DESC LIMIT 1
                     """,
-                    (os_num, part, op),
+                    (os_num, part, op, maquina),
                 )
                 row = cur.fetchone()
                 if row:
                     cur.execute(
-                        "UPDATE preparador_liberacao SET re_preparador=%s, status_geral=%s WHERE id=%s",
-                        (re_prep, status_geral, row["id"]),
+                        "UPDATE preparador_liberacao SET re_preparador=%s, status_geral=%s, maquina=%s WHERE id=%s",
+                        (re_prep, status_geral, maquina, row["id"]),
                     )
                 else:
                     cur.execute(
                         """
                         INSERT INTO preparador_liberacao
-                          (os, partnumber, operacao, re_preparador, status_geral)
-                        VALUES (%s, %s, %s, %s, %s)
+                          (os, partnumber, operacao, re_preparador, status_geral, maquina)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                         """,
-                        (os_num, part, op, re_prep, status_geral),
+                        (os_num, part, op, re_prep, status_geral, maquina),
                     )
 
-            c.commit()
+            cur.execute(
+                "ALTER TABLE preparador_liberacao ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL"
+            )
+            cur.execute(
+                "ALTER TABLE operador_amostragem ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL"
+            )
+            cur.execute(
+                "ALTER TABLE preparador_registro ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL"
+            )
+
+        c.commit()
 
         return jsonify(
             {"status": "ok", "registro_id": registro_id, "status_geral": status_geral}
@@ -1012,12 +1048,15 @@ def preparador_finalizar_os():
     re_prep = _norm(payload.get("re"))
     part = _norm_part(payload.get("partnumber"))
     op = _norm_op(payload.get("operacao"))
+    maquina = _norm(payload.get("maquina"))
     itens = payload.get("itens", [])
 
-    if not os_num or not re_prep or not part or not op:
+    if not os_num or not re_prep or not part or not op or not maquina:
         return (
             jsonify(
-                {"error": "Campos 'os', 're', 'partnumber' e 'operacao' são obrigatórios"}
+                {
+                    "error": "Campos 'os', 're', 'partnumber', 'operacao' e 'maquina' são obrigatórios"
+                }
             ),
             400,
         )
@@ -1030,6 +1069,10 @@ def preparador_finalizar_os():
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
+                cur.execute("SELECT 1 FROM maquinas WHERE codigo=%s", (maquina,))
+                if not cur.fetchone():
+                    return jsonify({"error": "máquina não cadastrada"}), 400
+
                 cur.execute(
                     "SELECT status FROM ordem_servico WHERE os=%s", (os_num,)
                 )
@@ -1056,10 +1099,10 @@ def preparador_finalizar_os():
 
                 cur.execute(
                     """
-                    INSERT INTO preparador_registro (os, partnumber, operacao, re_preparador)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO preparador_registro (os, partnumber, operacao, re_preparador, maquina)
+                    VALUES (%s, %s, %s, %s, %s)
                     """,
-                    (os_num, part, op, re_prep),
+                    (os_num, part, op, re_prep, maquina),
                 )
                 registro_id = cur.lastrowid
 
@@ -1116,22 +1159,23 @@ def preparador_finalizar_os():
                 cur.execute(
                     """
                     UPDATE preparador_liberacao
-                    SET re_preparador=%s, status_geral=%s
+                    SET re_preparador=%s, status_geral=%s, maquina=%s
                     WHERE os=%s
                       AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
                       AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
+                      AND maquina=%s
                     ORDER BY id DESC LIMIT 1
                     """,
-                    (re_prep, status_geral, os_num, part, op),
+                    (re_prep, status_geral, maquina, os_num, part, op, maquina),
                 )
                 if cur.rowcount == 0:
                     cur.execute(
                         """
                         INSERT INTO preparador_liberacao
-                          (os, partnumber, operacao, re_preparador, status_geral)
-                        VALUES (%s, %s, %s, %s, %s)
+                          (os, partnumber, operacao, re_preparador, status_geral, maquina)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                         """,
-                        (os_num, part, op, re_prep, status_geral),
+                        (os_num, part, op, re_prep, status_geral, maquina),
                     )
 
                 cur.execute(
@@ -1156,22 +1200,31 @@ def operador_pode():
     os_num = _norm(request.args.get("os"))
     part = _norm_part(request.args.get("partnumber"))
     op = _norm_op(request.args.get("operacao"))
-    if not os_num or not part or not op:
+    maquina = _norm(request.args.get("maquina"))
+    if not os_num or not part or not op or not maquina:
         return (
             jsonify(
-                {"error": "Parâmetros 'os', 'partnumber' e 'operacao' são obrigatórios"}
+                {
+                    "error": "Parâmetros 'os', 'partnumber', 'operacao' e 'maquina' são obrigatórios"
+                }
             ),
             400,
         )
 
     try:
         with _conn_db(DB_NAME) as c:
-            ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op)
+            with c.cursor() as cur:
+                cur.execute("SELECT 1 FROM maquinas WHERE codigo=%s", (maquina,))
+                if not cur.fetchone():
+                    return jsonify({"error": "máquina não cadastrada"}), 400
+
+            ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op, maquina)
         return jsonify(
             {
                 "os": os_num,
                 "partnumber": part,
                 "operacao": op,
+                "maquina": maquina,
                 "liberada": ok,
                 "fonte": fonte,
                 "detalhe": detalhe,
@@ -1211,14 +1264,15 @@ def operador_registrar():
     re_op = _norm(payload.get("re"))
     part = _norm_part(payload.get("partnumber"))
     op = _norm_op(payload.get("operacao"))
+    maquina = _norm(payload.get("maquina"))
     itens = payload.get("itens", [])
 
     # validações mínimas
-    if not os_num or not re_op or not part or not op:
+    if not os_num or not re_op or not part or not op or not maquina:
         return (
             jsonify(
                 {
-                    "error": "Campos 'os', 're', 'partnumber' e 'operacao' são obrigatórios"
+                    "error": "Campos 'os', 're', 'partnumber', 'operacao' e 'maquina' são obrigatórios"
                 }
             ),
             400,
@@ -1231,10 +1285,15 @@ def operador_registrar():
 
     try:
         with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute("SELECT 1 FROM maquinas WHERE codigo=%s", (maquina,))
+                if not cur.fetchone():
+                    return jsonify({"error": "máquina não cadastrada"}), 400
+
             # BLOQUEIO: exige liberação
-            ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op)
+            ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op, maquina)
             if not ok:
-                msg = _mensagem_bloqueio(os_num, part, op, fonte, detalhe)
+                msg = _mensagem_bloqueio(os_num, part, op, maquina, fonte, detalhe)
                 return (
                     jsonify(
                         {
@@ -1256,10 +1315,10 @@ def operador_registrar():
                 # cabeçalho
                 cur.execute(
                     """
-                    INSERT INTO operador_amostragem (os, partnumber, operacao, re_operador)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO operador_amostragem (os, partnumber, operacao, re_operador, maquina)
+                    VALUES (%s, %s, %s, %s, %s)
                     """,
-                    (os_num, part, op, re_op),
+                    (os_num, part, op, re_op, maquina),
                 )
                 amostragem_id = cur.lastrowid
 
@@ -1615,14 +1674,14 @@ def health():
 
 
 def _mensagem_bloqueio(
-    os_num: str, part: str, op: str, fonte: str, detalhe: str
+    os_num: str, part: str, op: str, maquina: str, fonte: str, detalhe: str
 ) -> str:
     """
     Gera um texto legível explicando por que o operador não pode registrar.
     fonte: "", "preparador_registro" ou "preparador_liberacao"
     detalhe: texto livre com dicas (ex.: "3/4 OK", "status_geral=pendente")
     """
-    base = f"OS: {os_num}  •  Peça: {part}  •  Operação: {op}."
+    base = f"OS: {os_num}  •  Peça: {part}  •  Operação: {op}  •  Máquina: {maquina}."
 
     fonte = (fonte or "").strip().lower()
     det = str(detalhe or "")
