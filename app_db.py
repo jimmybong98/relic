@@ -1021,15 +1021,17 @@ def resultado_preparador():
                         (os_num, part, op, re_prep, status_geral, maquina),
                     )
 
-            cur.execute(
-                "ALTER TABLE preparador_liberacao ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL"
-            )
-            cur.execute(
-                "ALTER TABLE operador_amostragem ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL"
-            )
-            cur.execute(
-                "ALTER TABLE preparador_registro ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL"
-            )
+        # DDL statements can implicitly close the current cursor on some MySQL
+        # servers. Execute each `ALTER TABLE` using a fresh cursor to avoid
+        # "cursor closed" errors on subsequent statements.
+        ddl_statements = (
+            "ALTER TABLE preparador_liberacao ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL",
+            "ALTER TABLE operador_amostragem ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL",
+            "ALTER TABLE preparador_registro ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL",
+        )
+        for ddl in ddl_statements:
+            with c.cursor() as cur:
+                cur.execute(ddl)
 
         c.commit()
 
