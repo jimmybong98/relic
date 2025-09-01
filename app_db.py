@@ -248,6 +248,14 @@ def _ensure_schema():
             )
             cur.execute(
                 """
+                  CREATE TABLE IF NOT EXISTS maquinas (
+                    codigo VARCHAR(64) NOT NULL PRIMARY KEY,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """
+            )
+            cur.execute(
+                """
                   CREATE TABLE IF NOT EXISTS supervisao_log (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     tabela VARCHAR(64) NOT NULL,
@@ -1556,6 +1564,36 @@ def exportar_relatorio_excel():
         )
     except Exception as e:
         return jsonify({"error": f"Falha ao exportar relatório: {e}"}), 500
+
+
+@app.route("/machines", methods=["GET", "POST"])
+def machines():
+    if request.method == "GET":
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute("SELECT codigo FROM maquinas ORDER BY codigo")
+                rows = [r["codigo"] for r in cur.fetchall()]
+        return jsonify(rows)
+
+    data = request.get_json(silent=True) or {}
+    codigo = (data.get("codigo") or "").strip()
+    if not codigo:
+        return jsonify({"error": "campo 'codigo' obrigatório"}), 400
+
+    with _conn_db(DB_NAME) as c:
+        with c.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM for07_norm WHERE tipo_maquina=%s LIMIT 1",
+                (codigo,),
+            )
+            if not cur.fetchone():
+                return jsonify({"error": "máquina não encontrada"}), 400
+            cur.execute(
+                "INSERT INTO maquinas (codigo) VALUES (%s) ON DUPLICATE KEY UPDATE codigo=codigo",
+                (codigo,),
+            )
+        c.commit()
+    return jsonify({"status": "ok", "codigo": codigo})
 
 
 @app.route("/relatorios/sql")
