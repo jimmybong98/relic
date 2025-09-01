@@ -1518,6 +1518,7 @@ def operador_encerrar_producao():
     except Exception as e:
         return jsonify({"error": f"Falha ao encerrar produção: {e}"}), 500
 
+
 @app.route("/reports")
 def listar_relatorios():
     try:
@@ -1623,21 +1624,33 @@ def relatorio_os():
                 if section in ("full", "liberacao"):
                     cur.execute(
                         """
-                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
-                               i.idx_medida, i.titulo, i.medicao,
+                        SELECT t.os, t.partnumber, t.operacao, t.re_preparador,
+                               t.idx_medida, t.titulo, t.medicao,
                                CASE
-                                 WHEN LOWER(i.status) LIKE '%reprov%'
-                                      OR LOWER(i.status) LIKE '%recus%'
+                                 WHEN LOWER(t.status) LIKE '%reprov%'
+                                      OR LOWER(t.status) LIKE '%recus%'
                                    THEN 'recusada'
                                  ELSE 'liberada'
                                END AS status,
-                               i.observacao, i.created_at
-                          FROM preparador_registro r
-                          JOIN preparador_registro_item i ON i.registro_id = r.id
-                         WHERE r.os=%s
-                         ORDER BY i.created_at
+                               t.observacao, t.created_at
+                          FROM (
+                                SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
+                                       i.idx_medida, i.titulo, i.medicao,
+                                       i.status, i.observacao, i.created_at
+                                  FROM preparador_registro r
+                                  JOIN preparador_registro_item i ON i.registro_id = r.id
+                                 WHERE r.os=%s
+                                UNION ALL
+                                SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
+                                       i.idx_medida, i.titulo, CAST(i.medicao AS CHAR) AS medicao,
+                                       i.status, i.observacao, i.created_at
+                                  FROM preparador_liberacao l
+                                  JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
+                                 WHERE l.os=%s
+                               ) AS t
+                         ORDER BY t.created_at
                         """,
-                        (os_num,),
+                        (os_num, os_num),
                     )
                     liberacao = cur.fetchall()
         return jsonify(
@@ -1649,8 +1662,6 @@ def relatorio_os():
         )
     except Exception as e:
         return jsonify({"error": f"Falha ao gerar relatório: {e}"}), 500
-
-
 
 @app.route("/reports/export")
 def exportar_relatorio_excel():
@@ -1664,21 +1675,33 @@ def exportar_relatorio_excel():
                 if tipo == "FOR07":
                     cur.execute(
                         """
-                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
-                               i.idx_medida, i.titulo, i.medicao,
+                        SELECT t.os, t.partnumber, t.operacao, t.re_preparador,
+                               t.idx_medida, t.titulo, t.medicao,
                                CASE
-                                 WHEN LOWER(i.status) LIKE '%reprov%'
-                                      OR LOWER(i.status) LIKE '%recus%'
+                                 WHEN LOWER(t.status) LIKE '%reprov%'
+                                      OR LOWER(t.status) LIKE '%recus%'
                                    THEN 'recusada'
                                  ELSE 'liberada'
                                END AS status,
-                               i.observacao, i.created_at
-                          FROM preparador_registro r
-                          JOIN preparador_registro_item i ON i.registro_id = r.id
-                         WHERE r.os=%s
-                         ORDER BY i.created_at
+                               t.observacao, t.created_at
+                          FROM (
+                                SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
+                                       i.idx_medida, i.titulo, i.medicao,
+                                       i.status, i.observacao, i.created_at
+                                  FROM preparador_registro r
+                                  JOIN preparador_registro_item i ON i.registro_id = r.id
+                                 WHERE r.os=%s
+                                UNION ALL
+                                SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
+                                       i.idx_medida, i.titulo, CAST(i.medicao AS CHAR) AS medicao,
+                                       i.status, i.observacao, i.created_at
+                                  FROM preparador_liberacao l
+                                  JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
+                                 WHERE l.os=%s
+                               ) AS t
+                         ORDER BY t.created_at
                         """,
-                        (os_num,),
+                        (os_num, os_num),
                     )
                     rows = cur.fetchall()
                     headers = [
