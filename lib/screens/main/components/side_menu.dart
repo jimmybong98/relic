@@ -9,6 +9,7 @@ import 'package:admin/features/finalizar_os/presentation/finalizar_os_page.dart'
 import 'package:admin/features/cadastro_itens/presentation/cadastro_itens_page.dart';
 import 'package:admin/features/cadastro_preparadores/presentation/cadastro_preparadores_page.dart';
 import 'package:admin/features/export_relatorios/presentation/export_relatorios_page.dart';
+import 'package:admin/features/export_relatorios/presentation/visualizar_relatorios_page.dart';
 import 'package:admin/features/cadastro_maquinas/presentation/cadastro_maquinas_page.dart';
 import 'package:admin/features/login/login_page.dart';
 import 'package:admin/features/users/users_page.dart';
@@ -49,13 +50,18 @@ class SideMenu extends ConsumerWidget {
     ];
 
     if (current == SideMenuSection.dashboard) {
-      items.add(
+      items.addAll([
         DrawerListTile(
           title: 'Exportar relatórios',
           svgSrc: 'assets/icons/menu_doc.svg',
           press: () => _navigate(context, const ExportRelatoriosPage()),
         ),
-      );
+        DrawerListTile(
+          title: 'Visualizar relatórios',
+          svgSrc: 'assets/icons/menu_doc.svg',
+          press: () => _navigate(context, const VisualizarRelatoriosPage()),
+        ),
+      ]);
     }
 
     switch (current) {
