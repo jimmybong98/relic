@@ -1518,8 +1518,6 @@ def operador_encerrar_producao():
     except Exception as e:
         return jsonify({"error": f"Falha ao encerrar produção: {e}"}), 500
 
-
-
 @app.route("/reports")
 def listar_relatorios():
     try:
@@ -1528,7 +1526,13 @@ def listar_relatorios():
                 cur.execute(
                     """
                     SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
-                           i.idx_medida, i.titulo, i.medicao, i.status,
+                           i.idx_medida, i.titulo, i.medicao,
+                           CASE
+                             WHEN LOWER(i.status) LIKE '%reprov%'
+                                  OR LOWER(i.status) LIKE '%recus%'
+                               THEN 'recusada'
+                             ELSE 'liberada'
+                           END AS status,
                            i.observacao, i.created_at
                       FROM preparador_registro r
                       JOIN preparador_registro_item i ON i.registro_id = r.id
@@ -1540,7 +1544,6 @@ def listar_relatorios():
         return jsonify(rows)
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar relatórios: {e}"}), 500
-
 
 
 @app.route("/reports/operador")
@@ -1620,12 +1623,19 @@ def relatorio_os():
                 if section in ("full", "liberacao"):
                     cur.execute(
                         """
-                        SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
-                               l.status_geral, li.idx_medida, li.titulo, li.status, li.created_at
-                          FROM preparador_liberacao l
-                          LEFT JOIN preparador_liberacao_item li ON li.liberacao_id = l.id
-                         WHERE l.os=%s
-                         ORDER BY li.idx_medida, li.created_at
+                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
+                               i.idx_medida, i.titulo, i.medicao,
+                               CASE
+                                 WHEN LOWER(i.status) LIKE '%reprov%'
+                                      OR LOWER(i.status) LIKE '%recus%'
+                                   THEN 'recusada'
+                                 ELSE 'liberada'
+                               END AS status,
+                               i.observacao, i.created_at
+                          FROM preparador_registro r
+                          JOIN preparador_registro_item i ON i.registro_id = r.id
+                         WHERE r.os=%s
+                         ORDER BY i.created_at
                         """,
                         (os_num,),
                     )
@@ -1641,6 +1651,7 @@ def relatorio_os():
         return jsonify({"error": f"Falha ao gerar relatório: {e}"}), 500
 
 
+
 @app.route("/reports/export")
 def exportar_relatorio_excel():
     os_num = _norm(request.args.get("os"))
@@ -1654,7 +1665,14 @@ def exportar_relatorio_excel():
                     cur.execute(
                         """
                         SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
-                               i.idx_medida, i.titulo, i.medicao, i.status, i.observacao, i.created_at
+                               i.idx_medida, i.titulo, i.medicao,
+                               CASE
+                                 WHEN LOWER(i.status) LIKE '%reprov%'
+                                      OR LOWER(i.status) LIKE '%recus%'
+                                   THEN 'recusada'
+                                 ELSE 'liberada'
+                               END AS status,
+                               i.observacao, i.created_at
                           FROM preparador_registro r
                           JOIN preparador_registro_item i ON i.registro_id = r.id
                          WHERE r.os=%s
@@ -1685,6 +1703,7 @@ def exportar_relatorio_excel():
                                i.created_at
                         FROM operador_amostragem a
                         JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+
                         WHERE a.os=%s
                         ORDER BY a.created_at DESC, i.idx_medida ASC
                         """,
