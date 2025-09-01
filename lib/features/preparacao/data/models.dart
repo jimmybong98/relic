@@ -291,12 +291,14 @@ class PreparacaoResultado {
   final String re;
   final String partnumber;
   final String operacao;
+  final String maquina;
   final List<MedidaItem> medidas;
 
   PreparacaoResultado({
     required this.re,
     required this.partnumber,
     required this.operacao,
+    required this.maquina,
     required this.medidas,
   });
 
@@ -304,6 +306,7 @@ class PreparacaoResultado {
     're': re,
     'partnumber': normalizeCode(partnumber),
     'operacao': normalizeCode(operacao),
+    'maquina': maquina,
     'medidas': medidas.map((e) => e.toMap()).toList(),
   };
 
