@@ -81,6 +81,7 @@ def _ensure_column(conn, table: str, column: str, definition: str) -> None:
 
 
 def _ensure_schema():
+
     """Garante que o banco e as tabelas principais existam (sem DDL agressivo)."""
     # Cria o database, se não existir
     with _conn_db(None) as c:
@@ -110,6 +111,7 @@ def _ensure_schema():
             )
             _ensure_column(c, "ordem_servico", "status", "VARCHAR(32) DEFAULT 'aberta'")
             # Operador (já estava)
+
 
             cur.execute(
                 """
@@ -307,6 +309,7 @@ def _ensure_schema():
                 c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL"
             )
         c.commit()
+
 
 
 # ========= Utils =========
@@ -1043,6 +1046,7 @@ def resultado_preparador():
             return jsonify(
                 {"status": "ok", "registro_id": registro_id, "status_geral": status_geral}
             )
+
 
     except Exception as e:
         return jsonify({"error": f"Falha ao inserir registro do preparador: {e}"}), 500
