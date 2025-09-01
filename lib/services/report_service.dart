@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/report.dart';
+import '../utils/string_utils.dart';
 
 /// Service responsible for fetching reports from the backend API.
 class ReportService {
@@ -56,7 +57,10 @@ class ReportService {
   /// Fetch releases performed by operators for a specific OS.
   Future<List<Report>> fetchOperatorReleasesByOs(String os) async {
     try {
-      final uri = Uri.parse('$_baseUrl/reports/operador?os=$os');
+      final normalized = normalizeCode(os);
+      final uri = Uri.parse(_baseUrl)
+          .resolve('reports/operador')
+          .replace(queryParameters: {'os': normalized});
       final response = await _client.get(uri);
       if (response.statusCode == 200) {
         return Report.listFromResponse(response.body);
