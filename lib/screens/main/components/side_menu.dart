@@ -1,6 +1,7 @@
 // Side menu for navigation across application sections
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:admin/features/preparacao/presentation/preparacao_page.dart';
 import 'package:admin/features/operador/presentation/operador_page.dart';
@@ -9,11 +10,14 @@ import 'package:admin/features/cadastro_itens/presentation/cadastro_itens_page.d
 import 'package:admin/features/cadastro_preparadores/presentation/cadastro_preparadores_page.dart';
 import 'package:admin/features/export_relatorios/presentation/export_relatorios_page.dart';
 import 'package:admin/features/cadastro_maquinas/presentation/cadastro_maquinas_page.dart';
+import 'package:admin/features/login/login_page.dart';
+import 'package:admin/features/users/users_page.dart';
+import 'package:admin/services/auth_service.dart';
 import 'package:admin/screens/main/main_screen.dart';
 
 enum SideMenuSection { mainMenu, dashboard, preparador, operador, finalizar }
 
-class SideMenu extends StatelessWidget {
+class SideMenu extends ConsumerWidget {
   const SideMenu({super.key, required this.current});
 
   final SideMenuSection current;
@@ -35,7 +39,7 @@ class SideMenu extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final items = <Widget>[
       DrawerListTile(
         title: 'Menu Principal',
@@ -71,6 +75,11 @@ class SideMenu extends StatelessWidget {
             title: 'Cadastro de Máquinas',
             svgSrc: 'assets/icons/menu_setting.svg',
             press: () => _navigate(context, CadastroMaquinasPage()),
+          ),
+          DrawerListTile(
+            title: 'Gerenciar Acessos',
+            svgSrc: 'assets/icons/menu_profile.svg',
+            press: () => _navigate(context, const UsersPage()),
           ),
         ]);
         break;
@@ -137,7 +146,22 @@ class SideMenu extends StatelessWidget {
           DrawerListTile(
             title: 'Supervisão',
             svgSrc: 'assets/icons/menu_task.svg',
-            press: () => _navigate(context, MainScreen()),
+            press: () async {
+              var auth = ref.read(authServiceProvider);
+              if (auth == null) {
+                final ok = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+                if (ok != true) return;
+                auth = ref.read(authServiceProvider);
+              }
+              if (auth == null || !auth.isAdmin) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Acesso restrito a administradores')));
+                return;
+              }
+              _navigate(context, MainScreen());
+            },
           ),
         ]);
     }

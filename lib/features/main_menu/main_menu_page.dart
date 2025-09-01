@@ -49,14 +49,22 @@ class MainMenuPage extends ConsumerWidget {
                 ),
                 _MenuCard(
                   title: 'Administração',
-                  onTap: () async {
-                    final auth = ref.read(authServiceProvider);
+
+                    var auth = ref.read(authServiceProvider);
                     if (auth == null) {
                       final ok = await Navigator.of(context).push<bool>(
                         MaterialPageRoute(
                             builder: (_) => const LoginPage()),
                       );
                       if (ok != true) return;
+                      auth = ref.read(authServiceProvider);
+                    }
+                    if (auth == null || !auth.isAdmin) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Acesso restrito a administradores')),
+                      );
+                      return;
                     }
                     open(context, MainScreen());
                   },
