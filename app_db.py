@@ -1670,7 +1670,7 @@ def exportar_relatorio_excel():
                 if tipo == "FOR07":
                     cur.execute(
                         """
-                        SELECT os, partnumber, operacao, re_preparador, status_geral, created_at
+                        SELECT os, partnumber, operacao, re_preparador, status_geral, maquina, created_at
                         FROM preparador_liberacao
                         WHERE os=%s
                         ORDER BY created_at DESC
@@ -1684,12 +1684,13 @@ def exportar_relatorio_excel():
                         "operacao",
                         "re_preparador",
                         "status_geral",
+                        "maquina",
                         "created_at",
                     ]
                 else:
                     cur.execute(
                         """
-                        SELECT a.os, a.partnumber, a.operacao, a.re_operador,
+                        SELECT a.os, a.partnumber, a.operacao, a.re_operador, a.maquina,
                                i.idx_medida, i.titulo, i.instrumento, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade, i.periodicidade,
                                i.tolerancias, i.escolha, i.status, i.observacao,
@@ -1707,6 +1708,7 @@ def exportar_relatorio_excel():
                         "partnumber",
                         "operacao",
                         "re_operador",
+                        "maquina",
                         "idx_medida",
                         "titulo",
                         "instrumento",
