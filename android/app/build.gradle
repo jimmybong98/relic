@@ -21,9 +21,11 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
-apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
-apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+plugins {
+    id "com.android.application"
+    id "org.jetbrains.kotlin.android" // ou "kotlin-android", depende do seu projeto
+    id "dev.flutter.flutter-gradle-plugin"
+}
 
 android {
     compileSdkVersion 30
@@ -35,7 +37,7 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.example.admin"
-        minSdkVersion 16
+        minSdkVersion flutter.minSdkVersion
         targetSdkVersion 30
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName

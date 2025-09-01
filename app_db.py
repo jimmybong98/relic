@@ -271,21 +271,10 @@ def _ensure_schema():
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
             )
-            # Garante a coluna 'categoria' mesmo em bancos MySQL mais antigos
             cur.execute(
-                """
-                SELECT COUNT(*) AS cnt
-                  FROM information_schema.COLUMNS
-                 WHERE TABLE_SCHEMA=%s
-                   AND TABLE_NAME='maquinas'
-                   AND COLUMN_NAME='categoria'
-                """,
-                (DB_NAME,),
+                """ALTER TABLE maquinas
+                      ADD COLUMN IF NOT EXISTS categoria VARCHAR(128) DEFAULT NULL"""
             )
-            if not cur.fetchone()["cnt"]:
-                cur.execute(
-                    "ALTER TABLE maquinas ADD COLUMN categoria VARCHAR(128) DEFAULT NULL"
-                )
             cur.execute(
                 """
                   CREATE TABLE IF NOT EXISTS supervisao_log (

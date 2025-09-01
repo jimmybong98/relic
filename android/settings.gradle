@@ -1,3 +1,21 @@
+pluginManagement {
+    def flutterSdkPath = System.getenv("FLUTTER_ROOT")
+    if (flutterSdkPath == null || flutterSdkPath.isEmpty()) {
+        // Ajuste o caminho pro seu Flutter se não usa FLUTTER_ROOT:
+        flutterSdkPath = "C:/src/flutter"
+    }
+    includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    // Nada obrigatório aqui além do padrão do Gradle; o importante é o includeBuild acima
+}
 include ':app'
 
 def localPropertiesFile = new File(rootProject.projectDir, "local.properties")

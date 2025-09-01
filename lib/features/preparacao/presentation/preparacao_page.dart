@@ -317,7 +317,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Preparação (FOR 007)'),
+        title: const Text('Liberação de Máquina (FOR 007)'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12.0),
@@ -382,6 +382,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                         ),
                       ],
                     ),
+
 
                     const SizedBox(height: 12),
 

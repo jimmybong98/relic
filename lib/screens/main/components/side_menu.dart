@@ -58,7 +58,7 @@ class SideMenu extends StatelessWidget {
       case SideMenuSection.dashboard:
         items.addAll([
           DrawerListTile(
-            title: 'Cadastro de novos itens',
+            title: 'Cadastro/Edição de itens',
             svgSrc: 'assets/icons/menu_store.svg',
             press: () => _navigate(context, const CadastroItensPage()),
           ),
@@ -70,7 +70,7 @@ class SideMenu extends StatelessWidget {
           DrawerListTile(
             title: 'Cadastro de Máquinas',
             svgSrc: 'assets/icons/menu_setting.svg',
-            press: () => _navigate(context, const CadastroMaquinasPage()),
+            press: () => _navigate(context, CadastroMaquinasPage()),
           ),
         ]);
         break;

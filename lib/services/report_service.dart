@@ -9,7 +9,7 @@ import '../models/report.dart';
 class ReportService {
   ReportService({http.Client? client, String? baseUrl})
       : _client = client ?? http.Client(),
-        _baseUrl = baseUrl ?? dotenv.env['API_BASE_URL'] ?? 'http://localhost:5000';
+        _baseUrl = baseUrl ?? dotenv.env['API_BASE_URL'] ?? 'http://localhost:5005';
 
   final http.Client _client;
   final String _baseUrl;
