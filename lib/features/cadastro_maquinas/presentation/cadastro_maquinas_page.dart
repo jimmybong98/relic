@@ -98,7 +98,60 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
                     itemBuilder: (context, index) {
                       final m = ctrl.maquinas[index];
                       return ListTile(
-                          title: Text('${m.codigo} (${m.categoria})'));
+                        title: Text('${m.codigo} (${m.categoria})'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () async {
+                            final catCtrl =
+                                TextEditingController(text: m.categoria);
+                            final codCtrl =
+                                TextEditingController(text: m.codigo);
+                            final result = await showDialog<bool>(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: const Text('Editar máquina'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      TextField(
+                                        controller: catCtrl,
+                                        decoration: const InputDecoration(
+                                            labelText: 'Categoria'),
+                                      ),
+                                      TextField(
+                                        controller: codCtrl,
+                                        decoration: const InputDecoration(
+                                            labelText: 'Código da máquina'),
+                                      ),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, false),
+                                      child: const Text('Cancelar'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, true),
+                                      child: const Text('Salvar'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                            if (result == true) {
+                              await ctrl.updateMaquina(
+                                  m.codigo,
+                                  codCtrl.text.trim(),
+                                  catCtrl.text.trim());
+                            }
+                            catCtrl.dispose();
+                            codCtrl.dispose();
+                          },
+                        ),
+                      );
                     },
                   ),
                 ),

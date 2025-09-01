@@ -11,6 +11,7 @@ class _FakeMachineService implements MachineService {
 
   final List<Machine> _items;
   final List<Machine> added = [];
+  final List<Map<String, String>> updated = [];
 
   @override
   Future<List<Machine>> fetchMaquinas() async {
@@ -24,6 +25,17 @@ class _FakeMachineService implements MachineService {
     final m = Machine(codigo: codigo, categoria: categoria);
     added.add(m);
     _items.add(m);
+    return true;
+  }
+
+  @override
+  Future<bool> updateMaquina(
+      String oldCodigo, String codigo, String categoria) async {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    final idx = _items.indexWhere((m) => m.codigo == oldCodigo);
+    if (idx < 0) return false;
+    _items[idx] = Machine(codigo: codigo, categoria: categoria);
+    updated.add({'old': oldCodigo, 'codigo': codigo, 'categoria': categoria});
     return true;
   }
 }
@@ -50,5 +62,34 @@ void main() {
     expect(find.text('MX2 (CAT2)'), findsOneWidget);
     expect(service.added.single.codigo, 'MX2');
     expect(service.added.single.categoria, 'CAT2');
+  });
+
+  testWidgets('edits existing machine', (tester) async {
+    final service = _FakeMachineService([
+      Machine(codigo: 'MX1', categoria: 'CAT1'),
+    ]);
+    final controller = MachineController(service: service);
+
+    await tester.pumpWidget(MaterialApp(
+      home: CadastroMaquinasPage(controller: controller),
+    ));
+    await tester.pump(const Duration(milliseconds: 20));
+
+    await tester.tap(find.byIcon(Icons.edit));
+    await tester.pumpAndSettle();
+
+    final dialog = find.byType(AlertDialog);
+    await tester.enterText(
+        find.descendant(of: dialog, matching: find.byType(TextField)).at(0),
+        'CAT2');
+    await tester.enterText(
+        find.descendant(of: dialog, matching: find.byType(TextField)).at(1),
+        'MX1');
+    await tester.tap(find.descendant(of: dialog, matching: find.text('Salvar')));
+    await tester.pump(const Duration(milliseconds: 20));
+
+    expect(find.text('MX1 (CAT2)'), findsOneWidget);
+    expect(service.updated.single['codigo'], 'MX1');
+    expect(service.updated.single['categoria'], 'CAT2');
   });
 }
