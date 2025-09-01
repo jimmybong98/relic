@@ -23,7 +23,8 @@ if (flutterVersionName == null) {
 }
 
 android {
-    compileSdkVersion 34
+    compileSdk 34
+    namespace "com.example.admin"
 
 
     sourceSets {
