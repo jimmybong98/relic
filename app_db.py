@@ -66,6 +66,20 @@ def _run_sql_report(sql_path: str, dbname: str = DB_NAME):
     return rows
 
 
+def _ensure_column(conn, table: str, column: str, definition: str) -> None:
+    """Adiciona uma coluna a uma tabela se ela ainda não existir."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s
+            """,
+            (table, column),
+        )
+        if not cur.fetchone():
+            cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
 def _ensure_schema():
     """Garante que o banco e as tabelas principais existam (sem DDL agressivo)."""
     # Cria o database, se não existir
@@ -94,10 +108,7 @@ def _ensure_schema():
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                   """
             )
-            cur.execute(
-                """ALTER TABLE ordem_servico
-                      ADD COLUMN IF NOT EXISTS status VARCHAR(32) DEFAULT 'aberta'"""
-            )
+            _ensure_column(c, "ordem_servico", "status", "VARCHAR(32) DEFAULT 'aberta'")
             # Operador (já estava)
 
             cur.execute(
@@ -285,14 +296,15 @@ def _ensure_schema():
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                   """
             )
-            cur.execute(
-                "ALTER TABLE preparador_liberacao ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL"
+            # Garante coluna 'maquina' nas tabelas principais
+            _ensure_column(
+                c, "preparador_liberacao", "maquina", "VARCHAR(128) DEFAULT NULL"
             )
-            cur.execute(
-                "ALTER TABLE operador_amostragem ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL"
+            _ensure_column(
+                c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL"
             )
-            cur.execute(
-                "ALTER TABLE preparador_registro ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL"
+            _ensure_column(
+                c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL"
             )
         c.commit()
 
@@ -878,6 +890,11 @@ def resultado_preparador():
 
     try:
         with _conn_db(DB_NAME) as c:
+            # Garante que as tabelas envolvidas possuam a coluna 'maquina'
+            _ensure_column(c, "preparador_liberacao", "maquina", "VARCHAR(128) DEFAULT NULL")
+            _ensure_column(c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL")
+            _ensure_column(c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL")
+
             with c.cursor() as cur:
                 cur.execute("SELECT 1 FROM maquinas WHERE codigo=%s", (maquina,))
                 if not cur.fetchone():
@@ -1021,23 +1038,11 @@ def resultado_preparador():
                         (os_num, part, op, re_prep, status_geral, maquina),
                     )
 
-        # DDL statements can implicitly close the current cursor on some MySQL
-        # servers. Execute each `ALTER TABLE` using a fresh cursor to avoid
-        # "cursor closed" errors on subsequent statements.
-        ddl_statements = (
-            "ALTER TABLE preparador_liberacao ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL",
-            "ALTER TABLE operador_amostragem ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL",
-            "ALTER TABLE preparador_registro ADD COLUMN IF NOT EXISTS maquina VARCHAR(128) DEFAULT NULL",
-        )
-        for ddl in ddl_statements:
-            with c.cursor() as cur:
-                cur.execute(ddl)
+            c.commit()
 
-        c.commit()
-
-        return jsonify(
-            {"status": "ok", "registro_id": registro_id, "status_geral": status_geral}
-        )
+            return jsonify(
+                {"status": "ok", "registro_id": registro_id, "status_geral": status_geral}
+            )
 
     except Exception as e:
         return jsonify({"error": f"Falha ao inserir registro do preparador: {e}"}), 500
