@@ -23,7 +23,8 @@ StatusMedida statusFromString(String? s) {
     case 'alerta_abaixo':
     case 'alerta abaixo':
       return StatusMedida.alertaAbaixo;
-      // dados antigos sem direção
+    case 'alerta':
+      // Dados antigos sem direção definida
       return StatusMedida.alertaAcima;
 
     case 'reprovada_acima':
