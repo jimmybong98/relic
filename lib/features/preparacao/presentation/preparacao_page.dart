@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 import 'package:admin/features/preparacao/data/models.dart';
 import 'package:admin/features/operador/data/repository_provider.dart';
+import 'package:admin/controllers/machine_controller.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import 'package:admin/utils/string_utils.dart';
 
@@ -114,6 +115,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   final _osCtrl = TextEditingController();   // <<< OS
   final _partCtrl = TextEditingController();
   final _opCtrl = TextEditingController();
+  String? _maquina;
 
   bool _registrando = false;
   bool _osLiberada = false;
@@ -212,6 +214,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       'os': _osCtrl.text.trim(),
       'partnumber': normalizeCode(_partCtrl.text),
       'operacao': normalizeCode(_opCtrl.text),
+      'maquina': _maquina,
       'itens': itens,
     });
 
@@ -273,6 +276,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   @override
   Widget build(BuildContext context) {
     final medidasAsync = ref.watch(medidasPreparadorControllerProvider);
+    final maquinas = ref.watch(machineListProvider);
     final medidas = medidasAsync.value ?? [];
 
     // Pode registrar quando: RE e OS preenchidos + todas as medições preenchidas
@@ -349,8 +353,27 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                               return null;
                             },
                           ),
-                        ),
+                    ),
+                  ],
+                ),
+
+                    const SizedBox(height: 12),
+
+                    DropdownButtonFormField<String>(
+                      value: _maquina,
+                      decoration: const InputDecoration(
+                        labelText: 'Máquina',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        for (final m in maquinas)
+                          DropdownMenuItem(value: m, child: Text(m))
                       ],
+                      onChanged: (v) {
+                        setState(() => _maquina = v);
+                      },
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Obrigatório' : null,
                     ),
 
                     const SizedBox(height: 12),

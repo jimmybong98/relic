@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 
 import '../../preparacao/data/models.dart';
 import '../data/repository_provider.dart';
+import 'package:admin/controllers/machine_controller.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import 'package:admin/utils/string_utils.dart';
 
@@ -98,6 +99,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
   final _osCtrl = TextEditingController(); // <<<< O.S.
   final _partCtrl = TextEditingController();
   final _opCtrl = TextEditingController();
+  String? _maquina;
 
   bool _registrando = false;
 
@@ -184,6 +186,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       'os': _osCtrl.text.trim(),
       'partnumber': normalizeCode(_partCtrl.text),
       'operacao': normalizeCode(_opCtrl.text),
+      'maquina': _maquina,
       // >>> chave correta no backend:
       'itens': itens,
     });
@@ -235,6 +238,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       'os': _osCtrl.text.trim(),
       'partnumber': normalizeCode(_partCtrl.text),
       'operacao': normalizeCode(_opCtrl.text),
+      'maquina': _maquina,
     });
 
     final uri = Uri.parse('$kBaseUrl/operador/fim_jornada');
@@ -317,6 +321,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
   @override
   Widget build(BuildContext context) {
     final medidasAsync = ref.watch(medidasOperadorControllerProvider);
+    final maquinas = ref.watch(machineListProvider);
     final medidas = medidasAsync.value ?? [];
     final reOk = _reCtrl.text.trim().isNotEmpty;
     final osOk = _osCtrl.text.trim().isNotEmpty;
@@ -394,6 +399,25 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                           ),
                         ),
                       ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    DropdownButtonFormField<String>(
+                      value: _maquina,
+                      decoration: const InputDecoration(
+                        labelText: 'Máquina',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        for (final m in maquinas)
+                          DropdownMenuItem(value: m, child: Text(m))
+                      ],
+                      onChanged: (v) {
+                        setState(() => _maquina = v);
+                      },
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Obrigatório' : null,
                     ),
 
                     const SizedBox(height: 12),
