@@ -10,8 +10,9 @@ import '../utils/string_utils.dart';
 /// Service responsible for fetching reports from the backend API.
 class ReportService {
   ReportService({http.Client? client, String? baseUrl})
-      : _client = client ?? http.Client(),
-        _baseUrl = baseUrl ?? dotenv.env['API_BASE_URL'] ?? 'http://localhost:5005';
+    : _client = client ?? http.Client(),
+      _baseUrl =
+          baseUrl ?? dotenv.env['API_BASE_URL'] ?? 'http://localhost:5005';
 
   final http.Client _client;
   final String _baseUrl;
@@ -70,9 +71,11 @@ class ReportService {
   }
 
   /// Fetch a comprehensive report for a specific OS.
-  /// [section] can be `full`, `amostragem` or `liberacao`.
-  Future<Map<String, dynamic>?> fetchOsReport(String os,
-      {String section = 'full'}) async {
+  /// [section] can be `full`, `amostragem`, `liberacao` or `finalizacao`.
+  Future<Map<String, dynamic>?> fetchOsReport(
+    String os, {
+    String section = 'full',
+  }) async {
     try {
       final normalized = normalizeCode(os);
       final uri = Uri.parse(_baseUrl)

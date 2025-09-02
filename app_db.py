@@ -430,7 +430,9 @@ def _ensure_schema():
             )
         _ensure_column(c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL")
         _ensure_column(c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL")
-        _ensure_column(c, "preparador_finalizacao", "maquina", "VARCHAR(128) DEFAULT NULL")
+        _ensure_column(
+            c, "preparador_finalizacao", "maquina", "VARCHAR(128) DEFAULT NULL"
+        )
         with c.cursor() as cur:
             cur.execute(
                 """
@@ -1760,7 +1762,7 @@ def operador_encerrar_producao():
             with c.cursor() as cur:
                 cur.execute(
                     "SELECT COUNT(*) AS cnt FROM operador_amostragem WHERE os=%s",
-                    (os_num,)
+                    (os_num,),
                 )
                 if cur.fetchone()["cnt"] == 0:
                     return (
@@ -1864,6 +1866,7 @@ def relatorio_os():
                 os_data = None
                 amostragem = []
                 liberacao = []
+                finalizacao = []
                 if section in ("full", "ordem_servico"):
                     cur.execute("SELECT * FROM ordem_servico WHERE os=%s", (os_num,))
                     os_data = cur.fetchone()
@@ -1908,11 +1911,36 @@ def relatorio_os():
                         liberacao = cur.fetchall()
                     else:
                         liberacao = []
+                if section in ("full", "finalizacao"):
+                    if _tables_exist(
+                        cur,
+                        "preparador_finalizacao",
+                        "preparador_finalizacao_item",
+                    ):
+                        cur.execute(
+                            """
+                        SELECT f.os, f.partnumber, f.operacao, f.re_preparador,
+                               f.maquina,
+                               i.idx_medida, i.titulo, i.faixa_texto,
+                               i.minimo, i.maximo, i.unidade,
+                               CAST(i.medicao AS CHAR) AS medicao,
+                               i.status, i.observacao, i.created_at
+                          FROM preparador_finalizacao f
+                          JOIN preparador_finalizacao_item i ON i.finalizacao_id = f.id
+                         WHERE f.os=%s
+                         ORDER BY i.created_at
+                        """,
+                            (os_num,),
+                        )
+                        finalizacao = cur.fetchall()
+                    else:
+                        finalizacao = []
         return jsonify(
             {
                 "ordem_servico": _serialize(os_data) if os_data else None,
                 "amostragem": _serialize(amostragem),
                 "liberacao": _serialize(liberacao),
+                "finalizacao": _serialize(finalizacao),
             }
         )
     except Exception as e:
@@ -1930,31 +1958,7 @@ def exportar_relatorio_excel():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 if tipo == "FOR07":
-                    if _tables_exist(
-                        cur, "preparador_registro", "preparador_registro_item"
-                    ):
-                        cur.execute(
-                            """
-                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
-                               i.idx_medida, i.titulo, i.faixa_texto,
-                               i.minimo, i.maximo, i.unidade,
-                               CAST(i.medicao AS CHAR) AS medicao,
-                                 CASE
-                                   WHEN LOWER(i.status) LIKE '%%reprov%%' OR LOWER(i.status) LIKE '%%recus%%'
-                                     THEN 'recusada'
-                                   ELSE 'liberada'
-                                 END AS status,
-                               i.observacao, i.created_at
-                          FROM preparador_registro r
-                          JOIN preparador_registro_item i ON i.registro_id = r.id
-                         WHERE r.os=%s
-                         ORDER BY i.created_at
-                        """,
-                            (os_num,),
-                        )
-                        rows = cur.fetchall()
-                    else:
-                        rows = []
+                    rows = []
                     headers = [
                         "os",
                         "partnumber",
@@ -1968,9 +1972,58 @@ def exportar_relatorio_excel():
                         "unidade",
                         "medicao",
                         "status",
+                        "etapa",
                         "observacao",
                         "created_at",
                     ]
+                    if _tables_exist(
+                        cur, "preparador_registro", "preparador_registro_item"
+                    ):
+                        cur.execute(
+                            """
+                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
+                               i.idx_medida, i.titulo, i.faixa_texto,
+                               i.minimo, i.maximo, i.unidade,
+                               CAST(i.medicao AS CHAR) AS medicao,
+                               CASE
+                                 WHEN LOWER(i.status) LIKE '%%reprov%%' OR LOWER(i.status) LIKE '%%recus%%'
+                                   THEN 'recusada'
+                                 ELSE 'liberada'
+                               END AS status,
+                               i.observacao, i.created_at
+                          FROM preparador_registro r
+                          JOIN preparador_registro_item i ON i.registro_id = r.id
+                         WHERE r.os=%s
+                         ORDER BY i.created_at
+                        """,
+                            (os_num,),
+                        )
+                        for r in cur.fetchall():
+                            r["etapa"] = "liberacao"
+                            rows.append(r)
+                    if _tables_exist(
+                        cur,
+                        "preparador_finalizacao",
+                        "preparador_finalizacao_item",
+                    ):
+                        cur.execute(
+                            """
+                        SELECT f.os, f.partnumber, f.operacao, f.re_preparador,
+                               i.idx_medida, i.titulo, i.faixa_texto,
+                               i.minimo, i.maximo, i.unidade,
+                               CAST(i.medicao AS CHAR) AS medicao,
+                               i.status,
+                               i.observacao, i.created_at
+                          FROM preparador_finalizacao f
+                          JOIN preparador_finalizacao_item i ON i.finalizacao_id = f.id
+                         WHERE f.os=%s
+                         ORDER BY i.created_at
+                        """,
+                            (os_num,),
+                        )
+                        for r in cur.fetchall():
+                            r["etapa"] = "finalizacao"
+                            rows.append(r)
                 else:
                     cur.execute(
                         """
