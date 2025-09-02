@@ -111,13 +111,10 @@ def _ensure_fk(conn, table: str, constraint: str, definition: str) -> None:
             (table, constraint),
         )
         if not cur.fetchone():
-            cur.execute(
-                f"ALTER TABLE {table} ADD CONSTRAINT {constraint} {definition}"
-            )
+            cur.execute(f"ALTER TABLE {table} ADD CONSTRAINT {constraint} {definition}")
 
 
 def _ensure_schema():
-
     """Garante que o banco e as tabelas principais existam (sem DDL agressivo)."""
     # Cria o database, se não existir
     with _conn_db(None) as c:
@@ -147,7 +144,6 @@ def _ensure_schema():
             )
             _ensure_column(c, "ordem_servico", "status", "VARCHAR(32) DEFAULT 'aberta'")
             # Operador (já estava)
-
 
             cur.execute(
                 """
@@ -382,12 +378,8 @@ def _ensure_schema():
             _ensure_column(
                 c, "preparador_liberacao", "maquina", "VARCHAR(128) DEFAULT NULL"
             )
-        _ensure_column(
-            c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL"
-        )
-        _ensure_column(
-            c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL"
-        )
+        _ensure_column(c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL")
+        _ensure_column(c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL")
         with c.cursor() as cur:
             cur.execute(
                 """
@@ -400,7 +392,6 @@ def _ensure_schema():
                 """
             )
         c.commit()
-
 
 
 # ========= Utils =========
@@ -1004,9 +995,15 @@ def resultado_preparador():
     try:
         with _conn_db(DB_NAME) as c:
             # Garante que as tabelas envolvidas possuam a coluna 'maquina'
-            _ensure_column(c, "preparador_liberacao", "maquina", "VARCHAR(128) DEFAULT NULL")
-            _ensure_column(c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL")
-            _ensure_column(c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL")
+            _ensure_column(
+                c, "preparador_liberacao", "maquina", "VARCHAR(128) DEFAULT NULL"
+            )
+            _ensure_column(
+                c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL"
+            )
+            _ensure_column(
+                c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL"
+            )
 
             with c.cursor() as cur:
                 cur.execute("SELECT 1 FROM maquinas WHERE codigo=%s", (maquina,))
@@ -1196,9 +1193,12 @@ def resultado_preparador():
             c.commit()
 
             return jsonify(
-                {"status": "ok", "registro_id": registro_id, "status_geral": status_geral}
+                {
+                    "status": "ok",
+                    "registro_id": registro_id,
+                    "status_geral": status_geral,
+                }
             )
-
 
     except Exception as e:
         return jsonify({"error": f"Falha ao inserir registro do preparador: {e}"}), 500
@@ -1687,6 +1687,7 @@ def operador_encerrar_producao():
     except Exception as e:
         return jsonify({"error": f"Falha ao encerrar produção: {e}"}), 500
 
+
 @app.route("/reports")
 @app.route("/reports/preparador")
 def listar_relatorios():
@@ -1773,15 +1774,15 @@ def relatorio_os():
                 amostragem = []
                 liberacao = []
                 if section in ("full", "ordem_servico"):
-                    cur.execute(
-                        "SELECT * FROM ordem_servico WHERE os=%s", (os_num,)
-                    )
+                    cur.execute("SELECT * FROM ordem_servico WHERE os=%s", (os_num,))
                     os_data = cur.fetchone()
                 if section in ("full", "amostragem"):
                     cur.execute(
                         """
                         SELECT a.os, a.partnumber, a.operacao, a.re_operador,
-                               i.idx_medida, i.titulo, i.status, i.created_at
+                               a.maquina,
+                               i.idx_medida, i.titulo, i.instrumento,
+                               i.faixa_texto, i.escolha, i.status, i.created_at
                           FROM operador_amostragem a
                           JOIN operador_amostragem_item i ON i.amostragem_id = a.id
                          WHERE a.os=%s
@@ -1826,7 +1827,6 @@ def relatorio_os():
     except Exception as e:
         app.logger.exception("Falha ao gerar relatório")
         return jsonify({"error": f"Falha ao gerar relatório: {e}"}), 500
-
 
 
 @app.route("/reports/export")
@@ -1946,6 +1946,7 @@ def exportar_relatorio_excel():
         app.logger.exception("Falha ao exportar relatório")
         return jsonify({"error": f"Falha ao exportar relatório: {e}"}), 500
 
+
 def _is_admin_request() -> bool:
     """Check HTTP Basic credentials and confirm admin user."""
     auth = request.authorization
@@ -1959,6 +1960,7 @@ def _is_admin_request() -> bool:
             )
             row = cur.fetchone()
     return bool(row and row.get("is_admin"))
+
 
 @app.route("/login", methods=["POST"])
 def login():
