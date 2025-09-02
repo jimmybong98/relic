@@ -256,6 +256,52 @@ def _ensure_schema():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
             )
+            # Preparador (finalização + itens)
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS preparador_finalizacao (
+                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                  os VARCHAR(64) NOT NULL,
+                  partnumber VARCHAR(128) NOT NULL,
+                  operacao VARCHAR(64) NOT NULL,
+                  re_preparador VARCHAR(64) NOT NULL,
+                  maquina VARCHAR(128) DEFAULT NULL,
+                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  KEY idx_os (os),
+                  KEY idx_part_op (partnumber, operacao)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """
+            )
+            _ensure_fk(
+                c,
+                "preparador_finalizacao",
+                "fk_pf_os",
+                "FOREIGN KEY (os) REFERENCES ordem_servico(os) ON UPDATE CASCADE",
+            )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS preparador_finalizacao_item (
+                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                  finalizacao_id BIGINT NOT NULL,
+                  idx_medida INT NOT NULL,
+                  titulo TEXT DEFAULT NULL,
+                  faixa_texto TEXT DEFAULT NULL,
+                  minimo DOUBLE DEFAULT NULL,
+                  maximo DOUBLE DEFAULT NULL,
+                  unidade VARCHAR(64) DEFAULT NULL,
+                  medicao TEXT DEFAULT NULL,
+                  status VARCHAR(64) DEFAULT NULL,
+                  observacao TEXT DEFAULT NULL,
+                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  KEY idx_cab (finalizacao_id),
+                  KEY idx_idx (idx_medida),
+                  CONSTRAINT fk_pf_item
+                    FOREIGN KEY (finalizacao_id)
+                    REFERENCES preparador_finalizacao(id)
+                    ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """
+            )
             # Preparador (liberação consolidada)
             cur.execute(
                 """
@@ -384,6 +430,7 @@ def _ensure_schema():
             )
         _ensure_column(c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL")
         _ensure_column(c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL")
+        _ensure_column(c, "preparador_finalizacao", "maquina", "VARCHAR(128) DEFAULT NULL")
         with c.cursor() as cur:
             cur.execute(
                 """
@@ -1309,12 +1356,12 @@ def preparador_finalizar_os():
 
                 cur.execute(
                     """
-                    INSERT INTO preparador_registro (os, partnumber, operacao, re_preparador, maquina)
+                    INSERT INTO preparador_finalizacao (os, partnumber, operacao, re_preparador, maquina)
                     VALUES (%s, %s, %s, %s, %s)
                     """,
                     (os_num, part, op, re_prep, maquina),
                 )
-                registro_id = cur.lastrowid
+                finalizacao_id = cur.lastrowid
 
                 all_status = []
                 for it in itens:
@@ -1330,15 +1377,15 @@ def preparador_finalizar_os():
 
                     cur.execute(
                         """
-                        INSERT INTO preparador_registro_item
-                          (registro_id, idx_medida, titulo, faixa_texto, minimo, maximo, unidade,
+                        INSERT INTO preparador_finalizacao_item
+                          (finalizacao_id, idx_medida, titulo, faixa_texto, minimo, maximo, unidade,
                            medicao, status, observacao)
                         VALUES
                           (%s, %s, %s, %s, %s, %s, %s,
                            %s, %s, %s)
                         """,
                         (
-                            registro_id,
+                            finalizacao_id,
                             idx,
                             titulo,
                             faixa_texto,
@@ -1443,7 +1490,7 @@ def preparador_finalizar_os():
         return jsonify(
             {
                 "status": "ok",
-                "registro_id": registro_id,
+                "registro_id": finalizacao_id,
                 "status_geral": status_geral,
             }
         )
