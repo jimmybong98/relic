@@ -35,9 +35,13 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
     if (data != null && data[section] is List) {
       for (final e in (data[section] as List)) {
         if (e is Map<String, dynamic>) {
+          final createdAt = (e['created_at'] ?? '').toString().replace(
+            'T',
+            ' ',
+          );
           if (_tipo == 'FOR07') {
             rows.add({
-              'created_at': e['created_at'],
+              'created_at': createdAt,
               'partnumber': e['partnumber'],
               'maquina': e['maquina'],
               'faixa_texto': e['faixa_texto'],
@@ -52,7 +56,7 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             });
           } else {
             rows.add({
-              'created_at': e['created_at'],
+              'created_at': createdAt,
               'partnumber': e['partnumber'],
               'maquina': e['maquina'],
               'titulo': e['titulo'],
