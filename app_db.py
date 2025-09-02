@@ -6,6 +6,7 @@ import os
 import re
 import json
 import io
+import math
 from decimal import Decimal
 from datetime import date, datetime
 
@@ -443,7 +444,13 @@ def _serialize(obj):
     if isinstance(obj, dict):
         return {k: _serialize(v) for k, v in obj.items()}
     if isinstance(obj, Decimal):
+        if not obj.is_finite():
+            return None
         return float(obj)
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
     return obj
