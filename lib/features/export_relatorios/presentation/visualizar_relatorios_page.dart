@@ -37,6 +37,7 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
         if (e is Map<String, dynamic>) {
           if (_tipo == 'FOR07') {
             rows.add({
+              'created_at': e['created_at'],
               'partnumber': e['partnumber'],
               'maquina': e['maquina'],
               'faixa_texto': e['faixa_texto'],
@@ -51,6 +52,7 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             });
           } else {
             rows.add({
+              'created_at': e['created_at'],
               'partnumber': e['partnumber'],
               'maquina': e['maquina'],
               'titulo': e['titulo'],
@@ -64,6 +66,9 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
       }
     }
     if (!mounted) return;
+    rows.sort(
+      (a, b) => (a['created_at'] ?? '').compareTo(b['created_at'] ?? ''),
+    );
     setState(() {
       _rows = rows;
       _loading = false;
@@ -74,6 +79,7 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
   Widget build(BuildContext context) {
     final headerMap = _tipo == 'FOR07'
         ? const {
+            'created_at': 'Horário',
             'partnumber': 'Partnumber',
             'maquina': 'Máquina',
             'faixa_texto': 'Faixa',
@@ -83,6 +89,7 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             'status_liberacao': 'Status da liberação',
           }
         : const {
+            'created_at': 'Horário',
             'partnumber': 'Partnumber',
             'maquina': 'Máquina',
             'titulo': 'Título',
@@ -138,15 +145,46 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
                               (h) => DataColumn(label: Text(headerMap[h] ?? h)),
                             )
                             .toList(),
-                        rows: _rows
-                            .map(
-                              (r) => DataRow(
-                                cells: headers
-                                    .map((h) => DataCell(Text('${r[h] ?? ''}')))
-                                    .toList(),
+                        rows: () {
+                          final Map<String, List<Map<String, dynamic>>> groups =
+                              {};
+                          for (final r in _rows) {
+                            final time = r['created_at'] ?? '';
+                            groups.putIfAbsent(time, () => []).add(r);
+                          }
+                          final sortedTimes = groups.keys.toList()..sort();
+                          final List<DataRow> dataRows = [];
+                          for (final time in sortedTimes) {
+                            dataRows.add(
+                              DataRow(
+                                cells: [
+                                  DataCell(Text(time)),
+                                  ...List.generate(
+                                    headers.length - 1,
+                                    (_) => const DataCell(Text('')),
+                                  ),
+                                ],
                               ),
-                            )
-                            .toList(),
+                            );
+                            for (final r in groups[time]!) {
+                              dataRows.add(
+                                DataRow(
+                                  cells: [
+                                    const DataCell(Text('')),
+                                    ...headers
+                                        .skip(1)
+                                        .map(
+                                          (h) =>
+                                              DataCell(Text('${r[h] ?? ''}')),
+                                        )
+                                        .toList(),
+                                  ],
+                                ),
+                              );
+                            }
+                          }
+                          return dataRows;
+                        }(),
                       ),
                     ),
             ),
