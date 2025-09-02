@@ -378,6 +378,10 @@ def _ensure_schema():
             _ensure_column(
                 c, "preparador_liberacao", "maquina", "VARCHAR(128) DEFAULT NULL"
             )
+            cur.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_pl_os_part_maquina "
+                "ON preparador_liberacao (os, partnumber, maquina)"
+            )
         _ensure_column(c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL")
         _ensure_column(c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL")
         with c.cursor() as cur:
@@ -706,12 +710,11 @@ def _maquina_liberada(
             WHERE os=%s
 
               AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
-              AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
               AND maquina=%s
 
             ORDER BY id DESC LIMIT 1
             """,
-            (os_num, part, op, maquina),
+            (os_num, part, maquina),
         )
         row = cur.fetchone()
         if row:
@@ -1009,6 +1012,26 @@ def resultado_preparador():
                 cur.execute("SELECT 1 FROM maquinas WHERE codigo=%s", (maquina,))
                 if not cur.fetchone():
                     return jsonify({"error": "máquina não cadastrada"}), 400
+                cur.execute(
+                    """
+                    SELECT TRIM(LEADING '0' FROM TRIM(partnumber)) AS partnumber
+                    FROM preparador_liberacao
+                    WHERE os=%s
+                    LIMIT 1
+                    """,
+                    (os_num,),
+                )
+                row_part = cur.fetchone()
+                if row_part and row_part.get("partnumber") != part:
+                    return (
+                        jsonify(
+                            {
+                                "code": "partnumber_divergente",
+                                "error": "Partnumber diferente das liberações já registradas para esta OS.",
+                            }
+                        ),
+                        409,
+                    )
 
             ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op, maquina)
             if ok:
@@ -1031,12 +1054,11 @@ def resultado_preparador():
                     FROM preparador_liberacao
                     WHERE os=%s
                       AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
-                      AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
                       AND maquina=%s
                       AND status_geral IN ('liberada','liberado','ok','aprovada','aprovado')
                     ORDER BY id DESC LIMIT 1
                     """,
-                    (os_num, part, op, maquina),
+                    (os_num, part, maquina),
                 )
                 row_os = cur.fetchone()
                 if row_os:
@@ -1121,17 +1143,16 @@ def resultado_preparador():
                     SELECT id FROM preparador_liberacao
                     WHERE os=%s
                       AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
-                      AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
                       AND maquina=%s
                     ORDER BY id DESC LIMIT 1
                     """,
-                    (os_num, part, op, maquina),
+                    (os_num, part, maquina),
                 )
                 row = cur.fetchone()
                 if row:
                     cur.execute(
-                        "UPDATE preparador_liberacao SET re_preparador=%s, status_geral=%s, maquina=%s WHERE id=%s",
-                        (re_prep, status_geral, maquina, row["id"]),
+                        "UPDATE preparador_liberacao SET re_preparador=%s, status_geral=%s, operacao=%s, maquina=%s WHERE id=%s",
+                        (re_prep, status_geral, op, maquina, row["id"]),
                     )
                     liberacao_id = row["id"]
                 else:
@@ -1239,6 +1260,27 @@ def preparador_finalizar_os():
                 if not cur.fetchone():
                     return jsonify({"error": "máquina não cadastrada"}), 400
 
+                cur.execute(
+                    """
+                    SELECT TRIM(LEADING '0' FROM TRIM(partnumber)) AS partnumber
+                    FROM preparador_liberacao
+                    WHERE os=%s
+                    LIMIT 1
+                    """,
+                    (os_num,),
+                )
+                row_part = cur.fetchone()
+                if row_part and row_part.get("partnumber") != part:
+                    return (
+                        jsonify(
+                            {
+                                "code": "partnumber_divergente",
+                                "error": "Partnumber diferente das liberações já registradas para esta OS.",
+                            }
+                        ),
+                        409,
+                    )
+
                 cur.execute("SELECT status FROM ordem_servico WHERE os=%s", (os_num,))
                 st = (cur.fetchone() or {}).get("status", "").lower()
                 if st == "encerrada":
@@ -1323,17 +1365,16 @@ def preparador_finalizar_os():
                     SELECT id FROM preparador_liberacao
                     WHERE os=%s
                       AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
-                      AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
                       AND maquina=%s
                     ORDER BY id DESC LIMIT 1
                     """,
-                    (os_num, part, op, maquina),
+                    (os_num, part, maquina),
                 )
                 row = cur.fetchone()
                 if row:
                     cur.execute(
-                        "UPDATE preparador_liberacao SET re_preparador=%s, status_geral=%s, maquina=%s WHERE id=%s",
-                        (re_prep, status_geral, maquina, row["id"]),
+                        "UPDATE preparador_liberacao SET re_preparador=%s, status_geral=%s, operacao=%s, maquina=%s WHERE id=%s",
+                        (re_prep, status_geral, op, maquina, row["id"]),
                     )
                     liberacao_id = row["id"]
                 else:
