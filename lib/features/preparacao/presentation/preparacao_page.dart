@@ -25,10 +25,12 @@ class PreparacaoPage extends ConsumerStatefulWidget {
 }
 
 final medidasPreparadorControllerProvider =
-StateNotifierProvider.autoDispose<MedidasPreparadorController,
-    AsyncValue<List<MedidaItem>>>((ref) {
-  return MedidasPreparadorController(ref);
-});
+    StateNotifierProvider.autoDispose<
+      MedidasPreparadorController,
+      AsyncValue<List<MedidaItem>>
+    >((ref) {
+      return MedidasPreparadorController(ref);
+    });
 
 class MedidasPreparadorController
     extends StateNotifier<AsyncValue<List<MedidaItem>>> {
@@ -42,24 +44,28 @@ class MedidasPreparadorController
     state = const AsyncValue.loading();
     try {
       final repo = _ref.read(preparadorRepositoryProvider);
-      final itens =
-      await repo.getMedidas(partnumber: partnumber, operacao: operacao);
+      final itens = await repo.getMedidas(
+        partnumber: partnumber,
+        operacao: operacao,
+      );
 
       // Zera status/medição – sem copyWith
       final normalizados = itens
-          .map((m) => MedidaItem(
-        titulo: m.titulo,
-        faixaTexto: m.faixaTexto,
-        minimo: m.minimo,
-        maximo: m.maximo,
-        unidade: m.unidade,
-        status: StatusMedida.pendente,
-        medicao: null,
-        observacao: m.observacao,
-        periodicidade: m.periodicidade,
-        instrumento: m.instrumento,
-        tolerancias: m.tolerancias,
-      ))
+          .map(
+            (m) => MedidaItem(
+              titulo: m.titulo,
+              faixaTexto: m.faixaTexto,
+              minimo: m.minimo,
+              maximo: m.maximo,
+              unidade: m.unidade,
+              status: StatusMedida.pendente,
+              medicao: null,
+              observacao: m.observacao,
+              periodicidade: m.periodicidade,
+              instrumento: m.instrumento,
+              tolerancias: m.tolerancias,
+            ),
+          )
           .toList();
 
       state = AsyncValue.data(normalizados);
@@ -112,8 +118,8 @@ class MedidasPreparadorController
 
 class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   final _formKey = GlobalKey<FormState>();
-  final _reCtrl = TextEditingController();   // <<< RE
-  final _osCtrl = TextEditingController();   // <<< OS
+  final _reCtrl = TextEditingController(); // <<< RE
+  final _osCtrl = TextEditingController(); // <<< OS
   final _partCtrl = TextEditingController();
   final _opCtrl = TextEditingController();
 
@@ -145,13 +151,15 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
         setState(() {
           _maquinas.addAll(list);
           _categorias.addAll(
-              _maquinas.map((e) => e.categoria).toSet().toList()..sort());
+            _maquinas.map((e) => e.categoria).toSet().toList()..sort(),
+          );
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erro ao carregar máquinas: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao carregar máquinas: $e')),
+        );
       }
     }
   }
@@ -171,15 +179,15 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   String statusToString(StatusMedida st) {
     switch (st) {
       case StatusMedida.ok:
-        return 'aprovado';
+        return 'OK';
       case StatusMedida.reprovadaAbaixo:
-        return 'reprovada_abaixo';
+        return 'Reprovada abaixo';
       case StatusMedida.reprovadaAcima:
-        return 'reprovada_acima';
+        return 'Reprovada acima';
       case StatusMedida.alertaAbaixo:
-        return 'alerta_abaixo';
+        return 'Alerta abaixo';
       case StatusMedida.alertaAcima:
-        return 'alerta_acima';
+        return 'Alerta acima';
       case StatusMedida.pendente:
         return 'pendente';
     }
@@ -194,7 +202,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
         (_maquinaSel ?? '').isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preencha RE, O.S. e máquina para registrar.')),
+        const SnackBar(
+          content: Text('Preencha RE, O.S. e máquina para registrar.'),
+        ),
       );
       return;
     }
@@ -256,7 +266,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
-        final statusGeral = (data['status_geral'] ?? '').toString().toLowerCase();
+        final statusGeral = (data['status_geral'] ?? '')
+            .toString()
+            .toLowerCase();
         final liberada = statusGeral == 'liberada';
         if (liberada) {
           setState(() => _osLiberada = true);
@@ -276,7 +288,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
           setState(() => _osLiberada = true);
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Falha ao registrar: ${data['error'] ?? resp.body}')),
+          SnackBar(
+            content: Text('Falha ao registrar: ${data['error'] ?? resp.body}'),
+          ),
         );
         if (liberada) {
           await Future.delayed(const Duration(seconds: 1));
@@ -285,15 +299,17 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Falha ao registrar: ${resp.statusCode} ${resp.body}'),
+            content: Text(
+              'Falha ao registrar: ${resp.statusCode} ${resp.body}',
+            ),
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao registrar: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao registrar: $e')));
     } finally {
       if (mounted) setState(() => _registrando = false);
     }
@@ -308,10 +324,12 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     final reOk = _reCtrl.text.trim().isNotEmpty;
     final osOk = _osCtrl.text.trim().isNotEmpty;
     final maquinaOk = (_maquinaSel ?? '').isNotEmpty;
-    final todasOk = medidas.isNotEmpty &&
-        medidas.every((m) =>
-        (m.medicao ?? '').isNotEmpty &&
-            m.status != StatusMedida.pendente);
+    final todasOk =
+        medidas.isNotEmpty &&
+        medidas.every(
+          (m) =>
+              (m.medicao ?? '').isNotEmpty && m.status != StatusMedida.pendente,
+        );
     final podeRegistrar =
         reOk && osOk && maquinaOk && todasOk && !_registrando && !_osLiberada;
 
@@ -323,11 +341,13 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
             padding: const EdgeInsets.only(right: 12.0),
             child: Center(
               child: Text(
-                Platform.isWindows ? 'Windows: leitura direta/API' : 'Android: via API',
+                Platform.isWindows
+                    ? 'Windows: leitura direta/API'
+                    : 'Android: via API',
                 style: const TextStyle(fontSize: 12),
               ),
             ),
-          )
+          ),
         ],
       ),
       drawer: const SideMenu(current: SideMenuSection.preparador),
@@ -347,15 +367,19 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             controller: _reCtrl,
                             textInputAction: TextInputAction.next,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: const InputDecoration(
-                              labelText: 'R.E. do Preparador', // ajuste o texto se for Operador
+                              labelText:
+                                  'R.E. do Preparador', // ajuste o texto se for Operador
                               border: OutlineInputBorder(),
                             ),
                             validator: (v) {
                               final s = (v ?? '').trim();
                               if (s.isEmpty) return 'Obrigatório';
-                              if (!RegExp(r'^\d+$').hasMatch(s)) return 'Apenas números';
+                              if (!RegExp(r'^\d+$').hasMatch(s))
+                                return 'Apenas números';
                               return null;
                             },
                           ),
@@ -367,7 +391,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             controller: _osCtrl,
                             textInputAction: TextInputAction.next,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: const InputDecoration(
                               labelText: 'O.S.',
                               border: OutlineInputBorder(),
@@ -375,14 +401,14 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             validator: (v) {
                               final s = (v ?? '').trim();
                               if (s.isEmpty) return 'Obrigatório';
-                              if (!RegExp(r'^\d+$').hasMatch(s)) return 'Apenas números';
+                              if (!RegExp(r'^\d+$').hasMatch(s))
+                                return 'Apenas números';
                               return null;
                             },
                           ),
                         ),
                       ],
                     ),
-
 
                     const SizedBox(height: 12),
 
@@ -396,8 +422,12 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                               border: OutlineInputBorder(),
                             ),
                             items: _categorias
-                                .map((c) =>
-                                    DropdownMenuItem(value: c, child: Text(c)))
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(c),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: (v) => setState(() {
                               _categoriaSel = v;
@@ -417,11 +447,14 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             ),
                             items: _maquinas
                                 .where((m) => m.categoria == _categoriaSel)
-                                .map((m) => DropdownMenuItem(
-                                    value: m.codigo, child: Text(m.codigo)))
+                                .map(
+                                  (m) => DropdownMenuItem(
+                                    value: m.codigo,
+                                    child: Text(m.codigo),
+                                  ),
+                                )
                                 .toList(),
-                            onChanged: (v) =>
-                                setState(() => _maquinaSel = v),
+                            onChanged: (v) => setState(() => _maquinaSel = v),
                             validator: (v) =>
                                 (v == null || v.isEmpty) ? 'Obrigatório' : null,
                           ),
@@ -442,8 +475,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                               labelText: 'Código da peça (PartNumber)',
                               border: OutlineInputBorder(),
                             ),
-                            validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Obrigatório'
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -452,7 +486,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                           child: TextFormField(
                             controller: _opCtrl,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: const InputDecoration(
                               labelText: 'Operação',
                               border: OutlineInputBorder(),
@@ -460,7 +496,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             validator: (v) {
                               final s = (v ?? '').trim();
                               if (s.isEmpty) return 'Obrigatório';
-                              if (!RegExp(r'^\d+$').hasMatch(s)) return 'Apenas números';
+                              if (!RegExp(r'^\d+$').hasMatch(s))
+                                return 'Apenas números';
                               return null;
                             },
                           ),
@@ -476,11 +513,13 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                           if (_formKey.currentState!.validate()) {
                             FocusScope.of(context).unfocus();
                             await ref
-                                .read(medidasPreparadorControllerProvider.notifier)
+                                .read(
+                                  medidasPreparadorControllerProvider.notifier,
+                                )
                                 .carregar(
-                              partnumber: normalizeCode(_partCtrl.text),
-                              operacao: normalizeCode(_opCtrl.text),
-                            );
+                                  partnumber: normalizeCode(_partCtrl.text),
+                                  operacao: normalizeCode(_opCtrl.text),
+                                );
                           }
                         },
                         icon: const Icon(Icons.search),
@@ -496,7 +535,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                   data: (list) {
                     if (list.isEmpty) {
                       return const Center(
-                        child: Text('Nenhuma medida encontrada para a chave informada.'),
+                        child: Text(
+                          'Nenhuma medida encontrada para a chave informada.',
+                        ),
                       );
                     }
                     return ListView.separated(
@@ -508,16 +549,18 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                           index: index,
                           item: item,
                           onChanged: (status, valor) => ref
-                              .read(medidasPreparadorControllerProvider.notifier)
+                              .read(
+                                medidasPreparadorControllerProvider.notifier,
+                              )
                               .setStatusAndMedicao(index, status, valor),
                         );
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(
-                    child: Text('Erro ao carregar:\n${e.toString()}'),
-                  ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) =>
+                      Center(child: Text('Erro ao carregar:\n${e.toString()}')),
                 ),
               ),
               const SizedBox(height: 10),
@@ -527,7 +570,10 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                   onPressed: podeRegistrar ? _registrarResultado : null,
                   icon: _registrando
                       ? const SizedBox(
-                      width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.save_outlined),
                   label: const Text('Registrar resultado'),
                 ),
@@ -575,7 +621,8 @@ class _MeasurementTilePrepState extends State<_MeasurementTilePrep> {
 
   void _setTextFromParent(String? txt) {
     final newText = (txt ?? '');
-    if (newText == _ctrl.text) return; // evita sobrescrever e mexer no cursor à toa
+    if (newText == _ctrl.text)
+      return; // evita sobrescrever e mexer no cursor à toa
     _ctrl.value = TextEditingValue(
       text: newText,
       // cursor no final do texto (sem selecionar tudo)
@@ -643,53 +690,60 @@ class _MeasurementTilePrepState extends State<_MeasurementTilePrep> {
       elevation: 0.5,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration:
-                BoxDecoration(color: _statusColor(st), shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(m.titulo.isEmpty ? '(sem título)' : m.titulo,
-                    style: Theme.of(context).textTheme.titleMedium),
-              ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: _statusColor(st),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    m.titulo.isEmpty ? '(sem título)' : m.titulo,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+            if (subtitulo.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(subtitulo, style: Theme.of(context).textTheme.bodyMedium),
             ],
-          ),
-          if (subtitulo.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(subtitulo, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _ctrl,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+                signed: false,
+              ),
+              decoration: InputDecoration(
+                labelText: 'Medição (${m.unidade ?? ''})',
+                border: const OutlineInputBorder(),
+                helperText: st == StatusMedida.ok
+                    ? 'Dentro da tolerância'
+                    : st == StatusMedida.pendente
+                    ? 'Preencha o valor para classificar'
+                    : (st == StatusMedida.reprovadaAbaixo
+                          ? 'Abaixo do mínimo'
+                          : 'Acima do máximo'),
+                helperStyle: TextStyle(color: _statusColor(st)),
+              ),
+              onChanged: (txt) {
+                final v = _toDouble(txt);
+                final novoStatus = _classifica(v, m.minimo, m.maximo);
+                widget.onChanged(novoStatus, txt);
+                setState(() {});
+              },
+            ),
           ],
-          const SizedBox(height: 10),
-          TextField(
-            controller: _ctrl,
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
-              signed: false,
-            ),
-            decoration: InputDecoration(
-              labelText: 'Medição (${m.unidade ?? ''})',
-              border: const OutlineInputBorder(),
-              helperText: st == StatusMedida.ok
-                  ? 'Dentro da tolerância'
-                  : st == StatusMedida.pendente
-                  ? 'Preencha o valor para classificar'
-                  : (st == StatusMedida.reprovadaAbaixo
-                  ? 'Abaixo do mínimo'
-                  : 'Acima do máximo'),
-              helperStyle: TextStyle(color: _statusColor(st)),
-            ),
-            onChanged: (txt) {
-              final v = _toDouble(txt);
-              final novoStatus = _classifica(v, m.minimo, m.maximo);
-              widget.onChanged(novoStatus, txt);
-              setState(() {});
-            },
-          ),
-        ]),
+        ),
       ),
     );
   }

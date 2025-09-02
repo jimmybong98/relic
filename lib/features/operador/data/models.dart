@@ -9,7 +9,7 @@ enum StatusMedida {
   alertaAbaixo,
   reprovadaAcima,
   reprovadaAbaixo,
-  pendente
+  pendente,
 }
 
 StatusMedida statusFromString(String? s) {
@@ -28,11 +28,13 @@ StatusMedida statusFromString(String? s) {
       return StatusMedida.alertaAcima;
 
     case 'reprovada_acima':
+    case 'reprovada acima':
     case 'acima':
     case 'reprovada':
     case 'reprovado':
       return StatusMedida.reprovadaAcima;
     case 'reprovada_abaixo':
+    case 'reprovada abaixo':
     case 'abaixo':
       return StatusMedida.reprovadaAbaixo;
     default:
@@ -43,16 +45,16 @@ StatusMedida statusFromString(String? s) {
 String statusToString(StatusMedida s) {
   switch (s) {
     case StatusMedida.ok:
-
-      return 'ok';
+      return 'OK';
     case StatusMedida.alertaAcima:
-      return 'alerta_acima';
+      return 'Alerta acima';
     case StatusMedida.alertaAbaixo:
-      return 'alerta_abaixo';
+      return 'Alerta abaixo';
 
     case StatusMedida.reprovadaAcima:
+      return 'Reprovada acima';
     case StatusMedida.reprovadaAbaixo:
-      return 'reprovado';
+      return 'Reprovada abaixo';
     case StatusMedida.pendente:
       return 'pendente';
   }
@@ -61,17 +63,22 @@ String statusToString(StatusMedida s) {
 class MedidaItem {
   // Básicos
   final String titulo;
+
   /// Texto amigável da faixa (ex.: "10,00 ~ 12,00 mm", "≥ 15,30 mm", "≤ 3,2 µm")
   final String faixaTexto;
+
   /// Limite mínimo aceito (opcional).
   final double? minimo;
+
   /// Limite máximo aceito (opcional).
   final double? maximo;
+
   /// Unidade de medida (ex.: "mm", "°", "µm", etc.).
   final String? unidade;
 
   // Metadados
   final StatusMedida status;
+
   /// Mantido como String? para compatibilidade com o restante do app.
   final String? medicao;
   final String? observacao;
@@ -121,10 +128,16 @@ class MedidaItem {
 
   static String _normalizeLower(String s) {
     final rep = {
-      'á': 'a', 'à': 'a', 'â': 'a', 'ã': 'a',
-      'é': 'e', 'ê': 'e',
+      'á': 'a',
+      'à': 'a',
+      'â': 'a',
+      'ã': 'a',
+      'é': 'e',
+      'ê': 'e',
       'í': 'i',
-      'ó': 'o', 'ô': 'o', 'õ': 'o',
+      'ó': 'o',
+      'ô': 'o',
+      'õ': 'o',
       'ú': 'u',
       'ç': 'c',
     };
@@ -160,7 +173,9 @@ class MedidaItem {
   ///  - Único valor: retorna (v,v,uni)
   ///  - Com token “minimo” → (v,null,uni)
   ///  - Com token “maximo” → (null,v,uni)
-  static ({double? min, double? max, String? uni}) _parseRangeAny(String texto) {
+  static ({double? min, double? max, String? uni}) _parseRangeAny(
+    String texto,
+  ) {
     if (texto.trim().isEmpty) return (min: null, max: null, uni: null);
     final s = texto.trim();
 
@@ -172,9 +187,13 @@ class MedidaItem {
     if (m != null) {
       var v1 = _toDouble(m.group(1));
       var v2 = _toDouble(m.group(2));
-      final uni = (m.group(3) ?? '').trim().isEmpty ? null : (m.group(3) ?? '').trim();
+      final uni = (m.group(3) ?? '').trim().isEmpty
+          ? null
+          : (m.group(3) ?? '').trim();
       if (v1 != null && v2 != null && v1 > v2) {
-        final tmp = v1; v1 = v2; v2 = tmp;
+        final tmp = v1;
+        v1 = v2;
+        v2 = tmp;
       }
       return (min: v1, max: v2, uni: uni);
     }
@@ -182,7 +201,9 @@ class MedidaItem {
     // Único valor (com possíveis tokens de minimo/máximo)
     final v = _firstNumber(s);
     final uniMatch = RegExp(r'[a-zA-Zµ°]+[a-zA-Z0-9/%²³]*$').firstMatch(s);
-    final uni = (uniMatch?.group(0) ?? '').trim().isEmpty ? null : uniMatch!.group(0)!.trim();
+    final uni = (uniMatch?.group(0) ?? '').trim().isEmpty
+        ? null
+        : uniMatch!.group(0)!.trim();
 
     if (v == null) return (min: null, max: null, uni: null);
 
@@ -215,17 +236,21 @@ class MedidaItem {
 
     double? minimo = _toDouble(map['minimo'] ?? map['min']);
     double? maximo = _toDouble(map['maximo'] ?? map['max']);
-    String? uni    = (map['unidade']?.toString().trim().isEmpty ?? true)
+    String? uni = (map['unidade']?.toString().trim().isEmpty ?? true)
         ? null
         : map['unidade']!.toString().trim();
 
     // Se não veio min/max, tenta extrair da faixa; se ainda não, tenta do título.
     if (minimo == null && maximo == null) {
       final r1 = _parseRangeAny(faixa);
-      minimo = r1.min; maximo = r1.max; uni ??= r1.uni;
+      minimo = r1.min;
+      maximo = r1.max;
+      uni ??= r1.uni;
       if (minimo == null && maximo == null) {
         final r2 = _parseRangeAny(titulo);
-        minimo = r2.min; maximo = r2.max; uni ??= r2.uni;
+        minimo = r2.min;
+        maximo = r2.max;
+        uni ??= r2.uni;
       }
     }
 
@@ -243,16 +268,18 @@ class MedidaItem {
     // valores absolutos ordenados quando tratar-se de ângulo.
     final tituloNorm = _normalizeLower(titulo);
     final isAngulo =
-        (uni != null && RegExp(r'[°º]').hasMatch(uni)) || tituloNorm.contains('angulo');
+        (uni != null && RegExp(r'[°º]').hasMatch(uni)) ||
+        tituloNorm.contains('angulo');
     if (isAngulo && minimo != null && maximo != null) {
-      final vals = [minimo!.abs(), maximo!.abs()]
-        ..sort();
+      final vals = [minimo!.abs(), maximo!.abs()]..sort();
       minimo = vals.first;
       maximo = vals.last;
     }
 
     // Se faixaTexto veio vazio, monta automaticamente a partir de min/max/unidade
-    final faixaOut = (faixa.isNotEmpty) ? faixa : _makeFaixaTexto(minimo, maximo, uni);
+    final faixaOut = (faixa.isNotEmpty)
+        ? faixa
+        : _makeFaixaTexto(minimo, maximo, uni);
 
     // Tolerâncias para Operador (lista de rótulos), se existirem
     final tol = (map['tolerancias'] is List)
