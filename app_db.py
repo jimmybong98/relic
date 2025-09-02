@@ -1870,7 +1870,7 @@ def exportar_relatorio_excel():
         ws = wb.active
         ws.append(headers)
         for r in rows:
-            ws.append([r.get(h) for h in headers])
+            ws.append([_serialize(r.get(h)) for h in headers])
         stream = io.BytesIO()
         wb.save(stream)
         stream.seek(0)
