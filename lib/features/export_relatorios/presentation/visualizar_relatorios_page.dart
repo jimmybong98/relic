@@ -32,7 +32,21 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
     if (data != null && data[section] is List) {
       for (final e in (data[section] as List)) {
         if (e is Map<String, dynamic>) {
-          rows.add(e);
+          if (_tipo == 'FOR07') {
+            rows.add({
+              'partnumber': e['partnumber'],
+              'maquina': e['maquina'],
+              'faixa_texto': e['faixa_texto'],
+              'titulo': e['titulo'],
+              'medicao': e['medicao'],
+              'status_medida':
+                  e['status_medida'] ?? e['statusMedida'] ?? '',
+              'status_liberacao':
+                  e['status_liberacao'] ?? e['statusLiberacao'] ?? e['status'] ?? '',
+            });
+          } else {
+            rows.add(e);
+          }
         }
       }
     }
@@ -45,7 +59,20 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
 
   @override
   Widget build(BuildContext context) {
-    final headers = _rows.isNotEmpty ? _rows.first.keys.toList() : <String>[];
+    final headerMap = _tipo == 'FOR07'
+        ? const {
+            'partnumber': 'Partnumber',
+            'maquina': 'Máquina',
+            'faixa_texto': 'Faixa',
+            'titulo': 'Título',
+            'medicao': 'Medição',
+            'status_medida': 'Status da medida',
+            'status_liberacao': 'Status da liberação',
+          }
+        : (_rows.isNotEmpty
+            ? {for (final k in _rows.first.keys) k: k}
+            : <String, String>{});
+    final headers = headerMap.keys.toList();
     return Scaffold(
       appBar: AppBar(title: const Text('Visualizar relatórios')),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
@@ -88,15 +115,20 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
                       scrollDirection: Axis.horizontal,
                       child: DataTable(
                         columns: headers
-                            .map((h) => DataColumn(label: Text(h)))
+                            .map(
+                              (h) =>
+                                  DataColumn(label: Text(headerMap[h] ?? h)),
+                            )
                             .toList(),
                         rows: _rows
-                            .map((r) => DataRow(
-                                  cells: headers
-                                      .map((h) =>
-                                          DataCell(Text('${r[h] ?? ''}')))
-                                      .toList(),
-                                ))
+                            .map(
+                              (r) => DataRow(
+                                cells: headers
+                                    .map((h) =>
+                                        DataCell(Text('${r[h] ?? ''}')))
+                                    .toList(),
+                              ),
+                            )
                             .toList(),
                       ),
                     ),
