@@ -334,6 +334,49 @@ def _ensure_schema():
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                   """
             )
+            cur.execute(
+                """
+                  CREATE TABLE IF NOT EXISTS for07_norm (
+                    partnumber VARCHAR(128) NOT NULL,
+                    operacao VARCHAR(64) NOT NULL,
+                    idx_medida INT NOT NULL,
+                    titulo VARCHAR(128) NOT NULL,
+                    faixa_texto TEXT NOT NULL,
+                    instrumento VARCHAR(255) DEFAULT NULL,
+                    minimo DOUBLE DEFAULT NULL,
+                    maximo DOUBLE DEFAULT NULL,
+                    nome_peca VARCHAR(255) DEFAULT NULL,
+                    tipo_maquina VARCHAR(255) DEFAULT NULL,
+                    cliente VARCHAR(255) DEFAULT NULL,
+                    data_inclusao DATE DEFAULT NULL,
+                    PRIMARY KEY (partnumber, operacao, idx_medida)
+                  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """
+            )
+            cur.execute(
+                """
+                  CREATE TABLE IF NOT EXISTS for09_norm (
+                    idx_medida BIGINT NOT NULL,
+                    partnumber VARCHAR(128) NOT NULL,
+                    operacao VARCHAR(64) NOT NULL,
+                    tipo_maquina VARCHAR(128) DEFAULT NULL,
+                    nome_peca VARCHAR(255) DEFAULT NULL,
+                    data_inclusao DATE DEFAULT NULL,
+                    cliente VARCHAR(255) DEFAULT NULL,
+                    titulo VARCHAR(128) NOT NULL,
+                    faixa_texto TEXT NOT NULL,
+                    minimo DOUBLE DEFAULT NULL,
+                    maximo DOUBLE DEFAULT NULL,
+                    periodicidade VARCHAR(128) DEFAULT NULL,
+                    instrumento VARCHAR(255) DEFAULT NULL,
+                    reprovada_abaixo DOUBLE DEFAULT NULL,
+                    alerta_abaixo DOUBLE DEFAULT NULL,
+                    alerta_acima DOUBLE DEFAULT NULL,
+                    reprovada_acima DOUBLE DEFAULT NULL,
+                    PRIMARY KEY (idx_medida, partnumber, operacao)
+                  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """
+            )
             # Garante coluna 'maquina' nas tabelas principais
             _ensure_column(
                 c, "preparador_liberacao", "maquina", "VARCHAR(128) DEFAULT NULL"
