@@ -8,7 +8,8 @@ class VisualizarRelatoriosPage extends StatefulWidget {
   const VisualizarRelatoriosPage({super.key});
 
   @override
-  State<VisualizarRelatoriosPage> createState() => _VisualizarRelatoriosPageState();
+  State<VisualizarRelatoriosPage> createState() =>
+      _VisualizarRelatoriosPageState();
 }
 
 class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
@@ -26,8 +27,10 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
   Future<void> _buscar() async {
     setState(() => _loading = true);
     final section = _tipo == 'FOR07' ? 'liberacao' : 'amostragem';
-    final data = await ReportService()
-        .fetchOsReport(_osController.text, section: section);
+    final data = await ReportService().fetchOsReport(
+      _osController.text,
+      section: section,
+    );
     final List<Map<String, dynamic>> rows = [];
     if (data != null && data[section] is List) {
       for (final e in (data[section] as List)) {
@@ -39,13 +42,23 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
               'faixa_texto': e['faixa_texto'],
               'titulo': e['titulo'],
               'medicao': e['medicao'],
-              'status_medida':
-                  e['status_medida'] ?? e['statusMedida'] ?? '',
+              'status_medida': e['status_medida'] ?? e['statusMedida'] ?? '',
               'status_liberacao':
-                  e['status_liberacao'] ?? e['statusLiberacao'] ?? e['status'] ?? '',
+                  e['status_liberacao'] ??
+                  e['statusLiberacao'] ??
+                  e['status'] ??
+                  '',
             });
           } else {
-            rows.add(e);
+            rows.add({
+              'partnumber': e['partnumber'],
+              'maquina': e['maquina'],
+              'titulo': e['titulo'],
+              'instrumento': e['instrumento'],
+              'faixa_texto': e['faixa_texto'],
+              'escolha': e['escolha'],
+              'status': e['status'],
+            });
           }
         }
       }
@@ -69,9 +82,15 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             'status_medida': 'Status da medida',
             'status_liberacao': 'Status da liberação',
           }
-        : (_rows.isNotEmpty
-            ? {for (final k in _rows.first.keys) k: k}
-            : <String, String>{});
+        : const {
+            'partnumber': 'Partnumber',
+            'maquina': 'Máquina',
+            'titulo': 'Título',
+            'instrumento': 'Instrumento',
+            'faixa_texto': 'Faixa',
+            'escolha': 'Escolha',
+            'status': 'Status',
+          };
     final headers = headerMap.keys.toList();
     return Scaffold(
       appBar: AppBar(title: const Text('Visualizar relatórios')),
@@ -116,16 +135,14 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
                       child: DataTable(
                         columns: headers
                             .map(
-                              (h) =>
-                                  DataColumn(label: Text(headerMap[h] ?? h)),
+                              (h) => DataColumn(label: Text(headerMap[h] ?? h)),
                             )
                             .toList(),
                         rows: _rows
                             .map(
                               (r) => DataRow(
                                 cells: headers
-                                    .map((h) =>
-                                        DataCell(Text('${r[h] ?? ''}')))
+                                    .map((h) => DataCell(Text('${r[h] ?? ''}')))
                                     .toList(),
                               ),
                             )
@@ -139,4 +156,3 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
     );
   }
 }
-
