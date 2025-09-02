@@ -68,6 +68,21 @@ def _run_sql_report(sql_path: str, dbname: str = DB_NAME):
     return rows
 
 
+def _tables_exist(cur, *names) -> bool:
+    """Verifica se todas as tabelas informadas existem no banco atual."""
+    placeholders = ",".join(["%s"] * len(names))
+    cur.execute(
+        f"""
+        SELECT COUNT(*) AS cnt
+          FROM information_schema.tables
+         WHERE table_schema = DATABASE()
+           AND table_name IN ({placeholders})
+        """,
+        names,
+    )
+    return cur.fetchone()["cnt"] == len(names)
+
+
 def _ensure_column(conn, table: str, column: str, definition: str) -> None:
     """Adiciona uma coluna a uma tabela se ela ainda não existir."""
     with conn.cursor() as cur:
@@ -1725,8 +1740,11 @@ def relatorio_os():
                     )
                     amostragem = cur.fetchall()
                 if section in ("full", "liberacao"):
-                    cur.execute(
-                        """
+                    if _tables_exist(
+                        cur, "preparador_liberacao", "preparador_liberacao_item"
+                    ):
+                        cur.execute(
+                            """
                         SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
@@ -1742,9 +1760,11 @@ def relatorio_os():
                          WHERE l.os=%s
                          ORDER BY i.created_at
                         """,
-                        (os_num,),
-                    )
-                    liberacao = cur.fetchall()
+                            (os_num,),
+                        )
+                        liberacao = cur.fetchall()
+                    else:
+                        liberacao = []
         return jsonify(
             {
                 "ordem_servico": _serialize(os_data) if os_data else None,
@@ -1767,8 +1787,11 @@ def exportar_relatorio_excel():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 if tipo == "FOR07":
-                    cur.execute(
-                        """
+                    if _tables_exist(
+                        cur, "preparador_liberacao", "preparador_liberacao_item"
+                    ):
+                        cur.execute(
+                            """
                         SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
@@ -1784,9 +1807,11 @@ def exportar_relatorio_excel():
                          WHERE l.os=%s
                          ORDER BY i.created_at
                         """,
-                        (os_num,),
-                    )
-                    rows = cur.fetchall()
+                            (os_num,),
+                        )
+                        rows = cur.fetchall()
+                    else:
+                        rows = []
                     headers = [
                         "os",
                         "partnumber",
