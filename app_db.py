@@ -1784,11 +1784,11 @@ def relatorio_os():
                     amostragem = cur.fetchall()
                 if section in ("full", "liberacao"):
                     if _tables_exist(
-                        cur, "preparador_liberacao", "preparador_liberacao_item"
+                        cur, "preparador_registro", "preparador_registro_item"
                     ):
                         cur.execute(
                             """
-                        SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
+                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
@@ -1798,9 +1798,9 @@ def relatorio_os():
                                  ELSE 'liberada'
                                END AS status,
                                i.observacao, i.created_at
-                          FROM preparador_liberacao l
-                          JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
-                         WHERE l.os=%s
+                          FROM preparador_registro r
+                          JOIN preparador_registro_item i ON i.registro_id = r.id
+                         WHERE r.os=%s
                          ORDER BY i.created_at
                         """,
                             (os_num,),
@@ -1831,11 +1831,11 @@ def exportar_relatorio_excel():
             with c.cursor() as cur:
                 if tipo == "FOR07":
                     if _tables_exist(
-                        cur, "preparador_liberacao", "preparador_liberacao_item"
+                        cur, "preparador_registro", "preparador_registro_item"
                     ):
                         cur.execute(
                             """
-                        SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
+                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
@@ -1845,9 +1845,9 @@ def exportar_relatorio_excel():
                                  ELSE 'liberada'
                                END AS status,
                                i.observacao, i.created_at
-                          FROM preparador_liberacao l
-                          JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
-                         WHERE l.os=%s
+                          FROM preparador_registro r
+                          JOIN preparador_registro_item i ON i.registro_id = r.id
+                         WHERE r.os=%s
                          ORDER BY i.created_at
                         """,
                             (os_num,),
@@ -1918,12 +1918,21 @@ def exportar_relatorio_excel():
         wb.save(stream)
         stream.seek(0)
         filename = f"relatorio_{os_num}_{tipo}.xlsx"
-        return send_file(
-            stream,
-            as_attachment=True,
-            download_name=filename,
-            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+        try:
+            return send_file(
+                stream,
+                as_attachment=True,
+                download_name=filename,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        except TypeError:
+            # Compatibilidade com versões antigas do Flask (<2.0)
+            return send_file(
+                stream,
+                as_attachment=True,
+                attachment_filename=filename,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
     except Exception as e:
         return jsonify({"error": f"Falha ao exportar relatório: {e}"}), 500
 
