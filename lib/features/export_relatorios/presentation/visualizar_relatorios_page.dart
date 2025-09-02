@@ -26,22 +26,23 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
 
   Future<void> _buscar() async {
     setState(() => _loading = true);
-    final section = _tipo == 'FOR07' ? 'liberacao' : 'amostragem';
+    final section = _tipo == 'FOR07' ? 'full' : 'amostragem';
     final data = await ReportService().fetchOsReport(
       _osController.text,
       section: section,
     );
     final List<Map<String, dynamic>> rows = [];
-    if (data != null && data[section] is List) {
-      for (final e in (data[section] as List)) {
-        if (e is Map<String, dynamic>) {
-          final raw = (e['created_at'] ?? '').toString();
-          final createdAt =
-              DateTime.tryParse(raw)?.toLocal().toString().split('.').first ??
-              raw.replaceAll('T', ' ');
-          if (_tipo == 'FOR07') {
+    if (data != null) {
+      if (_tipo == 'FOR07') {
+        for (final e in (data['liberacao'] as List? ?? [])) {
+          if (e is Map<String, dynamic>) {
+            final raw = (e['created_at'] ?? '').toString();
+            final createdAt =
+                DateTime.tryParse(raw)?.toLocal().toString().split('.').first ??
+                raw.replaceAll('T', ' ');
             rows.add({
               'created_at': createdAt,
+              'etapa': 'Liberação',
               'partnumber': e['partnumber'],
               'maquina': e['maquina'],
               'faixa_texto': e['faixa_texto'],
@@ -54,7 +55,34 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
                   e['status'] ??
                   '',
             });
-          } else {
+          }
+        }
+        for (final e in (data['finalizacao'] as List? ?? [])) {
+          if (e is Map<String, dynamic>) {
+            final raw = (e['created_at'] ?? '').toString();
+            final createdAt =
+                DateTime.tryParse(raw)?.toLocal().toString().split('.').first ??
+                raw.replaceAll('T', ' ');
+            rows.add({
+              'created_at': createdAt,
+              'etapa': 'Finalização',
+              'partnumber': e['partnumber'],
+              'maquina': e['maquina'],
+              'faixa_texto': e['faixa_texto'],
+              'titulo': e['titulo'],
+              'medicao': e['medicao'],
+              'status_medida': e['status_medida'] ?? e['statusMedida'] ?? '',
+              'status_liberacao': e['status'] ?? '',
+            });
+          }
+        }
+      } else if (data[section] is List) {
+        for (final e in (data[section] as List)) {
+          if (e is Map<String, dynamic>) {
+            final raw = (e['created_at'] ?? '').toString();
+            final createdAt =
+                DateTime.tryParse(raw)?.toLocal().toString().split('.').first ??
+                raw.replaceAll('T', ' ');
             rows.add({
               'created_at': createdAt,
               'partnumber': e['partnumber'],
@@ -84,13 +112,14 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
     final headerMap = _tipo == 'FOR07'
         ? const {
             'created_at': 'Horário',
+            'etapa': 'Etapa',
             'partnumber': 'Partnumber',
             'maquina': 'Máquina',
             'faixa_texto': 'Faixa',
             'titulo': 'Título',
             'medicao': 'Medição',
             'status_medida': 'Status da medida',
-            'status_liberacao': 'Status da liberação',
+            'status_liberacao': 'Status',
           }
         : const {
             'created_at': 'Horário',
