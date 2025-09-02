@@ -68,6 +68,21 @@ def _run_sql_report(sql_path: str, dbname: str = DB_NAME):
     return rows
 
 
+def _tables_exist(cur, *names) -> bool:
+    """Verifica se todas as tabelas informadas existem no banco atual."""
+    placeholders = ",".join(["%s"] * len(names))
+    cur.execute(
+        f"""
+        SELECT COUNT(*) AS cnt
+          FROM information_schema.tables
+         WHERE table_schema = DATABASE()
+           AND table_name IN ({placeholders})
+        """,
+        names,
+    )
+    return cur.fetchone()["cnt"] == len(names)
+
+
 def _ensure_column(conn, table: str, column: str, definition: str) -> None:
     """Adiciona uma coluna a uma tabela se ela ainda não existir."""
     with conn.cursor() as cur:
@@ -1725,7 +1740,9 @@ def relatorio_os():
                     )
                     amostragem = cur.fetchall()
                 if section in ("full", "liberacao"):
-                    try:
+                    if _tables_exist(
+                        cur, "preparador_liberacao", "preparador_liberacao_item"
+                    ):
                         cur.execute(
                             """
                         SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
@@ -1746,7 +1763,7 @@ def relatorio_os():
                             (os_num,),
                         )
                         liberacao = cur.fetchall()
-                    except Exception:
+                    else:
                         liberacao = []
         return jsonify(
             {
@@ -1770,7 +1787,9 @@ def exportar_relatorio_excel():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 if tipo == "FOR07":
-                    try:
+                    if _tables_exist(
+                        cur, "preparador_liberacao", "preparador_liberacao_item"
+                    ):
                         cur.execute(
                             """
                         SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
@@ -1791,7 +1810,7 @@ def exportar_relatorio_excel():
                             (os_num,),
                         )
                         rows = cur.fetchall()
-                    except Exception:
+                    else:
                         rows = []
                     headers = [
                         "os",
