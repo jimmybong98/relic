@@ -65,7 +65,7 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
                 raw.replaceAll('T', ' ');
             rows.add({
               'created_at': createdAt,
-              'etapa': 'Finalização',
+              'etapa': 'Encerramento',
               'partnumber': e['partnumber'],
               'maquina': e['maquina'],
               'faixa_texto': e['faixa_texto'],
@@ -189,11 +189,16 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
                             groups = {};
                             for (final r in _rows) {
                               final time = r['created_at'] ?? '';
-                              groups.putIfAbsent(time, () => []).add(r);
+                              final etapa = r['etapa'] ?? '';
+                              final key = '$time|$etapa';
+                              groups.putIfAbsent(key, () => []).add(r);
                             }
-                            final sortedTimes = groups.keys.toList()..sort();
+                            final sortedKeys = groups.keys.toList()..sort();
                             final List<DataRow> dataRows = [];
-                            for (final time in sortedTimes) {
+                            for (final key in sortedKeys) {
+                              final parts = key.split('|');
+                              final time = parts.first;
+                              final etapa = parts.length > 1 ? parts[1] : '';
                               dataRows.add(
                                 DataRow(
                                   cells: [
@@ -203,8 +208,14 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
                                         style: const TextStyle(fontSize: 12),
                                       ),
                                     ),
+                                    DataCell(
+                                      Text(
+                                        etapa,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ),
                                     ...List.generate(
-                                      headers.length - 1,
+                                      headers.length - 2,
                                       (_) => DataCell(
                                         Text(
                                           '',
@@ -215,7 +226,7 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
                                   ],
                                 ),
                               );
-                              for (final r in groups[time]!) {
+                              for (final r in groups[key]!) {
                                 dataRows.add(
                                   DataRow(
                                     cells: [
