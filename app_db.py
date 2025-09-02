@@ -1681,6 +1681,7 @@ def operador_encerrar_producao():
         return jsonify({"error": f"Falha ao encerrar produção: {e}"}), 500
 
 @app.route("/reports")
+@app.route("/reports/preparador")
 def listar_relatorios():
     try:
         with _conn_db(DB_NAME) as c:

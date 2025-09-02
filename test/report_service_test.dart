@@ -5,6 +5,17 @@ import 'package:http/http.dart' as http;
 import 'package:admin/services/report_service.dart';
 
 void main() {
+  test('fetchPreparerReleases hits preparador endpoint', () async {
+    late Uri requestedUri;
+    final client = MockClient((req) async {
+      requestedUri = req.url;
+      return http.Response('[]', 200);
+    });
+    final service = ReportService(client: client, baseUrl: 'http://dummy');
+    await service.fetchPreparerReleases();
+    expect(requestedUri.path, '/reports/preparador');
+  });
+
   test('normalizes OS parameter before request', () async {
     late Uri requestedUri;
     final client = MockClient((req) async {
