@@ -833,10 +833,12 @@ def supervisor_inserir():
                             400,
                         )
                     cur.execute(
-                        f"SELECT COALESCE(MAX(idx_medida),0)+1 FROM {tabela} WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=%s AND TRIM(LEADING '0' FROM TRIM(operacao))=%s",
+                        f"SELECT COALESCE(MAX(idx_medida),0)+1 AS next_idx FROM {tabela} "
+                        "WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=%s "
+                        "AND TRIM(LEADING '0' FROM TRIM(operacao))=%s",
                         (part, op),
                     )
-                    dados["idx_medida"] = cur.fetchone()[0]
+                    dados["idx_medida"] = cur.fetchone()["next_idx"]
 
                 cols = list(dados.keys())
                 vals = [dados[k] for k in cols]
@@ -1710,9 +1712,10 @@ def operador_encerrar_producao():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 cur.execute(
-                    "SELECT COUNT(*) FROM operador_amostragem WHERE os=%s", (os_num,)
+                    "SELECT COUNT(*) AS cnt FROM operador_amostragem WHERE os=%s",
+                    (os_num,)
                 )
-                if cur.fetchone()[0] == 0:
+                if cur.fetchone()["cnt"] == 0:
                     return (
                         jsonify({"error": "Nenhum registro de amostragem encontrado"}),
                         400,
