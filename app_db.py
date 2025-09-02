@@ -752,7 +752,7 @@ def _maquina_liberada(
         cur.execute(
             """
             SELECT
-              SUM(CASE WHEN LOWER(COALESCE(status,''))='ok' OR LOWER(COALESCE(status,'')) LIKE '%aprovado%'
+              SUM(CASE WHEN LOWER(COALESCE(status,''))='ok' OR LOWER(COALESCE(status,'')) LIKE '%%aprovado%%'
                       THEN 1 ELSE 0 END) AS ok_cnt,
               COUNT(*) AS total
             FROM preparador_registro_item
@@ -1697,12 +1697,12 @@ def listar_relatorios():
                     """
                     SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
                            i.idx_medida, i.titulo, i.medicao,
-                           CASE
-                             WHEN LOWER(i.status) LIKE '%reprov%'
-                                  OR LOWER(i.status) LIKE '%recus%'
-                               THEN 'recusada'
-                             ELSE 'liberada'
-                           END AS status,
+                             CASE
+                               WHEN LOWER(i.status) LIKE '%%reprov%%'
+                                    OR LOWER(i.status) LIKE '%%recus%%'
+                                 THEN 'recusada'
+                               ELSE 'liberada'
+                             END AS status,
                            i.observacao, i.created_at
                       FROM preparador_registro r
                       JOIN preparador_registro_item i ON i.registro_id = r.id
@@ -1739,8 +1739,8 @@ def listar_relatorios_operador():
                         """
                         SELECT a.os, a.partnumber, a.operacao, a.re_operador,
                                CASE
-                                 WHEN SUM(CASE WHEN LOWER(i.status) LIKE '%reprov%' THEN 1 ELSE 0 END) > 0 THEN 'reprovado'
-                                 WHEN SUM(CASE WHEN LOWER(i.status) LIKE '%aprov%' OR LOWER(i.status) = 'ok' THEN 1 ELSE 0 END) = COUNT(i.id) THEN 'aprovado'
+                                  WHEN SUM(CASE WHEN LOWER(i.status) LIKE '%%reprov%%' THEN 1 ELSE 0 END) > 0 THEN 'reprovado'
+                                  WHEN SUM(CASE WHEN LOWER(i.status) LIKE '%%aprov%%' OR LOWER(i.status) = 'ok' THEN 1 ELSE 0 END) = COUNT(i.id) THEN 'aprovado'
                                  ELSE 'pendente'
                                END AS status_geral,
                                a.created_at
@@ -1801,7 +1801,7 @@ def relatorio_os():
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
                                CASE
-                                 WHEN LOWER(i.status) LIKE '%reprov%' OR LOWER(i.status) LIKE '%recus%'
+                                 WHEN LOWER(i.status) LIKE '%%reprov%%' OR LOWER(i.status) LIKE '%%recus%%'
                                    THEN 'recusada'
                                  ELSE 'liberada'
                                END AS status,
@@ -1824,6 +1824,7 @@ def relatorio_os():
             }
         )
     except Exception as e:
+        app.logger.exception("Falha ao gerar relatório")
         return jsonify({"error": f"Falha ao gerar relatório: {e}"}), 500
 
 
@@ -1847,11 +1848,11 @@ def exportar_relatorio_excel():
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
-                               CASE
-                                 WHEN LOWER(i.status) LIKE '%reprov%' OR LOWER(i.status) LIKE '%recus%'
-                                   THEN 'recusada'
-                                 ELSE 'liberada'
-                               END AS status,
+                                 CASE
+                                   WHEN LOWER(i.status) LIKE '%%reprov%%' OR LOWER(i.status) LIKE '%%recus%%'
+                                     THEN 'recusada'
+                                   ELSE 'liberada'
+                                 END AS status,
                                i.observacao, i.created_at
                           FROM preparador_registro r
                           JOIN preparador_registro_item i ON i.registro_id = r.id
@@ -1942,6 +1943,7 @@ def exportar_relatorio_excel():
                 mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
     except Exception as e:
+        app.logger.exception("Falha ao exportar relatório")
         return jsonify({"error": f"Falha ao exportar relatório: {e}"}), 500
 
 def _is_admin_request() -> bool:
