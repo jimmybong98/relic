@@ -1725,8 +1725,9 @@ def relatorio_os():
                     )
                     amostragem = cur.fetchall()
                 if section in ("full", "liberacao"):
-                    cur.execute(
-                        """
+                    try:
+                        cur.execute(
+                            """
                         SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
@@ -1742,9 +1743,11 @@ def relatorio_os():
                          WHERE l.os=%s
                          ORDER BY i.created_at
                         """,
-                        (os_num,),
-                    )
-                    liberacao = cur.fetchall()
+                            (os_num,),
+                        )
+                        liberacao = cur.fetchall()
+                    except Exception:
+                        liberacao = []
         return jsonify(
             {
                 "ordem_servico": _serialize(os_data) if os_data else None,
@@ -1767,8 +1770,9 @@ def exportar_relatorio_excel():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 if tipo == "FOR07":
-                    cur.execute(
-                        """
+                    try:
+                        cur.execute(
+                            """
                         SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
@@ -1784,9 +1788,11 @@ def exportar_relatorio_excel():
                          WHERE l.os=%s
                          ORDER BY i.created_at
                         """,
-                        (os_num,),
-                    )
-                    rows = cur.fetchall()
+                            (os_num,),
+                        )
+                        rows = cur.fetchall()
+                    except Exception:
+                        rows = []
                     headers = [
                         "os",
                         "partnumber",
