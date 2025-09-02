@@ -143,52 +143,80 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
                   ? const Center(child: Text('Nenhum dado'))
                   : SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        columns: headers
-                            .map(
-                              (h) => DataColumn(label: Text(headerMap[h] ?? h)),
-                            )
-                            .toList(),
-                        rows: () {
-                          final Map<String, List<Map<String, dynamic>>> groups =
-                              {};
-                          for (final r in _rows) {
-                            final time = r['created_at'] ?? '';
-                            groups.putIfAbsent(time, () => []).add(r);
-                          }
-                          final sortedTimes = groups.keys.toList()..sort();
-                          final List<DataRow> dataRows = [];
-                          for (final time in sortedTimes) {
-                            dataRows.add(
-                              DataRow(
-                                cells: [
-                                  DataCell(Text(time)),
-                                  ...List.generate(
-                                    headers.length - 1,
-                                    (_) => const DataCell(Text('')),
+                      child: SingleChildScrollView(
+                        child: DataTable(
+                          columns: headers
+                              .map(
+                                (h) => DataColumn(
+                                  label: Text(
+                                    headerMap[h] ?? h,
+                                    style: const TextStyle(fontSize: 12),
                                   ),
-                                ],
-                              ),
-                            );
-                            for (final r in groups[time]!) {
+                                ),
+                              )
+                              .toList(),
+                          rows: () {
+                            final Map<String, List<Map<String, dynamic>>>
+                            groups = {};
+                            for (final r in _rows) {
+                              final time = r['created_at'] ?? '';
+                              groups.putIfAbsent(time, () => []).add(r);
+                            }
+                            final sortedTimes = groups.keys.toList()..sort();
+                            final List<DataRow> dataRows = [];
+                            for (final time in sortedTimes) {
                               dataRows.add(
                                 DataRow(
                                   cells: [
-                                    const DataCell(Text('')),
-                                    ...headers
-                                        .skip(1)
-                                        .map(
-                                          (h) =>
-                                              DataCell(Text('${r[h] ?? ''}')),
-                                        )
-                                        .toList(),
+                                    DataCell(
+                                      Text(
+                                        time,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                    ...List.generate(
+                                      headers.length - 1,
+                                      (_) => DataCell(
+                                        Text(
+                                          '',
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               );
+                              for (final r in groups[time]!) {
+                                dataRows.add(
+                                  DataRow(
+                                    cells: [
+                                      DataCell(
+                                        Text(
+                                          '',
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ),
+                                      ...headers
+                                          .skip(1)
+                                          .map(
+                                            (h) => DataCell(
+                                              Text(
+                                                '${r[h] ?? ''}',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                    ],
+                                  ),
+                                );
+                              }
                             }
-                          }
-                          return dataRows;
-                        }(),
+                            return dataRows;
+                          }(),
+                        ),
                       ),
                     ),
             ),
