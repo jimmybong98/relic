@@ -1887,23 +1887,21 @@ def relatorio_os():
                     amostragem = cur.fetchall()
                 if section in ("full", "liberacao"):
                     if _tables_exist(
-                        cur, "preparador_registro", "preparador_registro_item"
+                        cur, "preparador_liberacao", "preparador_liberacao_item"
                     ):
                         cur.execute(
                             """
-                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
+                        SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
+                               l.maquina,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
-                               CASE
-                                 WHEN LOWER(i.status) LIKE '%%reprov%%' OR LOWER(i.status) LIKE '%%recus%%'
-                                   THEN 'recusada'
-                                 ELSE 'liberada'
-                               END AS status,
+                               i.status AS status_medida,
+                               l.status_geral AS status_liberacao,
                                i.observacao, i.created_at
-                          FROM preparador_registro r
-                          JOIN preparador_registro_item i ON i.registro_id = r.id
-                         WHERE r.os=%s
+                          FROM preparador_liberacao l
+                          JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
+                         WHERE l.os=%s
                          ORDER BY i.created_at
                         """,
                             (os_num,),
@@ -1913,21 +1911,19 @@ def relatorio_os():
                         liberacao = []
                 if section in ("full", "finalizacao"):
                     if _tables_exist(
-                        cur,
-                        "preparador_finalizacao",
-                        "preparador_finalizacao_item",
+                        cur, "preparador_registro", "preparador_registro_item"
                     ):
                         cur.execute(
                             """
-                        SELECT f.os, f.partnumber, f.operacao, f.re_preparador,
-                               f.maquina,
+                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
+                               r.maquina,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
                                i.status, i.observacao, i.created_at
-                          FROM preparador_finalizacao f
-                          JOIN preparador_finalizacao_item i ON i.finalizacao_id = f.id
-                         WHERE f.os=%s
+                          FROM preparador_registro r
+                          JOIN preparador_registro_item i ON i.registro_id = r.id
+                         WHERE r.os=%s
                          ORDER BY i.created_at
                         """,
                             (os_num,),
@@ -1977,23 +1973,19 @@ def exportar_relatorio_excel():
                         "created_at",
                     ]
                     if _tables_exist(
-                        cur, "preparador_registro", "preparador_registro_item"
+                        cur, "preparador_liberacao", "preparador_liberacao_item"
                     ):
                         cur.execute(
                             """
-                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
+                        SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
-                               CASE
-                                 WHEN LOWER(i.status) LIKE '%%reprov%%' OR LOWER(i.status) LIKE '%%recus%%'
-                                   THEN 'recusada'
-                                 ELSE 'liberada'
-                               END AS status,
+                               l.status_geral AS status,
                                i.observacao, i.created_at
-                          FROM preparador_registro r
-                          JOIN preparador_registro_item i ON i.registro_id = r.id
-                         WHERE r.os=%s
+                          FROM preparador_liberacao l
+                          JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
+                         WHERE l.os=%s
                          ORDER BY i.created_at
                         """,
                             (os_num,),
@@ -2002,21 +1994,19 @@ def exportar_relatorio_excel():
                             r["etapa"] = "liberacao"
                             rows.append(r)
                     if _tables_exist(
-                        cur,
-                        "preparador_finalizacao",
-                        "preparador_finalizacao_item",
+                        cur, "preparador_registro", "preparador_registro_item"
                     ):
                         cur.execute(
                             """
-                        SELECT f.os, f.partnumber, f.operacao, f.re_preparador,
+                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
                                i.status,
                                i.observacao, i.created_at
-                          FROM preparador_finalizacao f
-                          JOIN preparador_finalizacao_item i ON i.finalizacao_id = f.id
-                         WHERE f.os=%s
+                          FROM preparador_registro r
+                          JOIN preparador_registro_item i ON i.registro_id = r.id
+                         WHERE r.os=%s
                          ORDER BY i.created_at
                         """,
                             (os_num,),
