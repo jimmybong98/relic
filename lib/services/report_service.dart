@@ -74,8 +74,10 @@ class ReportService {
   Future<Map<String, dynamic>?> fetchOsReport(String os,
       {String section = 'full'}) async {
     try {
-      final uri =
-          Uri.parse('$_baseUrl/reports/os?os=$os&section=$section');
+      final normalized = normalizeCode(os);
+      final uri = Uri.parse(_baseUrl)
+          .resolve('reports/os')
+          .replace(queryParameters: {'os': normalized, 'section': section});
       final response = await _client.get(uri);
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -88,10 +90,13 @@ class ReportService {
   /// Returns `true` if the file was saved successfully.
   Future<bool> exportToExcel({required String os, required String tipo}) async {
     try {
-      final uri = Uri.parse('$_baseUrl/reports/export?os=$os&type=$tipo');
+      final normalized = normalizeCode(os);
+      final uri = Uri.parse(_baseUrl)
+          .resolve('reports/export')
+          .replace(queryParameters: {'os': normalized, 'type': tipo});
       final response = await _client.get(uri);
       if (response.statusCode == 200) {
-        final file = File('relatorio_${os}_$tipo.xlsx');
+        final file = File('relatorio_${normalized}_$tipo.xlsx');
         await file.writeAsBytes(response.bodyBytes);
         return true;
       }
