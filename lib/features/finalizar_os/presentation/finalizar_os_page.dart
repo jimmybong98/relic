@@ -25,10 +25,12 @@ class FinalizarOsPage extends ConsumerStatefulWidget {
 }
 
 final medidasFinalizadorControllerProvider =
-    StateNotifierProvider.autoDispose<MedidasFinalizadorController,
-    AsyncValue<List<MedidaItem>>>((ref) {
-  return MedidasFinalizadorController(ref);
-});
+    StateNotifierProvider.autoDispose<
+      MedidasFinalizadorController,
+      AsyncValue<List<MedidaItem>>
+    >((ref) {
+      return MedidasFinalizadorController(ref);
+    });
 
 class MedidasFinalizadorController
     extends StateNotifier<AsyncValue<List<MedidaItem>>> {
@@ -42,24 +44,28 @@ class MedidasFinalizadorController
     state = const AsyncValue.loading();
     try {
       final repo = _ref.read(finalizadorRepositoryProvider);
-      final itens =
-      await repo.getMedidas(partnumber: partnumber, operacao: operacao);
+      final itens = await repo.getMedidas(
+        partnumber: partnumber,
+        operacao: operacao,
+      );
 
       // Zera status/medição – sem copyWith
       final normalizados = itens
-          .map((m) => MedidaItem(
-        titulo: m.titulo,
-        faixaTexto: m.faixaTexto,
-        minimo: m.minimo,
-        maximo: m.maximo,
-        unidade: m.unidade,
-        status: StatusMedida.pendente,
-        medicao: null,
-        observacao: m.observacao,
-        periodicidade: m.periodicidade,
-        instrumento: m.instrumento,
-        tolerancias: m.tolerancias,
-      ))
+          .map(
+            (m) => MedidaItem(
+              titulo: m.titulo,
+              faixaTexto: m.faixaTexto,
+              minimo: m.minimo,
+              maximo: m.maximo,
+              unidade: m.unidade,
+              status: StatusMedida.pendente,
+              medicao: null,
+              observacao: m.observacao,
+              periodicidade: m.periodicidade,
+              instrumento: m.instrumento,
+              tolerancias: m.tolerancias,
+            ),
+          )
           .toList();
 
       state = AsyncValue.data(normalizados);
@@ -112,8 +118,8 @@ class MedidasFinalizadorController
 
 class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
   final _formKey = GlobalKey<FormState>();
-  final _reCtrl = TextEditingController();   // <<< RE
-  final _osCtrl = TextEditingController();   // <<< OS
+  final _reCtrl = TextEditingController(); // <<< RE
+  final _osCtrl = TextEditingController(); // <<< OS
   final _partCtrl = TextEditingController();
   final _opCtrl = TextEditingController();
 
@@ -145,13 +151,15 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
         setState(() {
           _maquinas.addAll(list);
           _categorias.addAll(
-              _maquinas.map((e) => e.categoria).toSet().toList()..sort());
+            _maquinas.map((e) => e.categoria).toSet().toList()..sort(),
+          );
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erro ao carregar máquinas: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao carregar máquinas: $e')),
+        );
       }
     }
   }
@@ -171,15 +179,15 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
   String statusToString(StatusMedida st) {
     switch (st) {
       case StatusMedida.ok:
-        return 'aprovado';
+        return 'OK';
       case StatusMedida.reprovadaAbaixo:
-        return 'reprovada_abaixo';
+        return 'Reprovada abaixo';
       case StatusMedida.reprovadaAcima:
-        return 'reprovada_acima';
+        return 'Reprovada acima';
       case StatusMedida.alertaAbaixo:
-        return 'alerta_abaixo';
+        return 'Alerta abaixo';
       case StatusMedida.alertaAcima:
-        return 'alerta_acima';
+        return 'Alerta acima';
       case StatusMedida.pendente:
         return 'pendente';
     }
@@ -194,7 +202,9 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
         (_maquinaSel ?? '').isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preencha RE, O.S. e máquina para registrar.')),
+        const SnackBar(
+          content: Text('Preencha RE, O.S. e máquina para registrar.'),
+        ),
       );
       return;
     }
@@ -256,37 +266,40 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
-        final statusGeral =
-            (data['status_geral'] ?? '').toString().toLowerCase();
+        final statusGeral = (data['status_geral'] ?? '')
+            .toString()
+            .toLowerCase();
         if (statusGeral.isNotEmpty) {
           setState(() => _osFinalizada = true);
         }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('OS finalizada com sucesso!')),
         );
-        ref
-            .read(medidasFinalizadorControllerProvider.notifier)
-            .resetSelecoes();
+        ref.read(medidasFinalizadorControllerProvider.notifier).resetSelecoes();
       } else if (resp.statusCode == 409) {
         final data = jsonDecode(resp.body);
         if ((data['code'] ?? '') == 'ja_finalizada') {
           setState(() => _osFinalizada = true);
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Falha ao registrar: ${data['error'] ?? resp.body}')),
+          SnackBar(
+            content: Text('Falha ao registrar: ${data['error'] ?? resp.body}'),
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Falha ao registrar: ${resp.statusCode} ${resp.body}'),
+            content: Text(
+              'Falha ao registrar: ${resp.statusCode} ${resp.body}',
+            ),
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao registrar: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao registrar: $e')));
     } finally {
       if (mounted) setState(() => _registrando = false);
     }
@@ -301,10 +314,12 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     final reOk = _reCtrl.text.trim().isNotEmpty;
     final osOk = _osCtrl.text.trim().isNotEmpty;
     final maquinaOk = (_maquinaSel ?? '').isNotEmpty;
-    final todasOk = medidas.isNotEmpty &&
-        medidas.every((m) =>
-            (m.medicao ?? '').isNotEmpty &&
-                m.status != StatusMedida.pendente);
+    final todasOk =
+        medidas.isNotEmpty &&
+        medidas.every(
+          (m) =>
+              (m.medicao ?? '').isNotEmpty && m.status != StatusMedida.pendente,
+        );
     final podeRegistrar =
         reOk && osOk && maquinaOk && todasOk && !_registrando && !_osFinalizada;
 
@@ -316,11 +331,13 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
             padding: const EdgeInsets.only(right: 12.0),
             child: Center(
               child: Text(
-                Platform.isWindows ? 'Windows: leitura direta/API' : 'Android: via API',
+                Platform.isWindows
+                    ? 'Windows: leitura direta/API'
+                    : 'Android: via API',
                 style: const TextStyle(fontSize: 12),
               ),
             ),
-          )
+          ),
         ],
       ),
       drawer: const SideMenu(current: SideMenuSection.finalizar),
@@ -340,15 +357,19 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                             controller: _reCtrl,
                             textInputAction: TextInputAction.next,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: const InputDecoration(
-                              labelText: 'R.E. do Preparador', // ajuste o texto se for Operador
+                              labelText:
+                                  'R.E. do Preparador', // ajuste o texto se for Operador
                               border: OutlineInputBorder(),
                             ),
                             validator: (v) {
                               final s = (v ?? '').trim();
                               if (s.isEmpty) return 'Obrigatório';
-                              if (!RegExp(r'^\d+$').hasMatch(s)) return 'Apenas números';
+                              if (!RegExp(r'^\d+$').hasMatch(s))
+                                return 'Apenas números';
                               return null;
                             },
                           ),
@@ -360,7 +381,9 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                             controller: _osCtrl,
                             textInputAction: TextInputAction.next,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: const InputDecoration(
                               labelText: 'O.S.',
                               border: OutlineInputBorder(),
@@ -368,7 +391,8 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                             validator: (v) {
                               final s = (v ?? '').trim();
                               if (s.isEmpty) return 'Obrigatório';
-                              if (!RegExp(r'^\d+$').hasMatch(s)) return 'Apenas números';
+                              if (!RegExp(r'^\d+$').hasMatch(s))
+                                return 'Apenas números';
                               return null;
                             },
                           ),
@@ -388,8 +412,12 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                               border: OutlineInputBorder(),
                             ),
                             items: _categorias
-                                .map((c) =>
-                                    DropdownMenuItem(value: c, child: Text(c)))
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(c),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: (v) => setState(() {
                               _categoriaSel = v;
@@ -409,11 +437,14 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                             ),
                             items: _maquinas
                                 .where((m) => m.categoria == _categoriaSel)
-                                .map((m) => DropdownMenuItem(
-                                    value: m.codigo, child: Text(m.codigo)))
+                                .map(
+                                  (m) => DropdownMenuItem(
+                                    value: m.codigo,
+                                    child: Text(m.codigo),
+                                  ),
+                                )
                                 .toList(),
-                            onChanged: (v) =>
-                                setState(() => _maquinaSel = v),
+                            onChanged: (v) => setState(() => _maquinaSel = v),
                             validator: (v) =>
                                 (v == null || v.isEmpty) ? 'Obrigatório' : null,
                           ),
@@ -434,8 +465,9 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                               labelText: 'Código da peça (PartNumber)',
                               border: OutlineInputBorder(),
                             ),
-                            validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Obrigatório'
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -444,7 +476,9 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                           child: TextFormField(
                             controller: _opCtrl,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: const InputDecoration(
                               labelText: 'Operação',
                               border: OutlineInputBorder(),
@@ -452,7 +486,8 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                             validator: (v) {
                               final s = (v ?? '').trim();
                               if (s.isEmpty) return 'Obrigatório';
-                              if (!RegExp(r'^\d+$').hasMatch(s)) return 'Apenas números';
+                              if (!RegExp(r'^\d+$').hasMatch(s))
+                                return 'Apenas números';
                               return null;
                             },
                           ),
@@ -468,11 +503,13 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                           if (_formKey.currentState!.validate()) {
                             FocusScope.of(context).unfocus();
                             await ref
-                                .read(medidasFinalizadorControllerProvider.notifier)
+                                .read(
+                                  medidasFinalizadorControllerProvider.notifier,
+                                )
                                 .carregar(
-                              partnumber: normalizeCode(_partCtrl.text),
-                              operacao: normalizeCode(_opCtrl.text),
-                            );
+                                  partnumber: normalizeCode(_partCtrl.text),
+                                  operacao: normalizeCode(_opCtrl.text),
+                                );
                           }
                         },
                         icon: const Icon(Icons.search),
@@ -488,7 +525,9 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                   data: (list) {
                     if (list.isEmpty) {
                       return const Center(
-                        child: Text('Nenhuma medida encontrada para a chave informada.'),
+                        child: Text(
+                          'Nenhuma medida encontrada para a chave informada.',
+                        ),
                       );
                     }
                     return ListView.separated(
@@ -500,16 +539,18 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                           index: index,
                           item: item,
                           onChanged: (status, valor) => ref
-                              .read(medidasFinalizadorControllerProvider.notifier)
+                              .read(
+                                medidasFinalizadorControllerProvider.notifier,
+                              )
                               .setStatusAndMedicao(index, status, valor),
                         );
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(
-                    child: Text('Erro ao carregar:\n${e.toString()}'),
-                  ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) =>
+                      Center(child: Text('Erro ao carregar:\n${e.toString()}')),
                 ),
               ),
               const SizedBox(height: 10),
@@ -521,7 +562,8 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.save_outlined),
                   label: const Text('Finalizar OS'),
                 ),
@@ -569,7 +611,8 @@ class _MeasurementTilePrepState extends State<_MeasurementTilePrep> {
 
   void _setTextFromParent(String? txt) {
     final newText = (txt ?? '');
-    if (newText == _ctrl.text) return; // evita sobrescrever e mexer no cursor à toa
+    if (newText == _ctrl.text)
+      return; // evita sobrescrever e mexer no cursor à toa
     _ctrl.value = TextEditingValue(
       text: newText,
       // cursor no final do texto (sem selecionar tudo)
@@ -637,53 +680,60 @@ class _MeasurementTilePrepState extends State<_MeasurementTilePrep> {
       elevation: 0.5,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration:
-                BoxDecoration(color: _statusColor(st), shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(m.titulo.isEmpty ? '(sem título)' : m.titulo,
-                    style: Theme.of(context).textTheme.titleMedium),
-              ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: _statusColor(st),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    m.titulo.isEmpty ? '(sem título)' : m.titulo,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+            if (subtitulo.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(subtitulo, style: Theme.of(context).textTheme.bodyMedium),
             ],
-          ),
-          if (subtitulo.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(subtitulo, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _ctrl,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+                signed: false,
+              ),
+              decoration: InputDecoration(
+                labelText: 'Medição (${m.unidade ?? ''})',
+                border: const OutlineInputBorder(),
+                helperText: st == StatusMedida.ok
+                    ? 'Dentro da tolerância'
+                    : st == StatusMedida.pendente
+                    ? 'Preencha o valor para classificar'
+                    : (st == StatusMedida.reprovadaAbaixo
+                          ? 'Abaixo do mínimo'
+                          : 'Acima do máximo'),
+                helperStyle: TextStyle(color: _statusColor(st)),
+              ),
+              onChanged: (txt) {
+                final v = _toDouble(txt);
+                final novoStatus = _classifica(v, m.minimo, m.maximo);
+                widget.onChanged(novoStatus, txt);
+                setState(() {});
+              },
+            ),
           ],
-          const SizedBox(height: 10),
-          TextField(
-            controller: _ctrl,
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
-              signed: false,
-            ),
-            decoration: InputDecoration(
-              labelText: 'Medição (${m.unidade ?? ''})',
-              border: const OutlineInputBorder(),
-              helperText: st == StatusMedida.ok
-                  ? 'Dentro da tolerância'
-                  : st == StatusMedida.pendente
-                  ? 'Preencha o valor para classificar'
-                  : (st == StatusMedida.reprovadaAbaixo
-                  ? 'Abaixo do mínimo'
-                  : 'Acima do máximo'),
-              helperStyle: TextStyle(color: _statusColor(st)),
-            ),
-            onChanged: (txt) {
-              final v = _toDouble(txt);
-              final novoStatus = _classifica(v, m.minimo, m.maximo);
-              widget.onChanged(novoStatus, txt);
-              setState(() {});
-            },
-          ),
-        ]),
+        ),
       ),
     );
   }

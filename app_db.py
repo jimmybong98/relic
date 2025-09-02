@@ -958,7 +958,7 @@ def resultado_preparador():
           "faixaTexto": "...",
           "min": 1.23, "max": 4.56, "unidade": "mm",
           "medicao": "1.30",
-          "status": "ok|reprovada_acima|reprovada_abaixo|alerta_acima|alerta_abaixo|pendente",
+          "status": "OK|Reprovada acima|Reprovada abaixo|Alerta acima|Alerta abaixo|pendente",
           "observacao": ""
         }, ...
       ]
@@ -1464,7 +1464,7 @@ def operador_registrar():
           "indice": 0, "titulo": "...", "instrumento": "...",
           "faixaTexto": "...", "min": 1.23, "max": 4.56, "unidade": "mm",
           "periodicidade": "5 peças", "tolerancias": [..],
-          "escolha": "OK", "status": "ok|reprovada_acima|reprovada_abaixo|alerta_acima|alerta_abaixo",
+          "escolha": "OK", "status": "OK|Reprovada acima|Reprovada abaixo|Alerta acima|Alerta abaixo",
           "observacao": "..."
         }, ...
       ]
