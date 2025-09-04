@@ -1726,7 +1726,7 @@ def listar_relatorios():
                     ):
                         cur.execute(
                             """
-                            SELECT l.os, l.partnumber, l.operacao, l.maquina,
+                            SELECT l.os, l.partnumber, l.operacao, l.re_preparador, l.maquina,
                                    i.idx_medida, i.titulo, i.faixa_texto,
                                    CAST(i.medicao AS CHAR) AS medicao,
                                    i.created_at
@@ -1741,7 +1741,10 @@ def listar_relatorios():
                         for r in cur.fetchall():
                             key = (r["os"], r["idx_medida"])
                             combined[key] = {
+                                "os": r["os"],
                                 "partnumber": r["partnumber"],
+                                "operacao": r["operacao"],
+                                "re_preparador": r["re_preparador"],
                                 "maquina": r["maquina"],
                                 "faixa_texto": r["faixa_texto"],
                                 "medicao": r["medicao"],
@@ -1754,7 +1757,7 @@ def listar_relatorios():
                     ):
                         cur.execute(
                             """
-                            SELECT f.os, f.partnumber, f.operacao, f.maquina,
+                            SELECT f.os, f.partnumber, f.operacao, f.re_preparador, f.maquina,
                                    i.idx_medida, i.titulo, i.faixa_texto,
                                    CAST(i.medicao AS CHAR) AS medicao,
                                    i.created_at
@@ -1771,7 +1774,10 @@ def listar_relatorios():
                             row = combined.setdefault(
                                 key,
                                 {
+                                    "os": r["os"],
                                     "partnumber": r["partnumber"],
+                                    "operacao": r["operacao"],
+                                    "re_preparador": r["re_preparador"],
                                     "maquina": r["maquina"],
                                     "faixa_texto": r["faixa_texto"],
                                     "medicao": None,
