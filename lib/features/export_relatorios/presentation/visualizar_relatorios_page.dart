@@ -34,38 +34,28 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
     final List<Map<String, dynamic>> rows = [];
     if (data != null) {
       if (_tipo == 'FOR07') {
-        final Map<String, Map<String, dynamic>> combined = {};
-        for (final e in (data['liberacao'] as List? ?? [])) {
+        for (final e in (data['for07'] as List? ?? [])) {
           if (e is Map<String, dynamic>) {
             final raw = (e['created_at'] ?? '').toString();
             final createdAt =
                 DateTime.tryParse(raw)?.toLocal().toString().split('.').first ??
                 raw.replaceAll('T', ' ');
-            final key = '${e['partnumber']}_${e['idx_medida']}';
-            combined[key] = {
+            final rawFinal = (e['created_at_final'] ?? '').toString();
+            final createdAtFinal =
+                DateTime.tryParse(rawFinal)
+                        ?.toLocal()
+                        .toString()
+                        .split('.')
+                        .first ??
+                    rawFinal.replaceAll('T', ' ');
+            rows.add({
               'created_at': createdAt,
               'partnumber': e['partnumber'],
               'maquina': e['maquina'],
               'faixa_texto': e['faixa_texto'],
               'medicao': e['medicao'],
-            };
-          }
-        }
-        for (final e in (data['finalizacao'] as List? ?? [])) {
-          if (e is Map<String, dynamic>) {
-            final raw = (e['created_at'] ?? '').toString();
-            final createdAt =
-                DateTime.tryParse(raw)?.toLocal().toString().split('.').first ??
-                raw.replaceAll('T', ' ');
-            final key = '${e['partnumber']}_${e['idx_medida']}';
-            final row = combined.putIfAbsent(key, () {
-              return {
-                'created_at': '',
-                'partnumber': e['partnumber'],
-                'maquina': e['maquina'],
-                'faixa_texto': e['faixa_texto'],
-                'medicao': '',
-              };
+              'medicao_final': e['medicao_final'],
+              'created_at_final': createdAtFinal,
             });
             row['created_at_final'] = createdAt;
             row['medicao_final'] = e['medicao'];
@@ -114,7 +104,6 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             'medicao': 'Medição Inicial',
             'medicao_final': 'Medição Final',
             'created_at_final': 'Horário Final',
-
           }
         : const {
             'created_at': 'Horário',
