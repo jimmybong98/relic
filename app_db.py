@@ -1717,13 +1717,9 @@ def listar_relatorios():
                 cur.execute(
                     """
                     SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
-                           i.idx_medida, i.titulo, i.medicao,
-                             CASE
-                               WHEN LOWER(i.status) LIKE '%%reprov%%'
-                                    OR LOWER(i.status) LIKE '%%recus%%'
-                                 THEN 'recusada'
-                               ELSE 'liberada'
-                             END AS status,
+                           i.idx_medida, i.titulo,
+                           CAST(i.medicao AS CHAR) AS medicao,
+                           i.status,
                            i.observacao, i.created_at
                       FROM preparador_registro r
                       JOIN preparador_registro_item i ON i.registro_id = r.id
@@ -1826,7 +1822,7 @@ def relatorio_os():
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
-                               i.status AS status_medida,
+                               i.status AS status,
                                COALESCE(l.status_geral, 'Pendente') AS status_liberacao,
                                i.observacao, i.created_at
                           FROM preparador_registro r
@@ -1911,7 +1907,6 @@ def exportar_relatorio_excel():
                         cur,
                         "preparador_registro",
                         "preparador_registro_item",
-                        "preparador_liberacao",
                     ):
                         cur.execute(
                             """
@@ -1919,15 +1914,10 @@ def exportar_relatorio_excel():
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
-                               COALESCE(l.status_geral, 'Pendente') AS status,
+                               i.status,
                                i.observacao, i.created_at
                           FROM preparador_registro r
                           JOIN preparador_registro_item i ON i.registro_id = r.id
-                          LEFT JOIN preparador_liberacao l
-                            ON l.os = r.os
-                           AND TRIM(LEADING '0' FROM TRIM(l.partnumber)) = TRIM(LEADING '0' FROM TRIM(r.partnumber))
-                           AND l.operacao = r.operacao
-                           AND l.maquina = r.maquina
                          WHERE r.os=%s
                          ORDER BY i.created_at
                         """,
