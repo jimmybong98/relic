@@ -9,6 +9,7 @@ import 'components/recent_files.dart';
 import 'components/reports_table.dart';
 import 'components/storage_details.dart';
 import 'components/operator_report_chart.dart';
+import 'components/personnel_report_chart.dart';
 
 class DashboardScreen extends StatelessWidget {
   @override
@@ -36,6 +37,8 @@ class DashboardScreen extends StatelessWidget {
                       ReportsTable(),
                       SizedBox(height: defaultPadding),
                       OperatorReportChart(),
+                      SizedBox(height: defaultPadding),
+                      PersonnelReportChart(),
                       if (Responsive.isMobile(context))
                         SizedBox(height: defaultPadding),
                       if (Responsive.isMobile(context)) StorageDetails(),
@@ -46,12 +49,9 @@ class DashboardScreen extends StatelessWidget {
                   SizedBox(width: defaultPadding),
                 // On Mobile means if the screen is less than 850 we don't want to show it
                 if (!Responsive.isMobile(context))
-                  Expanded(
-                    flex: 2,
-                    child: StorageDetails(),
-                  ),
+                  Expanded(flex: 2, child: StorageDetails()),
               ],
-            )
+            ),
           ],
         ),
       ),

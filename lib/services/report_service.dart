@@ -70,6 +70,40 @@ class ReportService {
     return [];
   }
 
+  /// Generic search for releases filtering by [tipo] ("operador" or
+  /// "preparador"). The caller can provide either [os] or a combination of
+  /// [partnumber] and [operacao] to filter the results.
+  Future<List<Report>> fetchReleases({
+    required String tipo,
+    String? os,
+    String? partnumber,
+    String? operacao,
+  }) async {
+    try {
+      final endpoint = tipo.toLowerCase() == 'preparador'
+          ? 'preparador'
+          : 'operador';
+      final params = <String, String>{};
+      if (os != null && os.isNotEmpty) {
+        params['os'] = normalizeCode(os);
+      } else if (partnumber != null &&
+          operacao != null &&
+          partnumber.isNotEmpty &&
+          operacao.isNotEmpty) {
+        params['partnumber'] = normalizeCode(partnumber);
+        params['operacao'] = normalizeCode(operacao);
+      }
+      final uri = Uri.parse(
+        _baseUrl,
+      ).resolve('reports/$endpoint').replace(queryParameters: params);
+      final response = await _client.get(uri);
+      if (response.statusCode == 200) {
+        return Report.listFromResponse(response.body);
+      }
+    } catch (_) {}
+    return [];
+  }
+
   /// Fetch a comprehensive report for a specific OS.
   /// [section] can be `full`, `amostragem`, `liberacao` or `finalizacao`.
   Future<Map<String, dynamic>?> fetchOsReport(
