@@ -1410,79 +1410,6 @@ def preparador_finalizar_os():
                     for s in all_status
                 )
                 status_geral = "Liberada" if all_ok else "Pendente"
-
-                cur.execute(
-                    """
-                    SELECT id FROM preparador_liberacao
-                    WHERE os=%s
-                      AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
-                      AND maquina=%s
-                    ORDER BY id DESC LIMIT 1
-                    """,
-                    (os_num, part, maquina),
-                )
-                row = cur.fetchone()
-                if row:
-                    cur.execute(
-                        "UPDATE preparador_liberacao SET re_preparador=%s, status_geral=%s, operacao=%s, maquina=%s WHERE id=%s",
-                        (re_prep, status_geral, op, maquina, row["id"]),
-                    )
-                    liberacao_id = row["id"]
-                else:
-                    cur.execute(
-                        """
-                        INSERT INTO preparador_liberacao
-                          (os, partnumber, operacao, re_preparador, status_geral, maquina)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                        """,
-                        (os_num, part, op, re_prep, status_geral, maquina),
-                    )
-                    liberacao_id = cur.lastrowid
-
-                cur.execute(
-                    "DELETE FROM preparador_liberacao_item WHERE liberacao_id=%s",
-                    (liberacao_id,),
-                )
-                for it in itens:
-                    idx = int(it.get("indice", 0))
-                    titulo = _norm(it.get("titulo"))
-                    faixa_texto = _norm(it.get("faixaTexto"))
-                    minimo = it.get("min")
-                    maximo = it.get("max")
-                    unidade = _norm(it.get("unidade"))
-                    medicao_raw = _norm(it.get("medicao"))
-                    status = _norm(it.get("status")).lower()
-                    observacao = _norm(it.get("observacao"))
-                    medicao_val = None
-                    try:
-                        medicao_val = float(medicao_raw) if medicao_raw else None
-                    except Exception:
-                        medicao_val = None
-                    cur.execute(
-                        """
-                        INSERT INTO preparador_liberacao_item
-                          (liberacao_id, idx_medida, titulo, faixa_texto, minimo, maximo, unidade,
-                           medicao, status, periodicidade, instrumento, observacao)
-                        VALUES
-                          (%s, %s, %s, %s, %s, %s, %s,
-                           %s, %s, %s, %s, %s)
-                        """,
-                        (
-                            liberacao_id,
-                            idx,
-                            titulo,
-                            faixa_texto,
-                            minimo,
-                            maximo,
-                            unidade,
-                            medicao_val,
-                            status,
-                            None,
-                            None,
-                            observacao,
-                        ),
-                    )
-
                 cur.execute(
                     "UPDATE ordem_servico SET status='encerrada' WHERE os=%s",
                     (os_num,),
@@ -1789,7 +1716,7 @@ def listar_relatorios():
             with c.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
+                    SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
                            i.idx_medida, i.titulo, i.medicao,
                              CASE
                                WHEN LOWER(i.status) LIKE '%%reprov%%'
@@ -1798,8 +1725,8 @@ def listar_relatorios():
                                ELSE 'liberada'
                              END AS status,
                            i.observacao, i.created_at
-                      FROM preparador_registro r
-                      JOIN preparador_registro_item i ON i.registro_id = r.id
+                      FROM preparador_liberacao l
+                      JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
                      ORDER BY i.created_at
                      LIMIT 200
                     """
@@ -1911,19 +1838,19 @@ def relatorio_os():
                         liberacao = []
                 if section in ("full", "finalizacao"):
                     if _tables_exist(
-                        cur, "preparador_registro", "preparador_registro_item"
+                        cur, "preparador_finalizacao", "preparador_finalizacao_item"
                     ):
                         cur.execute(
                             """
-                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
-                               r.maquina,
+                        SELECT f.os, f.partnumber, f.operacao, f.re_preparador,
+                               f.maquina,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
                                i.status, i.observacao, i.created_at
-                          FROM preparador_registro r
-                          JOIN preparador_registro_item i ON i.registro_id = r.id
-                         WHERE r.os=%s
+                          FROM preparador_finalizacao f
+                          JOIN preparador_finalizacao_item i ON i.finalizacao_id = f.id
+                         WHERE f.os=%s
                          ORDER BY i.created_at
                         """,
                             (os_num,),
@@ -1994,19 +1921,19 @@ def exportar_relatorio_excel():
                             r["etapa"] = "liberacao"
                             rows.append(r)
                     if _tables_exist(
-                        cur, "preparador_registro", "preparador_registro_item"
+                        cur, "preparador_finalizacao", "preparador_finalizacao_item"
                     ):
                         cur.execute(
                             """
-                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
+                        SELECT f.os, f.partnumber, f.operacao, f.re_preparador,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
                                i.status,
                                i.observacao, i.created_at
-                          FROM preparador_registro r
-                          JOIN preparador_registro_item i ON i.registro_id = r.id
-                         WHERE r.os=%s
+                          FROM preparador_finalizacao f
+                          JOIN preparador_finalizacao_item i ON i.finalizacao_id = f.id
+                         WHERE f.os=%s
                          ORDER BY i.created_at
                         """,
                             (os_num,),
