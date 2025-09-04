@@ -41,14 +41,12 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             final createdAt =
                 DateTime.tryParse(raw)?.toLocal().toString().split('.').first ??
                 raw.replaceAll('T', ' ');
-            final key = '${e['idx_medida']}_${e['titulo']}';
+            final key = '${e['partnumber']}_${e['idx_medida']}';
             combined[key] = {
               'created_at': createdAt,
-              'etapa': 'Liberação',
               'partnumber': e['partnumber'],
               'maquina': e['maquina'],
               'faixa_texto': e['faixa_texto'],
-              'titulo': e['titulo'],
               'medicao': e['medicao'],
             };
           }
@@ -59,21 +57,18 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             final createdAt =
                 DateTime.tryParse(raw)?.toLocal().toString().split('.').first ??
                 raw.replaceAll('T', ' ');
-            final key = '${e['idx_medida']}_${e['titulo']}';
+            final key = '${e['partnumber']}_${e['idx_medida']}';
             final row = combined.putIfAbsent(key, () {
               return {
                 'created_at': '',
-                'etapa': 'Liberação',
                 'partnumber': e['partnumber'],
                 'maquina': e['maquina'],
                 'faixa_texto': e['faixa_texto'],
-                'titulo': e['titulo'],
                 'medicao': '',
               };
             });
             row['created_at_final'] = createdAt;
             row['medicao_final'] = e['medicao'];
-            row['etapa_final'] = 'Finalização';
           }
         }
         rows.addAll(combined.values);
@@ -112,16 +107,14 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
   Widget build(BuildContext context) {
     final headerMap = _tipo == 'FOR07'
         ? const {
-            'created_at': 'Horário',
-            'created_at_final': 'Horário finalização',
-            'etapa': 'Etapa',
-            'etapa_final': 'Etapa final',
+            'created_at': 'Horário Inicial',
             'partnumber': 'Partnumber',
             'maquina': 'Máquina',
             'faixa_texto': 'Faixa',
-            'titulo': 'Título',
-            'medicao': 'Medição',
-            'medicao_final': 'Medição final',
+            'medicao': 'Medição Inicial',
+            'medicao_final': 'Medição Final',
+            'created_at_final': 'Horário Final',
+
           }
         : const {
             'created_at': 'Horário',
