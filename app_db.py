@@ -732,7 +732,7 @@ def _medidas_operador_db(part: str, op: str):
 
 # ========= HELPERS DE NEGÓCIO =========
 def _maquina_liberada(
-    conn, os_num: str, part: str, op: str, maquina: str
+        conn, os_num: str, part: str, op: str, maquina: str
 ) -> Tuple[bool, str, str]:
     """
     Retorna (liberada, fonte, detalhe).
@@ -931,7 +931,7 @@ def supervisor_atualizar():
                 cur.execute(
                     f"UPDATE {tabela} SET {set_sql} WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=%s AND TRIM(LEADING '0' FROM TRIM(operacao))=%s AND idx_medida=%s",
                     list(updates.values()) + [part, op, idx],
-                )
+                    )
                 _log_supervisao(
                     cur,
                     tabela,
@@ -1720,13 +1720,13 @@ def listar_relatorios():
                 if part and op:
                     combined = {}
                     if _tables_exist(
-                        cur,
-                        "preparador_liberacao",
-                        "preparador_liberacao_item",
+                            cur,
+                            "preparador_liberacao",
+                            "preparador_liberacao_item",
                     ):
                         cur.execute(
                             """
-                            SELECT l.os, l.partnumber, l.operacao, l.re_preparador, l.maquina,
+                            SELECT l.os, l.partnumber, l.operacao, l.maquina,
                                    i.idx_medida, i.titulo, i.faixa_texto,
                                    CAST(i.medicao AS CHAR) AS medicao,
                                    i.created_at
@@ -1741,23 +1741,20 @@ def listar_relatorios():
                         for r in cur.fetchall():
                             key = (r["os"], r["idx_medida"])
                             combined[key] = {
-                                "os": r["os"],
                                 "partnumber": r["partnumber"],
-                                "operacao": r["operacao"],
-                                "re_preparador": r["re_preparador"],
                                 "maquina": r["maquina"],
                                 "faixa_texto": r["faixa_texto"],
                                 "medicao": r["medicao"],
                                 "created_at": r["created_at"],
                             }
                     if _tables_exist(
-                        cur,
-                        "preparador_finalizacao",
-                        "preparador_finalizacao_item",
+                            cur,
+                            "preparador_finalizacao",
+                            "preparador_finalizacao_item",
                     ):
                         cur.execute(
                             """
-                            SELECT f.os, f.partnumber, f.operacao, f.re_preparador, f.maquina,
+                            SELECT f.os, f.partnumber, f.operacao, f.maquina,
                                    i.idx_medida, i.titulo, i.faixa_texto,
                                    CAST(i.medicao AS CHAR) AS medicao,
                                    i.created_at
@@ -1774,10 +1771,7 @@ def listar_relatorios():
                             row = combined.setdefault(
                                 key,
                                 {
-                                    "os": r["os"],
                                     "partnumber": r["partnumber"],
-                                    "operacao": r["operacao"],
-                                    "re_preparador": r["re_preparador"],
                                     "maquina": r["maquina"],
                                     "faixa_texto": r["faixa_texto"],
                                     "medicao": None,
@@ -1900,10 +1894,10 @@ def relatorio_os():
                     amostragem = cur.fetchall()
                 if section in ("full", "liberacao"):
                     if _tables_exist(
-                        cur,
-                        "preparador_registro",
-                        "preparador_registro_item",
-                        "preparador_liberacao",
+                            cur,
+                            "preparador_registro",
+                            "preparador_registro_item",
+                            "preparador_liberacao",
                     ):
                         cur.execute(
                             """
@@ -1932,7 +1926,7 @@ def relatorio_os():
                         liberacao = []
                 if section in ("full", "finalizacao"):
                     if _tables_exist(
-                        cur, "preparador_finalizacao", "preparador_finalizacao_item"
+                            cur, "preparador_finalizacao", "preparador_finalizacao_item"
                     ):
                         cur.execute(
                             """
@@ -1997,9 +1991,9 @@ def exportar_relatorio_excel():
                     ]
                     combined = {}
                     if _tables_exist(
-                        cur,
-                        "preparador_registro",
-                        "preparador_registro_item",
+                            cur,
+                            "preparador_registro",
+                            "preparador_registro_item",
                     ):
                         cur.execute(
                             """
@@ -2025,7 +2019,7 @@ def exportar_relatorio_excel():
                             r["etapa"] = "liberacao"
                             combined[key] = r
                     if _tables_exist(
-                        cur, "preparador_finalizacao", "preparador_finalizacao_item"
+                            cur, "preparador_finalizacao", "preparador_finalizacao_item"
                     ):
                         cur.execute(
                             """
@@ -2262,7 +2256,7 @@ def health():
 
 
 def _mensagem_bloqueio(
-    os_num: str, part: str, op: str, maquina: str, fonte: str, detalhe: str
+        os_num: str, part: str, op: str, maquina: str, fonte: str, detalhe: str
 ) -> str:
     """
     Gera um texto legível explicando por que o operador não pode registrar.
@@ -2281,8 +2275,8 @@ def _mensagem_bloqueio(
 
     if not fonte:
         return (
-            base
-            + "\nNão há registro do Preparador para esta combinação. Solicite a liberação (FOR-007/008)."
+                base
+                + "\nNão há registro do Preparador para esta combinação. Solicite a liberação (FOR-007/008)."
         )
 
     if fonte == "preparador_liberacao":
@@ -2299,8 +2293,8 @@ def _mensagem_bloqueio(
         if m:
             aprov_cnt, total = m.group(1), m.group(2)
             return (
-                base
-                + f"\nProgresso do registro do Preparador: {aprov_cnt}/{total} medidas aprovadas. Aguarde até todas estarem aprovadas."
+                    base
+                    + f"\nProgresso do registro do Preparador: {aprov_cnt}/{total} medidas aprovadas. Aguarde até todas estarem aprovadas."
             )
         return base + "\nO registro do Preparador ainda não está 100% aprovado."
 

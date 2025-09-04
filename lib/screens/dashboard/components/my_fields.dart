@@ -30,7 +30,7 @@ class MyFiles extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Relatórios',
+                  'Status',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 ElevatedButton.icon(

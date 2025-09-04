@@ -139,7 +139,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Relatório de Amostragens',
+            'Histórico',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: defaultPadding),
