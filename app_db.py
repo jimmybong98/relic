@@ -1823,7 +1823,7 @@ def relatorio_os():
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
                                i.status AS status,
-                               COALESCE(l.status_geral, 'Pendente') AS status_liberacao,
+                               COALESCE(l.status_geral, 'Pendente') AS status_geral,
                                i.observacao, i.created_at
                           FROM preparador_registro r
                           JOIN preparador_registro_item i ON i.registro_id = r.id
