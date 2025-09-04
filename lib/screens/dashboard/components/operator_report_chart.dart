@@ -147,7 +147,7 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                     ..sort((a, b) =>
                         (DateTime.tryParse(a.createdAt) ?? DateTime(0))
                             .compareTo(
-                                DateTime.tryParse(b.createdAt) ?? DateTime(0)));
+                            DateTime.tryParse(b.createdAt) ?? DateTime(0)));
                   final spots = <FlSpot>[];
                   final verticalLines = <VerticalLine>[];
                   for (var i = 0; i < reports.length; i++) {
@@ -254,7 +254,7 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                                 )
                               ],
                               extraLinesData:
-                                  ExtraLinesData(verticalLines: verticalLines),
+                              ExtraLinesData(verticalLines: verticalLines),
                             ),
                           ),
                         ),
