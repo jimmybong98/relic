@@ -1149,7 +1149,7 @@ def resultado_preparador():
                     minimo = it.get("min")
                     maximo = it.get("max")
                     unidade = _norm(it.get("unidade"))
-                    medicao = _norm(it.get("medicao"))
+                    medicao = _norm(it.get("medicao")).replace(",", ".")
                     status = _norm(it.get("status")).lower()
                     observacao = _norm(it.get("observacao"))
 
@@ -1229,7 +1229,7 @@ def resultado_preparador():
                     minimo = it.get("min")
                     maximo = it.get("max")
                     unidade = _norm(it.get("unidade"))
-                    medicao_raw = _norm(it.get("medicao"))
+                    medicao_raw = _norm(it.get("medicao")).replace(",", ".")
                     status = _norm(it.get("status")).lower()
                     observacao = _norm(it.get("observacao"))
                     medicao_val = None
@@ -1814,21 +1814,29 @@ def relatorio_os():
                     amostragem = cur.fetchall()
                 if section in ("full", "liberacao"):
                     if _tables_exist(
-                        cur, "preparador_liberacao", "preparador_liberacao_item"
+                        cur,
+                        "preparador_registro",
+                        "preparador_registro_item",
+                        "preparador_liberacao",
                     ):
                         cur.execute(
                             """
-                        SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
-                               l.maquina,
+                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
+                               r.maquina,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
                                i.status AS status_medida,
-                               l.status_geral AS status_liberacao,
+                               COALESCE(l.status_geral, 'Pendente') AS status_liberacao,
                                i.observacao, i.created_at
-                          FROM preparador_liberacao l
-                          JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
-                         WHERE l.os=%s
+                          FROM preparador_registro r
+                          JOIN preparador_registro_item i ON i.registro_id = r.id
+                          LEFT JOIN preparador_liberacao l
+                            ON l.os = r.os
+                           AND TRIM(LEADING '0' FROM TRIM(l.partnumber)) = TRIM(LEADING '0' FROM TRIM(r.partnumber))
+                           AND l.operacao = r.operacao
+                           AND l.maquina = r.maquina
+                         WHERE r.os=%s
                          ORDER BY i.created_at
                         """,
                             (os_num,),
@@ -1900,19 +1908,27 @@ def exportar_relatorio_excel():
                         "created_at",
                     ]
                     if _tables_exist(
-                        cur, "preparador_liberacao", "preparador_liberacao_item"
+                        cur,
+                        "preparador_registro",
+                        "preparador_registro_item",
+                        "preparador_liberacao",
                     ):
                         cur.execute(
                             """
-                        SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
+                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
-                               l.status_geral AS status,
+                               COALESCE(l.status_geral, 'Pendente') AS status,
                                i.observacao, i.created_at
-                          FROM preparador_liberacao l
-                          JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
-                         WHERE l.os=%s
+                          FROM preparador_registro r
+                          JOIN preparador_registro_item i ON i.registro_id = r.id
+                          LEFT JOIN preparador_liberacao l
+                            ON l.os = r.os
+                           AND TRIM(LEADING '0' FROM TRIM(l.partnumber)) = TRIM(LEADING '0' FROM TRIM(r.partnumber))
+                           AND l.operacao = r.operacao
+                           AND l.maquina = r.maquina
+                         WHERE r.os=%s
                          ORDER BY i.created_at
                         """,
                             (os_num,),
