@@ -1711,23 +1711,97 @@ def operador_encerrar_producao():
 @app.route("/reports")
 @app.route("/reports/preparador")
 def listar_relatorios():
+    os_num = _norm(request.args.get("os"))
+    part = _norm_part(request.args.get("partnumber"))
+    op = _norm_op(request.args.get("operacao"))
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
-                           i.idx_medida, i.titulo,
-                           CAST(i.medicao AS CHAR) AS medicao,
-                           i.status,
-                           i.observacao, i.created_at
-                      FROM preparador_registro r
-                      JOIN preparador_registro_item i ON i.registro_id = r.id
-                     ORDER BY i.created_at
-                     LIMIT 200
-                    """
-                )
-                rows = cur.fetchall()
+                if part and op:
+                    combined = {}
+                    if _tables_exist(
+                        cur,
+                        "preparador_liberacao",
+                        "preparador_liberacao_item",
+                    ):
+                        cur.execute(
+                            """
+                            SELECT l.os, l.partnumber, l.operacao, l.re_preparador, l.maquina,
+                                   i.idx_medida, i.titulo, i.faixa_texto,
+                                   CAST(i.medicao AS CHAR) AS medicao,
+                                   i.created_at
+                              FROM preparador_liberacao l
+                              JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
+                             WHERE TRIM(LEADING '0' FROM TRIM(l.partnumber)) = %s
+                               AND TRIM(LEADING '0' FROM TRIM(l.operacao)) = %s
+                             ORDER BY i.idx_medida, i.created_at
+                            """,
+                            (part, op),
+                        )
+                        for r in cur.fetchall():
+                            key = (r["os"], r["idx_medida"])
+                            combined[key] = {
+                                "os": r["os"],
+                                "partnumber": r["partnumber"],
+                                "operacao": r["operacao"],
+                                "re_preparador": r["re_preparador"],
+                                "maquina": r["maquina"],
+                                "faixa_texto": r["faixa_texto"],
+                                "medicao": r["medicao"],
+                                "created_at": r["created_at"],
+                            }
+                    if _tables_exist(
+                        cur,
+                        "preparador_finalizacao",
+                        "preparador_finalizacao_item",
+                    ):
+                        cur.execute(
+                            """
+                            SELECT f.os, f.partnumber, f.operacao, f.re_preparador, f.maquina,
+                                   i.idx_medida, i.titulo, i.faixa_texto,
+                                   CAST(i.medicao AS CHAR) AS medicao,
+                                   i.created_at
+                              FROM preparador_finalizacao f
+                              JOIN preparador_finalizacao_item i ON i.finalizacao_id = f.id
+                             WHERE TRIM(LEADING '0' FROM TRIM(f.partnumber)) = %s
+                               AND TRIM(LEADING '0' FROM TRIM(f.operacao)) = %s
+                             ORDER BY i.idx_medida, i.created_at
+                            """,
+                            (part, op),
+                        )
+                        for r in cur.fetchall():
+                            key = (r["os"], r["idx_medida"])
+                            row = combined.setdefault(
+                                key,
+                                {
+                                    "os": r["os"],
+                                    "partnumber": r["partnumber"],
+                                    "operacao": r["operacao"],
+                                    "re_preparador": r["re_preparador"],
+                                    "maquina": r["maquina"],
+                                    "faixa_texto": r["faixa_texto"],
+                                    "medicao": None,
+                                    "created_at": None,
+                                },
+                            )
+                            row["medicao_final"] = r["medicao"]
+                            row["created_at_final"] = r["created_at"]
+                    rows = list(combined.values())
+                else:
+                    cur.execute(
+                        """
+                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
+                               i.idx_medida, i.titulo,
+                               CAST(i.medicao AS CHAR) AS medicao,
+                               i.status,
+                               i.observacao, i.created_at
+                          FROM preparador_registro r
+                          JOIN preparador_registro_item i ON i.registro_id = r.id
+                         ORDER BY i.created_at
+                         LIMIT 200
+                        """,
+                    )
+                    rows = cur.fetchall()
         return jsonify(rows)
     except Exception as e:
         return jsonify({"error": f"Falha ao consultar relatórios: {e}"}), 500
@@ -1736,6 +1810,8 @@ def listar_relatorios():
 @app.route("/reports/operador")
 def listar_relatorios_operador():
     os_num = _norm(request.args.get("os"))
+    part = _norm_part(request.args.get("partnumber"))
+    op = _norm_op(request.args.get("operacao"))
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
@@ -1750,6 +1826,20 @@ def listar_relatorios_operador():
                          ORDER BY i.idx_medida, i.created_at
                         """,
                         (os_num,),
+                    )
+                elif part and op:
+                    cur.execute(
+                        """
+                        SELECT a.os, a.partnumber, a.operacao, a.re_operador, a.maquina,
+                               i.idx_medida, i.titulo, i.instrumento,
+                               i.faixa_texto, i.escolha, i.status, i.created_at
+                          FROM operador_amostragem a
+                          JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+                         WHERE TRIM(LEADING '0' FROM TRIM(a.partnumber)) = %s
+                           AND TRIM(LEADING '0' FROM TRIM(a.operacao)) = %s
+                         ORDER BY i.idx_medida, i.created_at
+                        """,
+                        (part, op),
                     )
                 else:
                     cur.execute(
