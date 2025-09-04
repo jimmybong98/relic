@@ -159,10 +159,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'operador', child: Text('Operador')),
+                  DropdownMenuItem(value: 'operador', child: Text('Verificação do Processo')),
                   DropdownMenuItem(
                     value: 'preparador',
-                    child: Text('Preparador'),
+                    child: Text('Liberação/Finalização'),
                   ),
                 ],
                 onChanged: (v) => setState(() => _tipo = v ?? 'operador'),
