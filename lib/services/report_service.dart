@@ -72,8 +72,9 @@ class ReportService {
 
   /// Generic search for releases filtering by [tipo] ("operador" or
   /// "preparador"). The caller can provide either [os] or a combination of
-  /// [partnumber] and [operacao] to filter the results.
-  Future<List<Report>> fetchReleases({
+  /// [partnumber] and [operacao] to filter the results. The returned list
+  /// contains raw maps so that callers can display arbitrary fields.
+  Future<List<Map<String, dynamic>>> fetchReleases({
     required String tipo,
     String? os,
     String? partnumber,
@@ -98,7 +99,10 @@ class ReportService {
       ).resolve('reports/$endpoint').replace(queryParameters: params);
       final response = await _client.get(uri);
       if (response.statusCode == 200) {
-        return Report.listFromResponse(response.body);
+        final data = jsonDecode(response.body);
+        if (data is List) {
+          return data.whereType<Map<String, dynamic>>().toList(growable: false);
+        }
       }
     } catch (_) {}
     return [];

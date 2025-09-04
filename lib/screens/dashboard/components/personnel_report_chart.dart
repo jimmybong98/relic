@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../constants.dart';
-import '../../../models/report.dart';
 import '../../../services/report_service.dart';
 
 /// Form that allows searching reports for either operators or preparers.
@@ -20,7 +19,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
 
   String _tipo = 'operador';
   String _modo = 'os';
-  Future<List<Report>>? _future;
+  Future<List<Map<String, dynamic>>>? _future;
 
   @override
   void dispose() {
@@ -31,25 +30,101 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   void _buscar() {
-    final service = ReportService();
-    if (_modo == 'os') {
-      final os = _osCtrl.text.trim();
-      if (os.isEmpty) return;
-      setState(() {
-        _future = service.fetchReleases(tipo: _tipo, os: os);
-      });
-    } else {
-      final part = _partCtrl.text.trim();
-      final op = _opCtrl.text.trim();
-      if (part.isEmpty || op.isEmpty) return;
-      setState(() {
-        _future = service.fetchReleases(
+    Future<List<Map<String, dynamic>>> carregador() async {
+      final service = ReportService();
+      if (_modo == 'os') {
+        final os = _osCtrl.text.trim();
+        final section = _tipo == 'preparador' ? 'full' : 'amostragem';
+        final data = await service.fetchOsReport(os, section: section);
+        final rows = <Map<String, dynamic>>[];
+        if (data != null) {
+          if (_tipo == 'preparador') {
+            final Map<String, Map<String, dynamic>> combined = {};
+            for (final e in (data['liberacao'] as List? ?? [])) {
+              if (e is Map<String, dynamic>) {
+                final raw = (e['created_at'] ?? '').toString();
+                final createdAt =
+                    DateTime.tryParse(
+                      raw,
+                    )?.toLocal().toString().split('.').first ??
+                    raw.replaceAll('T', ' ');
+                final key = '${e['partnumber']}_${e['idx_medida']}';
+                combined[key] = {
+                  'created_at': createdAt,
+                  'partnumber': e['partnumber'],
+                  'maquina': e['maquina'],
+                  'faixa_texto': e['faixa_texto'],
+                  'medicao': e['medicao'],
+                };
+              }
+            }
+            for (final e in (data['finalizacao'] as List? ?? [])) {
+              if (e is Map<String, dynamic>) {
+                final raw = (e['created_at'] ?? '').toString();
+                final createdAt =
+                    DateTime.tryParse(
+                      raw,
+                    )?.toLocal().toString().split('.').first ??
+                    raw.replaceAll('T', ' ');
+                final key = '${e['partnumber']}_${e['idx_medida']}';
+                final row = combined.putIfAbsent(key, () {
+                  return {
+                    'created_at': '',
+                    'partnumber': e['partnumber'],
+                    'maquina': e['maquina'],
+                    'faixa_texto': e['faixa_texto'],
+                    'medicao': '',
+                  };
+                });
+                row['created_at_final'] = createdAt;
+                row['medicao_final'] = e['medicao'];
+              }
+            }
+            rows.addAll(combined.values);
+          } else {
+            final list = data[section];
+            if (list is List) {
+              for (final e in list) {
+                if (e is Map<String, dynamic>) {
+                  final raw = (e['created_at'] ?? '').toString();
+                  final createdAt =
+                      DateTime.tryParse(
+                        raw,
+                      )?.toLocal().toString().split('.').first ??
+                      raw.replaceAll('T', ' ');
+                  rows.add({
+                    'created_at': createdAt,
+                    'partnumber': e['partnumber'],
+                    'maquina': e['maquina'],
+                    'titulo': e['titulo'],
+                    'instrumento': e['instrumento'],
+                    'faixa_texto': e['faixa_texto'],
+                    'escolha': e['escolha'],
+                    'status': e['status'],
+                  });
+                }
+              }
+            }
+          }
+        }
+        rows.sort(
+          (a, b) => (a['created_at'] ?? '').compareTo(b['created_at'] ?? ''),
+        );
+        return rows;
+      } else {
+        final part = _partCtrl.text.trim();
+        final op = _opCtrl.text.trim();
+        return await service.fetchReleases(
           tipo: _tipo,
           partnumber: part,
           operacao: op,
         );
-      });
+      }
     }
+
+    setState(() {
+      _future = carregador();
+    });
   }
 
   @override
@@ -174,7 +249,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             ),
           ),
           const SizedBox(height: defaultPadding),
-          FutureBuilder<List<Report>>(
+          FutureBuilder<List<Map<String, dynamic>>>(
             future: _future,
             builder: (context, snapshot) {
               if (_future == null) {
@@ -189,14 +264,56 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
               if (dados.isEmpty) {
                 return const Text('Nenhum dado encontrado.');
               }
-              return SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  itemCount: dados.length,
-                  itemBuilder: (context, index) {
-                    final r = dados[index];
-                    return Text('${r.os} - ${r.partnumber} - ${r.operacao}');
-                  },
+              final headerMap = _tipo == 'preparador'
+                  ? const {
+                      'partnumber': 'Partnumber',
+                      'maquina': 'Máquina',
+                      'faixa_texto': 'Faixa',
+                      'created_at': 'Horário Inicial',
+                      'medicao': 'Medição Inicial',
+                      'medicao_final': 'Medição Final',
+                      'created_at_final': 'Horário Final',
+                    }
+                  : const {
+                      'created_at': 'Horário',
+                      'partnumber': 'Partnumber',
+                      'maquina': 'Máquina',
+                      'titulo': 'Título',
+                      'instrumento': 'Instrumento',
+                      'faixa_texto': 'Faixa',
+                      'escolha': 'Escolha',
+                      'status': 'Status',
+                    };
+              final headers = headerMap.keys.toList();
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columns: headers
+                      .map(
+                        (h) => DataColumn(
+                          label: Text(
+                            headerMap[h] ?? h,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  rows: dados
+                      .map(
+                        (r) => DataRow(
+                          cells: headers
+                              .map(
+                                (h) => DataCell(
+                                  Text(
+                                    '${r[h] ?? ''}',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      )
+                      .toList(),
                 ),
               );
             },
