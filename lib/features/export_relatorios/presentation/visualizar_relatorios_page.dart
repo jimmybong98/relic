@@ -57,8 +57,11 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
               'medicao_final': e['medicao_final'],
               'created_at_final': createdAtFinal,
             });
+            row['created_at_final'] = createdAt;
+            row['medicao_final'] = e['medicao'];
           }
         }
+        rows.addAll(combined.values);
       } else if (data[section] is List) {
         for (final e in (data[section] as List)) {
           if (e is Map<String, dynamic>) {

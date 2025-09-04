@@ -1920,6 +1920,7 @@ def exportar_relatorio_excel():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 if tipo == "FOR07":
+
                     headers = [
                         "created_at",
                         "partnumber",
@@ -1927,6 +1928,7 @@ def exportar_relatorio_excel():
                         "faixa_texto",
                         "medicao",
                         "medicao_final",
+
                         "created_at_final",
                     ]
                     combined = {}
@@ -1950,6 +1952,7 @@ def exportar_relatorio_excel():
                         )
                         for r in cur.fetchall():
                             key = (
+
                                 str(r["partnumber"]).strip(),
                                 r["idx_medida"],
                                 str(r.get("maquina", "")).strip(),
