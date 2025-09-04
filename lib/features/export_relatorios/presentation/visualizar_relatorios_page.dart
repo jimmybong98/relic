@@ -114,6 +114,7 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             'medicao': 'Medição Inicial',
             'medicao_final': 'Medição Final',
             'created_at_final': 'Horário Final',
+
           }
         : const {
             'created_at': 'Horário',

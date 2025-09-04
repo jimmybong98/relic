@@ -1898,11 +1898,14 @@ def exportar_relatorio_excel():
                         "maximo",
                         "unidade",
                         "medicao",
-                        "status",
+                        "medicao_final",
                         "etapa",
+                        "etapa_final",
                         "observacao",
                         "created_at",
+                        "created_at_final",
                     ]
+                    combined = {}
                     if _tables_exist(
                         cur,
                         "preparador_registro",
@@ -1914,7 +1917,6 @@ def exportar_relatorio_excel():
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
-                               i.status,
                                i.observacao, i.created_at
                           FROM preparador_registro r
                           JOIN preparador_registro_item i ON i.registro_id = r.id
@@ -1924,8 +1926,14 @@ def exportar_relatorio_excel():
                             (os_num,),
                         )
                         for r in cur.fetchall():
+                            key = (
+                                r["idx_medida"],
+                                r["titulo"],
+                                r["partnumber"],
+                                r["operacao"],
+                            )
                             r["etapa"] = "liberacao"
-                            rows.append(r)
+                            combined[key] = r
                     if _tables_exist(
                         cur, "preparador_finalizacao", "preparador_finalizacao_item"
                     ):
@@ -1935,7 +1943,6 @@ def exportar_relatorio_excel():
                                i.idx_medida, i.titulo, i.faixa_texto,
                                i.minimo, i.maximo, i.unidade,
                                CAST(i.medicao AS CHAR) AS medicao,
-                               i.status,
                                i.observacao, i.created_at
                           FROM preparador_finalizacao f
                           JOIN preparador_finalizacao_item i ON i.finalizacao_id = f.id
@@ -1945,8 +1952,37 @@ def exportar_relatorio_excel():
                             (os_num,),
                         )
                         for r in cur.fetchall():
-                            r["etapa"] = "finalizacao"
-                            rows.append(r)
+                            key = (
+                                r["idx_medida"],
+                                r["titulo"],
+                                r["partnumber"],
+                                r["operacao"],
+                            )
+                            row = combined.get(key)
+                            if not row:
+                                row = {
+                                    "os": r["os"],
+                                    "partnumber": r["partnumber"],
+                                    "operacao": r["operacao"],
+                                    "re_preparador": r["re_preparador"],
+                                    "idx_medida": r["idx_medida"],
+                                    "titulo": r["titulo"],
+                                    "faixa_texto": r["faixa_texto"],
+                                    "minimo": r["minimo"],
+                                    "maximo": r["maximo"],
+                                    "unidade": r["unidade"],
+                                    "medicao": None,
+                                    "etapa": "liberacao",
+                                    "observacao": r.get("observacao"),
+                                    "created_at": None,
+                                }
+                            row["medicao_final"] = r["medicao"]
+                            row["etapa_final"] = "finalizacao"
+                            row["created_at_final"] = r["created_at"]
+                            if not row.get("observacao") and r.get("observacao"):
+                                row["observacao"] = r["observacao"]
+                            combined[key] = row
+                    rows = list(combined.values())
                 else:
                     cur.execute(
                         """
