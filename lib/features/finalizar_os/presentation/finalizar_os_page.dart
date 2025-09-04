@@ -228,6 +228,20 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
       return;
     }
 
+    // Verifica se há alguma medida reprovada
+    final reprovadas = medidas.where((m) =>
+        m.status == StatusMedida.reprovadaAbaixo ||
+        m.status == StatusMedida.reprovadaAcima).toList();
+    if (reprovadas.isNotEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Uma ou mais medidas foram reprovadas.'),
+        ),
+      );
+      return;
+    }
+
     // Monta payload
     final itens = <Map<String, dynamic>>[];
     for (var i = 0; i < medidas.length; i++) {
