@@ -28,6 +28,26 @@ void main() {
     expect(requestedUri.queryParameters['os'], '123');
   });
 
+  test(
+    'fetchReleases builds params for preparador partnumber search',
+    () async {
+      late Uri requestedUri;
+      final client = MockClient((req) async {
+        requestedUri = req.url;
+        return http.Response('[]', 200);
+      });
+      final service = ReportService(client: client, baseUrl: 'http://dummy');
+      await service.fetchReleases(
+        tipo: 'preparador',
+        partnumber: '0001',
+        operacao: '0002',
+      );
+      expect(requestedUri.path, '/reports/preparador');
+      expect(requestedUri.queryParameters['partnumber'], '1');
+      expect(requestedUri.queryParameters['operacao'], '2');
+    },
+  );
+
   test('fetchOsReport normalizes OS and forwards section parameter', () async {
     late Uri requestedUri;
     final client = MockClient((req) async {
