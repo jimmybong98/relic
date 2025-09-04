@@ -1716,7 +1716,7 @@ def listar_relatorios():
             with c.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT l.os, l.partnumber, l.operacao, l.re_preparador,
+                    SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
                            i.idx_medida, i.titulo, i.medicao,
                              CASE
                                WHEN LOWER(i.status) LIKE '%%reprov%%'
@@ -1725,8 +1725,8 @@ def listar_relatorios():
                                ELSE 'liberada'
                              END AS status,
                            i.observacao, i.created_at
-                      FROM preparador_liberacao l
-                      JOIN preparador_liberacao_item i ON i.liberacao_id = l.id
+                      FROM preparador_registro r
+                      JOIN preparador_registro_item i ON i.registro_id = r.id
                      ORDER BY i.created_at
                      LIMIT 200
                     """
