@@ -1862,12 +1862,47 @@ def relatorio_os():
                         finalizacao = cur.fetchall()
                     else:
                         finalizacao = []
+                # Combina liberações e finalizações em uma única lista por medida
+                combined = {}
+                for r in liberacao:
+                    key = (
+                        str(r["partnumber"]).strip(),
+                        r["idx_medida"],
+                        str(r.get("maquina", "")).strip(),
+                    )
+                    combined[key] = {
+                        "created_at": r.get("created_at"),
+                        "partnumber": r.get("partnumber"),
+                        "maquina": r.get("maquina"),
+                        "faixa_texto": r.get("faixa_texto"),
+                        "medicao": r.get("medicao"),
+                    }
+                for r in finalizacao:
+                    key = (
+                        str(r["partnumber"]).strip(),
+                        r["idx_medida"],
+                        str(r.get("maquina", "")).strip(),
+                    )
+                    row = combined.setdefault(
+                        key,
+                        {
+                            "created_at": None,
+                            "partnumber": r.get("partnumber"),
+                            "maquina": r.get("maquina"),
+                            "faixa_texto": r.get("faixa_texto"),
+                            "medicao": None,
+                        },
+                    )
+                    row["medicao_final"] = r.get("medicao")
+                    row["created_at_final"] = r.get("created_at")
+                for07_rows = list(combined.values())
         return jsonify(
             {
                 "ordem_servico": _serialize(os_data) if os_data else None,
                 "amostragem": _serialize(amostragem),
                 "liberacao": _serialize(liberacao),
                 "finalizacao": _serialize(finalizacao),
+                "for07": _serialize(for07_rows),
             }
         )
     except Exception as e:
@@ -1885,24 +1920,16 @@ def exportar_relatorio_excel():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 if tipo == "FOR07":
-                    rows = []
                     headers = [
-                        "os",
-                        "partnumber",
-                        "operacao",
-                        "re_preparador",
-                        "idx_medida",
-                        "titulo",
-                        "faixa_texto",
-                        "minimo",
-                        "maximo",
-                        "unidade",
-                        "medicao",
-                        "status",
-                        "etapa",
-                        "observacao",
                         "created_at",
+                        "partnumber",
+                        "maquina",
+                        "faixa_texto",
+                        "medicao",
+                        "medicao_final",
+                        "created_at_final",
                     ]
+                    combined = {}
                     if _tables_exist(
                         cur,
                         "preparador_registro",
@@ -1910,12 +1937,10 @@ def exportar_relatorio_excel():
                     ):
                         cur.execute(
                             """
-                        SELECT r.os, r.partnumber, r.operacao, r.re_preparador,
-                               i.idx_medida, i.titulo, i.faixa_texto,
-                               i.minimo, i.maximo, i.unidade,
+                        SELECT r.partnumber, r.maquina,
+                               i.idx_medida, i.faixa_texto,
                                CAST(i.medicao AS CHAR) AS medicao,
-                               i.status,
-                               i.observacao, i.created_at
+                               i.created_at
                           FROM preparador_registro r
                           JOIN preparador_registro_item i ON i.registro_id = r.id
                          WHERE r.os=%s
@@ -1924,19 +1949,27 @@ def exportar_relatorio_excel():
                             (os_num,),
                         )
                         for r in cur.fetchall():
-                            r["etapa"] = "liberacao"
-                            rows.append(r)
+                            key = (
+                                str(r["partnumber"]).strip(),
+                                r["idx_medida"],
+                                str(r.get("maquina", "")).strip(),
+                            )
+                            combined[key] = {
+                                "created_at": r.get("created_at"),
+                                "partnumber": r.get("partnumber"),
+                                "maquina": r.get("maquina"),
+                                "faixa_texto": r.get("faixa_texto"),
+                                "medicao": r.get("medicao"),
+                            }
                     if _tables_exist(
                         cur, "preparador_finalizacao", "preparador_finalizacao_item"
                     ):
                         cur.execute(
                             """
-                        SELECT f.os, f.partnumber, f.operacao, f.re_preparador,
-                               i.idx_medida, i.titulo, i.faixa_texto,
-                               i.minimo, i.maximo, i.unidade,
+                        SELECT f.partnumber, f.maquina,
+                               i.idx_medida, i.faixa_texto,
                                CAST(i.medicao AS CHAR) AS medicao,
-                               i.status,
-                               i.observacao, i.created_at
+                               i.created_at
                           FROM preparador_finalizacao f
                           JOIN preparador_finalizacao_item i ON i.finalizacao_id = f.id
                          WHERE f.os=%s
@@ -1945,8 +1978,24 @@ def exportar_relatorio_excel():
                             (os_num,),
                         )
                         for r in cur.fetchall():
-                            r["etapa"] = "finalizacao"
-                            rows.append(r)
+                            key = (
+                                str(r["partnumber"]).strip(),
+                                r["idx_medida"],
+                                str(r.get("maquina", "")).strip(),
+                            )
+                            row = combined.setdefault(
+                                key,
+                                {
+                                    "created_at": None,
+                                    "partnumber": r.get("partnumber"),
+                                    "maquina": r.get("maquina"),
+                                    "faixa_texto": r.get("faixa_texto"),
+                                    "medicao": None,
+                                },
+                            )
+                            row["medicao_final"] = r.get("medicao")
+                            row["created_at_final"] = r.get("created_at")
+                    rows = list(combined.values())
                 else:
                     cur.execute(
                         """
