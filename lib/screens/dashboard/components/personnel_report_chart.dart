@@ -50,6 +50,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                     raw.replaceAll('T', ' ');
                 final key = '${e['partnumber']}_${e['idx_medida']}';
                 combined[key] = {
+                  'os': e['os'],
+                  're_preparador': e['re_preparador'],
                   'created_at': createdAt,
                   'partnumber': e['partnumber'],
                   'maquina': e['maquina'],
@@ -69,6 +71,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                 final key = '${e['partnumber']}_${e['idx_medida']}';
                 final row = combined.putIfAbsent(key, () {
                   return {
+                    'os': e['os'],
+                    're_preparador': e['re_preparador'],
                     'created_at': '',
                     'partnumber': e['partnumber'],
                     'maquina': e['maquina'],
@@ -93,6 +97,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                       )?.toLocal().toString().split('.').first ??
                       raw.replaceAll('T', ' ');
                   rows.add({
+                    'os': e['os'],
+                    're_operador': e['re_operador'],
                     'created_at': createdAt,
                     'partnumber': e['partnumber'],
                     'maquina': e['maquina'],
@@ -266,6 +272,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
               }
               final headerMap = _tipo == 'preparador'
                   ? const {
+                      'os': 'OS',
+                      're_preparador': 'RE',
                       'partnumber': 'Partnumber',
                       'maquina': 'Máquina',
                       'faixa_texto': 'Faixa',
@@ -275,6 +283,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                       'created_at_final': 'Horário Final',
                     }
                   : const {
+                      'os': 'OS',
+                      're_operador': 'RE',
                       'created_at': 'Horário',
                       'partnumber': 'Partnumber',
                       'maquina': 'Máquina',

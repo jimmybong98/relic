@@ -43,6 +43,8 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
                 raw.replaceAll('T', ' ');
             final key = '${e['partnumber']}_${e['idx_medida']}';
             combined[key] = {
+              'os': e['os'],
+              're_preparador': e['re_preparador'],
               'created_at': createdAt,
               'partnumber': e['partnumber'],
               'maquina': e['maquina'],
@@ -60,6 +62,8 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             final key = '${e['partnumber']}_${e['idx_medida']}';
             final row = combined.putIfAbsent(key, () {
               return {
+                'os': e['os'],
+                're_preparador': e['re_preparador'],
                 'created_at': '',
                 'partnumber': e['partnumber'],
                 'maquina': e['maquina'],
@@ -80,6 +84,8 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
                 DateTime.tryParse(raw)?.toLocal().toString().split('.').first ??
                 raw.replaceAll('T', ' ');
             rows.add({
+              'os': e['os'],
+              're_operador': e['re_operador'],
               'created_at': createdAt,
               'partnumber': e['partnumber'],
               'maquina': e['maquina'],
@@ -107,6 +113,8 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
   Widget build(BuildContext context) {
     final headerMap = _tipo == 'FOR07'
         ? const {
+            'os': 'OS',
+            're_preparador': 'RE',
             'partnumber': 'Partnumber',
             'maquina': 'Máquina',
             'faixa_texto': 'Faixa',
@@ -117,6 +125,8 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
 
           }
         : const {
+            'os': 'OS',
+            're_operador': 'RE',
             'created_at': 'Horário',
             'partnumber': 'Partnumber',
             'maquina': 'Máquina',
