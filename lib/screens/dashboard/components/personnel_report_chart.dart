@@ -136,6 +136,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(defaultPadding),
       decoration: BoxDecoration(
         color: secondaryColor,
@@ -144,10 +145,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Histórico',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text('Histórico', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: defaultPadding),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -159,7 +157,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'operador', child: Text('Verificação do Processo')),
+                  DropdownMenuItem(
+                    value: 'operador',
+                    child: Text('Verificação do Processo'),
+                  ),
                   DropdownMenuItem(
                     value: 'preparador',
                     child: Text('Liberação/Finalização'),
@@ -295,36 +296,45 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                       'status': 'Status',
                     };
               final headers = headerMap.keys.toList();
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  columns: headers
-                      .map(
-                        (h) => DataColumn(
-                          label: Text(
-                            headerMap[h] ?? h,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  rows: dados
-                      .map(
-                        (r) => DataRow(
-                          cells: headers
-                              .map(
-                                (h) => DataCell(
-                                  Text(
-                                    '${r[h] ?? ''}',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: constraints.maxWidth,
+                      ),
+                      child: DataTable(
+                        columns: headers
+                            .map(
+                              (h) => DataColumn(
+                                label: Text(
+                                  headerMap[h] ?? h,
+                                  style: const TextStyle(fontSize: 12),
                                 ),
-                              )
-                              .toList(),
-                        ),
-                      )
-                      .toList(),
-                ),
+                              ),
+                            )
+                            .toList(),
+                        rows: dados
+                            .map(
+                              (r) => DataRow(
+                                cells: headers
+                                    .map(
+                                      (h) => DataCell(
+                                        Text(
+                                          '${r[h] ?? ''}',
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  );
+                },
               );
             },
           ),
