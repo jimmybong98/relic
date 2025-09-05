@@ -474,6 +474,16 @@ def _norm_op(text):
     return _strip_leading_zeros(t)
 
 
+def _strip_side_prefix(part: str) -> str:
+    """Remove prefixos de lado (LP/LNP) e retorna o status em minúsculas."""
+    p = _norm(part).lower()
+    if p.startswith("lp "):
+        return p[3:]
+    if p.startswith("lnp "):
+        return p[4:]
+    return p
+
+
 def _to_float(s):
     try:
         return float(str(s).replace(",", ".").strip())
@@ -1018,7 +1028,7 @@ def resultado_preparador():
       ]
     }
     (Para medições de tampão, o campo `status` envia os dois lados como
-    "aprovado|reprovado".)
+    "LP Aprovado | LNP Reprovado".)
     """
 
     payload = request.get_json(silent=True) or {}
@@ -1179,11 +1189,11 @@ def resultado_preparador():
 
                 # Consolida liberação
                 has_reprov = any(
-                    any(parte.strip().startswith("reprov") for parte in s.split("|"))
+                    any(_strip_side_prefix(parte).startswith("reprov") for parte in s.split("|"))
                     for s in all_status
                 )
                 all_ok = len(all_status) > 0 and all(
-                    all(parte.strip() in ("ok", "aprovado") for parte in s.split("|"))
+                    all(_strip_side_prefix(parte) in ("ok", "aprovado") for parte in s.split("|"))
                     for s in all_status
                 )
                 status_geral = "Liberada" if all_ok else "Pendente"
@@ -1402,11 +1412,11 @@ def preparador_finalizar_os():
                     all_status.append(status)
 
                 has_reprov = any(
-                    any(parte.strip().startswith("reprov") for parte in s.split("|"))
+                    any(_strip_side_prefix(parte).startswith("reprov") for parte in s.split("|"))
                     for s in all_status
                 )
                 all_ok = len(all_status) > 0 and all(
-                    all(parte.strip() in ("ok", "aprovado") for parte in s.split("|"))
+                    all(_strip_side_prefix(parte) in ("ok", "aprovado") for parte in s.split("|"))
                     for s in all_status
                 )
                 status_geral = "Liberada" if all_ok else "Pendente"
@@ -1489,7 +1499,7 @@ def operador_registrar():
       ]
     }
     (Para medições de tampão, o campo `status` envia os dois lados como
-    "aprovado|reprovado".)
+    "LP Aprovado | LNP Reprovado".)
     """
 
     payload = request.get_json(silent=True) or {}

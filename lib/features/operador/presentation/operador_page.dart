@@ -187,24 +187,24 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       // escolha = texto selecionado (OK / Aprovado / Reprovado / pílula etc.)
       map['escolha'] = m.medicao ?? '';
 
-      // status como string; tampão envia "aprovado|reprovado" com ambos os lados
+      // status como string; tampão envia "LP Aprovado | LNP Reprovado" com ambos os lados
 
       String status;
       final med = m.medicao ?? '';
       if (med.contains('Lado passa') && med.contains('Lado não passa')) {
         // Tampão: avalia cada lado separadamente
-        var passa = 'aprovado';
-        var naoPassa = 'aprovado';
+        var passa = 'LP Aprovado';
+        var naoPassa = 'LNP Aprovado';
         for (final part in med.split('|')) {
           final p = part.trim();
           if (p.startsWith('Lado passa') && p.endsWith('Reprovado')) {
-            passa = 'reprovado';
+            passa = 'LP Reprovado';
           }
           if (p.startsWith('Lado não passa') && p.endsWith('Reprovado')) {
-            naoPassa = 'reprovado';
+            naoPassa = 'LNP Reprovado';
           }
         }
-        status = '$passa|$naoPassa';
+        status = '$passa | $naoPassa';
       } else {
         status = statusToString(m.status);
       }
