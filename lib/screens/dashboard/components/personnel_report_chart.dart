@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../constants.dart';
 import '../../../services/report_service.dart';
+import 'package:intl/intl.dart';
 
 /// Form that allows searching reports for either operators or preparers.
 /// The user can choose to search by OS or by Partnumber + Operação.
@@ -20,6 +21,22 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   String _tipo = 'operador';
   String _modo = 'os';
   Future<List<Map<String, dynamic>>>? _future;
+
+  String _formatDate(dynamic value) {
+    final raw = value?.toString() ?? '';
+    if (raw.isEmpty) return '';
+    DateTime? dt = DateTime.tryParse(raw);
+    if (dt == null) {
+      try {
+        dt = DateFormat(
+          "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
+          'en_US',
+        ).parseUtc(raw);
+      } catch (_) {}
+    }
+    return dt?.toLocal().toString().split('.').first ??
+        raw.replaceAll('T', ' ');
+  }
 
   @override
   void dispose() {
@@ -42,12 +59,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             final Map<String, Map<String, dynamic>> combined = {};
             for (final e in (data['liberacao'] as List? ?? [])) {
               if (e is Map<String, dynamic>) {
-                final raw = (e['created_at'] ?? '').toString();
-                final createdAt =
-                    DateTime.tryParse(
-                      raw,
-                    )?.toLocal().toString().split('.').first ??
-                    raw.replaceAll('T', ' ');
+                final createdAt = _formatDate(e['created_at']);
                 final key = '${e['partnumber']}_${e['idx_medida']}';
                 combined[key] = {
                   'os': e['os'],
@@ -62,12 +74,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             }
             for (final e in (data['finalizacao'] as List? ?? [])) {
               if (e is Map<String, dynamic>) {
-                final raw = (e['created_at'] ?? '').toString();
-                final createdAt =
-                    DateTime.tryParse(
-                      raw,
-                    )?.toLocal().toString().split('.').first ??
-                    raw.replaceAll('T', ' ');
+                final createdAt = _formatDate(e['created_at']);
                 final key = '${e['partnumber']}_${e['idx_medida']}';
                 final row = combined.putIfAbsent(key, () {
                   return {
@@ -90,12 +97,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             if (list is List) {
               for (final e in list) {
                 if (e is Map<String, dynamic>) {
-                  final raw = (e['created_at'] ?? '').toString();
-                  final createdAt =
-                      DateTime.tryParse(
-                        raw,
-                      )?.toLocal().toString().split('.').first ??
-                      raw.replaceAll('T', ' ');
+                  final createdAt = _formatDate(e['created_at']);
                   rows.add({
                     'os': e['os'],
                     're_operador': e['re_operador'],
@@ -120,11 +122,26 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       } else {
         final part = _partCtrl.text.trim();
         final op = _opCtrl.text.trim();
-        return await service.fetchReleases(
+        final data = await service.fetchReleases(
           tipo: _tipo,
           partnumber: part,
           operacao: op,
         );
+        final rows = <Map<String, dynamic>>[];
+        for (final e in data) {
+          if (e is Map<String, dynamic>) {
+            final map = Map<String, dynamic>.from(e);
+            map['created_at'] = _formatDate(e['created_at']);
+            if (map.containsKey('created_at_final')) {
+              map['created_at_final'] = _formatDate(e['created_at_final']);
+            }
+            rows.add(map);
+          }
+        }
+        rows.sort(
+          (a, b) => (a['created_at'] ?? '').compareTo(b['created_at'] ?? ''),
+        );
+        return rows;
       }
     }
 
@@ -136,6 +153,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(defaultPadding),
       decoration: BoxDecoration(
         color: secondaryColor,
@@ -144,10 +162,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Histórico',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text('Histórico', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: defaultPadding),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -159,7 +174,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'operador', child: Text('Verificação do Processo')),
+                  DropdownMenuItem(
+                    value: 'operador',
+                    child: Text('Verificação do Processo'),
+                  ),
                   DropdownMenuItem(
                     value: 'preparador',
                     child: Text('Liberação/Finalização'),
@@ -295,36 +313,45 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                       'status': 'Status',
                     };
               final headers = headerMap.keys.toList();
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  columns: headers
-                      .map(
-                        (h) => DataColumn(
-                          label: Text(
-                            headerMap[h] ?? h,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  rows: dados
-                      .map(
-                        (r) => DataRow(
-                          cells: headers
-                              .map(
-                                (h) => DataCell(
-                                  Text(
-                                    '${r[h] ?? ''}',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: constraints.maxWidth,
+                      ),
+                      child: DataTable(
+                        columns: headers
+                            .map(
+                              (h) => DataColumn(
+                                label: Text(
+                                  headerMap[h] ?? h,
+                                  style: const TextStyle(fontSize: 12),
                                 ),
-                              )
-                              .toList(),
-                        ),
-                      )
-                      .toList(),
-                ),
+                              ),
+                            )
+                            .toList(),
+                        rows: dados
+                            .map(
+                              (r) => DataRow(
+                                cells: headers
+                                    .map(
+                                      (h) => DataCell(
+                                        Text(
+                                          '${r[h] ?? ''}',
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  );
+                },
               );
             },
           ),
