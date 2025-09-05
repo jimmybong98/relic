@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../constants.dart';
 import '../../../services/report_service.dart';
+import 'package:intl/intl.dart';
 
 /// Form that allows searching reports for either operators or preparers.
 /// The user can choose to search by OS or by Partnumber + Operação.
@@ -20,6 +21,22 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   String _tipo = 'operador';
   String _modo = 'os';
   Future<List<Map<String, dynamic>>>? _future;
+
+  String _formatDate(dynamic value) {
+    final raw = value?.toString() ?? '';
+    if (raw.isEmpty) return '';
+    DateTime? dt = DateTime.tryParse(raw);
+    if (dt == null) {
+      try {
+        dt = DateFormat(
+          "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
+          'en_US',
+        ).parseUtc(raw);
+      } catch (_) {}
+    }
+    return dt?.toLocal().toString().split('.').first ??
+        raw.replaceAll('T', ' ');
+  }
 
   @override
   void dispose() {
@@ -42,12 +59,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             final Map<String, Map<String, dynamic>> combined = {};
             for (final e in (data['liberacao'] as List? ?? [])) {
               if (e is Map<String, dynamic>) {
-                final raw = (e['created_at'] ?? '').toString();
-                final createdAt =
-                    DateTime.tryParse(
-                      raw,
-                    )?.toLocal().toString().split('.').first ??
-                    raw.replaceAll('T', ' ');
+                final createdAt = _formatDate(e['created_at']);
                 final key = '${e['partnumber']}_${e['idx_medida']}';
                 combined[key] = {
                   'os': e['os'],
@@ -62,12 +74,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             }
             for (final e in (data['finalizacao'] as List? ?? [])) {
               if (e is Map<String, dynamic>) {
-                final raw = (e['created_at'] ?? '').toString();
-                final createdAt =
-                    DateTime.tryParse(
-                      raw,
-                    )?.toLocal().toString().split('.').first ??
-                    raw.replaceAll('T', ' ');
+                final createdAt = _formatDate(e['created_at']);
                 final key = '${e['partnumber']}_${e['idx_medida']}';
                 final row = combined.putIfAbsent(key, () {
                   return {
@@ -90,12 +97,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             if (list is List) {
               for (final e in list) {
                 if (e is Map<String, dynamic>) {
-                  final raw = (e['created_at'] ?? '').toString();
-                  final createdAt =
-                      DateTime.tryParse(
-                        raw,
-                      )?.toLocal().toString().split('.').first ??
-                      raw.replaceAll('T', ' ');
+                  final createdAt = _formatDate(e['created_at']);
                   rows.add({
                     'os': e['os'],
                     're_operador': e['re_operador'],
@@ -120,11 +122,26 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       } else {
         final part = _partCtrl.text.trim();
         final op = _opCtrl.text.trim();
-        return await service.fetchReleases(
+        final data = await service.fetchReleases(
           tipo: _tipo,
           partnumber: part,
           operacao: op,
         );
+        final rows = <Map<String, dynamic>>[];
+        for (final e in data) {
+          if (e is Map<String, dynamic>) {
+            final map = Map<String, dynamic>.from(e);
+            map['created_at'] = _formatDate(e['created_at']);
+            if (map.containsKey('created_at_final')) {
+              map['created_at_final'] = _formatDate(e['created_at_final']);
+            }
+            rows.add(map);
+          }
+        }
+        rows.sort(
+          (a, b) => (a['created_at'] ?? '').compareTo(b['created_at'] ?? ''),
+        );
+        return rows;
       }
     }
 
