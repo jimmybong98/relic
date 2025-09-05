@@ -4,7 +4,7 @@ import '../../../controllers/machine_controller.dart';
 
 class CadastroMaquinasPage extends StatefulWidget {
   CadastroMaquinasPage({super.key, MachineController? controller})
-      : controller = controller ?? MachineController();
+    : controller = controller ?? MachineController();
 
   final MachineController controller;
 
@@ -27,8 +27,7 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
     if (!mounted) return;
     final err = widget.controller.error;
     if (err != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(err)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
     }
     setState(() {});
   }
@@ -57,16 +56,18 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
                       Expanded(
                         child: TextField(
                           controller: _categoriaCtrl,
-                          decoration:
-                              const InputDecoration(labelText: 'Categoria'),
+                          decoration: const InputDecoration(
+                            labelText: 'Categoria',
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: TextField(
                           controller: _codigoCtrl,
-                          decoration:
-                              const InputDecoration(labelText: 'Código da máquina'),
+                          decoration: const InputDecoration(
+                            labelText: 'Código da máquina',
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -102,10 +103,12 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
                         trailing: IconButton(
                           icon: const Icon(Icons.edit),
                           onPressed: () async {
-                            final catCtrl =
-                                TextEditingController(text: m.categoria);
-                            final codCtrl =
-                                TextEditingController(text: m.codigo);
+                            final catCtrl = TextEditingController(
+                              text: m.categoria,
+                            );
+                            final codCtrl = TextEditingController(
+                              text: m.codigo,
+                            );
                             final result = await showDialog<bool>(
                               context: context,
                               builder: (context) {
@@ -117,12 +120,14 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
                                       TextField(
                                         controller: catCtrl,
                                         decoration: const InputDecoration(
-                                            labelText: 'Categoria'),
+                                          labelText: 'Categoria',
+                                        ),
                                       ),
                                       TextField(
                                         controller: codCtrl,
                                         decoration: const InputDecoration(
-                                            labelText: 'Código da máquina'),
+                                          labelText: 'Código da máquina',
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -143,12 +148,11 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
                             );
                             if (result == true) {
                               await ctrl.updateMaquina(
-                                  m.codigo,
-                                  codCtrl.text.trim(),
-                                  catCtrl.text.trim());
+                                m.codigo,
+                                codCtrl.text.trim(),
+                                catCtrl.text.trim(),
+                              );
                             }
-                            catCtrl.dispose();
-                            codCtrl.dispose();
                           },
                         ),
                       );

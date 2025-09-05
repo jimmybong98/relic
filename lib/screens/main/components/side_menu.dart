@@ -10,6 +10,7 @@ import 'package:admin/features/cadastro_itens/presentation/cadastro_itens_page.d
 import 'package:admin/features/cadastro_preparadores/presentation/cadastro_preparadores_page.dart';
 import 'package:admin/features/export_relatorios/presentation/export_relatorios_page.dart';
 import 'package:admin/features/export_relatorios/presentation/visualizar_relatorios_page.dart';
+import 'package:admin/features/export_relatorios/presentation/tempo_os_page.dart';
 import 'package:admin/features/cadastro_maquinas/presentation/cadastro_maquinas_page.dart';
 import 'package:admin/features/login/login_page.dart';
 import 'package:admin/features/users/users_page.dart';
@@ -60,6 +61,11 @@ class SideMenu extends ConsumerWidget {
           title: 'Visualizar relatórios',
           svgSrc: 'assets/icons/menu_doc.svg',
           press: () => _navigate(context, const VisualizarRelatoriosPage()),
+        ),
+        DrawerListTile(
+          title: 'Tempo por OS',
+          svgSrc: 'assets/icons/menu_doc.svg',
+          press: () => _navigate(context, const TempoOsPage()),
         ),
       ]);
     }
@@ -162,8 +168,11 @@ class SideMenu extends ConsumerWidget {
                 auth = ref.read(authServiceProvider);
               }
               if (auth == null || !auth.isAdmin) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Acesso restrito a administradores')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Acesso restrito a administradores'),
+                  ),
+                );
                 return;
               }
               _navigate(context, MainScreen());
@@ -175,9 +184,7 @@ class SideMenu extends ConsumerWidget {
     return Drawer(
       child: ListView(
         children: [
-          DrawerHeader(
-            child: Image.asset('assets/images/logo.png'),
-          ),
+          DrawerHeader(child: Image.asset('assets/images/logo.png')),
           ...items,
         ],
       ),
@@ -207,10 +214,7 @@ class DrawerListTile extends StatelessWidget {
         colorFilter: const ColorFilter.mode(Colors.white54, BlendMode.srcIn),
         height: 16,
       ),
-      title: Text(
-        title,
-        style: const TextStyle(color: Colors.white54),
-      ),
+      title: Text(title, style: const TextStyle(color: Colors.white54)),
     );
   }
 }
