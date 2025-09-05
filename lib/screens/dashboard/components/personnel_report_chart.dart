@@ -63,7 +63,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                 final key = '${e['partnumber']}_${e['idx_medida']}';
                 combined[key] = {
                   'os': e['os'],
-                  're_preparador': e['re_preparador'],
+                  're_liberacao': e['re_preparador'],
+                  're_finalizacao': '',
                   'created_at': createdAt,
                   'partnumber': e['partnumber'],
                   'maquina': e['maquina'],
@@ -79,7 +80,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                 final row = combined.putIfAbsent(key, () {
                   return {
                     'os': e['os'],
-                    're_preparador': e['re_preparador'],
+                    're_liberacao': '',
                     'created_at': '',
                     'partnumber': e['partnumber'],
                     'maquina': e['maquina'],
@@ -89,6 +90,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                 });
                 row['created_at_final'] = createdAt;
                 row['medicao_final'] = e['medicao'];
+                row['re_finalizacao'] = e['re_preparador'];
               }
             }
             rows.addAll(combined.values);
@@ -291,7 +293,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
               final headerMap = _tipo == 'preparador'
                   ? const {
                       'os': 'OS',
-                      're_preparador': 'RE',
+                      're_liberacao': 'RE Liberação',
+                      're_finalizacao': 'RE Finalização',
                       'partnumber': 'Partnumber',
                       'maquina': 'Máquina',
                       'faixa_texto': 'Faixa',
