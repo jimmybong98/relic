@@ -322,6 +322,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                         minWidth: constraints.maxWidth,
                       ),
                       child: DataTable(
+                        columnSpacing: 12,
+                        horizontalMargin: 12,
                         columns: headers
                             .map(
                               (h) => DataColumn(
