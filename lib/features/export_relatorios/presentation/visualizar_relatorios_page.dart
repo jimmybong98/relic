@@ -44,7 +44,8 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             final key = '${e['partnumber']}_${e['idx_medida']}';
             combined[key] = {
               'os': e['os'],
-              're_preparador': e['re_preparador'],
+              're_liberacao': e['re_preparador'],
+              're_finalizacao': '',
               'created_at': createdAt,
               'partnumber': e['partnumber'],
               'maquina': e['maquina'],
@@ -63,7 +64,7 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             final row = combined.putIfAbsent(key, () {
               return {
                 'os': e['os'],
-                're_preparador': e['re_preparador'],
+                're_liberacao': '',
                 'created_at': '',
                 'partnumber': e['partnumber'],
                 'maquina': e['maquina'],
@@ -73,6 +74,7 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             });
             row['created_at_final'] = createdAt;
             row['medicao_final'] = e['medicao'];
+            row['re_finalizacao'] = e['re_preparador'];
           }
         }
         rows.addAll(combined.values);
@@ -114,7 +116,8 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
     final headerMap = _tipo == 'FOR07'
         ? const {
             'os': 'OS',
-            're_preparador': 'RE',
+            're_liberacao': 'RE Liberação',
+            're_finalizacao': 'RE Finalização',
             'partnumber': 'Partnumber',
             'maquina': 'Máquina',
             'faixa_texto': 'Faixa',
@@ -122,7 +125,6 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
             'medicao': 'Medição Inicial',
             'medicao_final': 'Medição Final',
             'created_at_final': 'Horário Final',
-
           }
         : const {
             'os': 'OS',
