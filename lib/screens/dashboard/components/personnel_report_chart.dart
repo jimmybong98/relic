@@ -312,7 +312,6 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                       'titulo': 'Título',
                       'instrumento': 'Instrumento',
                       'faixa_texto': 'Faixa',
-                      'escolha': 'Escolha',
                       'status': 'Status',
                     };
               final headers = headerMap.keys.toList();
