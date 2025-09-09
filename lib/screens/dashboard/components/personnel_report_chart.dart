@@ -130,15 +130,13 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           operacao: op,
         );
         final rows = <Map<String, dynamic>>[];
-        for (final e in data) {
-          if (e is Map<String, dynamic>) {
-            final map = Map<String, dynamic>.from(e);
-            map['created_at'] = _formatDate(e['created_at']);
-            if (map.containsKey('created_at_final')) {
-              map['created_at_final'] = _formatDate(e['created_at_final']);
-            }
-            rows.add(map);
+        for (final Map<String, dynamic> e in data) {
+          final map = Map<String, dynamic>.from(e);
+          map['created_at'] = _formatDate(e['created_at']);
+          if (map.containsKey('created_at_final')) {
+            map['created_at_final'] = _formatDate(e['created_at_final']);
           }
+          rows.add(map);
         }
         rows.sort(
           (a, b) => (a['created_at'] ?? '').compareTo(b['created_at'] ?? ''),

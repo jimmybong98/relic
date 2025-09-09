@@ -4,10 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../constants.dart';
 import 'components/header.dart';
-
-import 'components/recent_files.dart';
-import 'components/reports_table.dart';
-import 'components/storage_details.dart';
 import 'components/operator_report_chart.dart';
 import 'components/personnel_report_chart.dart';
 

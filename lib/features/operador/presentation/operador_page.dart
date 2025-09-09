@@ -759,8 +759,6 @@ class _MeasurementTile extends StatelessWidget {
     return double.tryParse(v.toString().replaceAll(',', '.').trim());
   }
 
-  bool _near(double a, double b) => (a - b).abs() <= 0.005;
-
   Color _fgOn(Color bg) =>
       ThemeData.estimateBrightnessForColor(bg) == Brightness.dark
       ? Colors.white
