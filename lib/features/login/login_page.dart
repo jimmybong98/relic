@@ -40,6 +40,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+
       appBar: const WindowBar(title: 'Login', showProfile: false),
       body: Center(
         child: SingleChildScrollView(
