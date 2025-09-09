@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
+import 'package:admin/widgets/window_bar.dart';
 
 import '../../../services/supervisao_service.dart';
 
@@ -39,18 +40,14 @@ class _CadastroItensPageState extends State<CadastroItensPage>
       // portanto não deve aparecer para o usuário
       _camposAdd = [
         for (var c in campos)
-          if (c != 'idx_medida') c
+          if (c != 'idx_medida') c,
       ];
-      _controllersAdd = {
-        for (var c in _camposAdd) c: TextEditingController()
-      };
+      _controllersAdd = {for (var c in _camposAdd) c: TextEditingController()};
     });
   }
 
   Future<void> _adicionar() async {
-    final dados = {
-      for (var c in _camposAdd) c: _controllersAdd[c]!.text
-    };
+    final dados = {for (var c in _camposAdd) c: _controllersAdd[c]!.text};
     final ok = await _service.inserir(_tabelaAdd, dados);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -71,18 +68,22 @@ class _CadastroItensPageState extends State<CadastroItensPage>
 
   Future<void> _buscarRegistros() async {
     final regs = await _service.fetchRegistros(
-        _tabelaEdit, _partCtrl.text, _opCtrl.text);
+      _tabelaEdit,
+      _partCtrl.text,
+      _opCtrl.text,
+    );
     final lista = regs
         .map((e) => Map<String, dynamic>.from(e)..remove('id'))
         .toList();
     setState(() {
       _registros = lista;
       _editControllers = lista
-          .map((item) => {
-                for (var entry in item.entries)
-                  entry.key:
-                      TextEditingController(text: '${entry.value ?? ''}')
-              })
+          .map(
+            (item) => {
+              for (var entry in item.entries)
+                entry.key: TextEditingController(text: '${entry.value ?? ''}'),
+            },
+          )
           .toList();
     });
   }
@@ -100,22 +101,20 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cadastro de novos itens')),
+      appBar: const WindowBar(title: 'Cadastro de novos itens'),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: DefaultTabController(
         length: 2,
         child: Column(
           children: [
             const TabBar(
-              tabs: [Tab(text: 'Adicionar'), Tab(text: 'Editar')],
+              tabs: [
+                Tab(text: 'Adicionar'),
+                Tab(text: 'Editar'),
+              ],
             ),
             Expanded(
-              child: TabBarView(
-                children: [
-                  _buildAdicionar(),
-                  _buildEditar(),
-                ],
-              ),
+              child: TabBarView(children: [_buildAdicionar(), _buildEditar()]),
             ),
           ],
         ),
@@ -184,7 +183,9 @@ class _CadastroItensPageState extends State<CadastroItensPage>
               ),
               const SizedBox(height: 8),
               FilledButton(
-                  onPressed: _buscarRegistros, child: const Text('Buscar')),
+                onPressed: _buscarRegistros,
+                child: const Text('Buscar'),
+              ),
             ],
           ),
         ),
@@ -206,8 +207,11 @@ class _CadastroItensPageState extends State<CadastroItensPage>
                           child: TextField(
                             controller: ctrls[k],
                             decoration: InputDecoration(labelText: k),
-                            enabled: !['idx_medida', 'partnumber', 'operacao']
-                                .contains(k),
+                            enabled: ![
+                              'idx_medida',
+                              'partnumber',
+                              'operacao',
+                            ].contains(k),
                           ),
                         ),
                       ),
@@ -216,13 +220,13 @@ class _CadastroItensPageState extends State<CadastroItensPage>
                         child: FilledButton(
                           onPressed: () {
                             final data = {
-                              for (var k in ctrls.keys) k: ctrls[k]!.text
+                              for (var k in ctrls.keys) k: ctrls[k]!.text,
                             };
                             _salvarEdicao(data);
                           },
                           child: const Text('Salvar'),
                         ),
-                      )
+                      ),
                     ],
                   ),
                 ),

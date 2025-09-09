@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:admin/features/preparacao/data/models.dart';
 import 'package:admin/features/preparacao/data/repository_provider.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
+import 'package:admin/widgets/window_bar.dart';
 import 'package:admin/utils/string_utils.dart';
 import 'package:admin/services/machine_service.dart';
 import 'package:admin/models/machine.dart';
@@ -229,15 +230,17 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     }
 
     // Verifica se há alguma medida reprovada
-    final reprovadas = medidas.where((m) =>
-        m.status == StatusMedida.reprovadaAbaixo ||
-        m.status == StatusMedida.reprovadaAcima).toList();
+    final reprovadas = medidas
+        .where(
+          (m) =>
+              m.status == StatusMedida.reprovadaAbaixo ||
+              m.status == StatusMedida.reprovadaAcima,
+        )
+        .toList();
     if (reprovadas.isNotEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Uma ou mais medidas foram reprovadas.'),
-        ),
+        const SnackBar(content: Text('Uma ou mais medidas foram reprovadas.')),
       );
       return;
     }
@@ -338,8 +341,8 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
         reOk && osOk && maquinaOk && todasOk && !_registrando && !_osFinalizada;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Finalizar OS'),
+      appBar: WindowBar(
+        title: 'Finalizar OS',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12.0),

@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:admin/features/preparacao/data/models.dart';
 import 'package:admin/features/operador/data/repository_provider.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
+import 'package:admin/widgets/window_bar.dart';
 import 'package:admin/utils/string_utils.dart';
 import 'package:admin/services/machine_service.dart';
 import 'package:admin/models/machine.dart';
@@ -350,8 +351,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
         reOk && osOk && maquinaOk && todasOk && !_registrando && !_osLiberada;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Liberação de Máquina (FOR 007)'),
+      appBar: WindowBar(
+        title: 'Liberação de Máquina (FOR 007)',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12.0),

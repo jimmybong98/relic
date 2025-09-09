@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../screens/main/components/side_menu.dart';
+import 'package:admin/widgets/window_bar.dart';
 import '../../../services/report_service.dart';
 
 /// Page that displays the time spent on an OS based on release and
@@ -117,7 +118,7 @@ class _TempoOsPageState extends State<TempoOsPage> {
     };
     final headers = headerMap.keys.toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('Tempo por OS')),
+      appBar: const WindowBar(title: 'Tempo por OS'),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: Padding(
         padding: const EdgeInsets.all(16),

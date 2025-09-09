@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../screens/main/components/side_menu.dart';
+import 'package:admin/widgets/window_bar.dart';
 import '../../../services/report_service.dart';
 
 /// Page that allows the user to export reports to an Excel file.
@@ -24,8 +25,10 @@ class _ExportRelatoriosPageState extends State<ExportRelatoriosPage> {
 
   Future<void> _exportar() async {
     setState(() => _loading = true);
-    final ok = await ReportService()
-        .exportToExcel(os: _osController.text, tipo: _tipo);
+    final ok = await ReportService().exportToExcel(
+      os: _osController.text,
+      tipo: _tipo,
+    );
     if (!mounted) return;
     setState(() => _loading = false);
     final msg = ok ? 'Relatório salvo com sucesso' : 'Falha ao exportar';
@@ -35,7 +38,7 @@ class _ExportRelatoriosPageState extends State<ExportRelatoriosPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Exportar relatórios')),
+      appBar: const WindowBar(title: 'Exportar relatórios'),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: Padding(
         padding: const EdgeInsets.all(16),
