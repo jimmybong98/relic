@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:admin/utils/platform_utils.dart';
 
 /// Custom title bar with window controls and drag support.
 class WindowBar extends StatefulWidget implements PreferredSizeWidget {
@@ -21,16 +22,26 @@ class _WindowBarState extends State<WindowBar> {
   @override
   void initState() {
     super.initState();
-    _syncMaximized();
+    if (isDesktop) {
+      _syncMaximized();
+    }
   }
 
   Future<void> _syncMaximized() async {
+    if (!isDesktop) return;
     _isMaximized = await windowManager.isMaximized();
     if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!isDesktop) {
+      return AppBar(
+        toolbarHeight: widget.preferredSize.height,
+        title: widget.title != null ? Text(widget.title!) : null,
+        actions: widget.actions,
+      );
+    }
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onPanStart: (_) => windowManager.startDragging(),

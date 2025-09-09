@@ -7,20 +7,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart' as pv;
 import 'package:window_manager/window_manager.dart';
+import 'package:admin/utils/platform_utils.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await windowManager.ensureInitialized();
-  windowManager.waitUntilReadyToShow(
-    const WindowOptions(
-      titleBarStyle: TitleBarStyle.hidden, // oculta a barra do sistema
-      size: Size(1000, 700),
-    ),
-        () async {
-      await windowManager.show();
-      await windowManager.focus();
-    },
-  );
+  if (isDesktop) {
+    await windowManager.ensureInitialized();
+    windowManager.waitUntilReadyToShow(
+      const WindowOptions(
+        titleBarStyle: TitleBarStyle.hidden, // oculta a barra do sistema
+        size: Size(1000, 700),
+      ),
+      () async {
+        await windowManager.show();
+        await windowManager.focus();
+      },
+    );
+  }
   // Carrega .env de forma segura (não quebra se não existir)
   try {
     await dotenv.load(fileName: ".env");
@@ -39,9 +42,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return pv.MultiProvider(
       providers: [
-        pv.ChangeNotifierProvider(
-          create: (_) => MenuAppController(),
-        ),
+        pv.ChangeNotifierProvider(create: (_) => MenuAppController()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
