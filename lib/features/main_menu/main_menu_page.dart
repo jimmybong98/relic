@@ -6,7 +6,6 @@ import 'package:admin/screens/main/components/side_menu.dart';
 import 'package:admin/widgets/window_bar.dart';
 import '../preparacao/presentation/preparacao_page.dart';
 import '../operador/presentation/operador_page.dart';
-import '../finalizar_os/presentation/finalizar_os_page.dart';
 import '../login/login_page.dart';
 import '../../services/auth_service.dart';
 
@@ -19,6 +18,24 @@ class MainMenuPage extends ConsumerWidget {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
     }
 
+    Future<void> openAdmin() async {
+      var auth = ref.read(authServiceProvider);
+      if (auth == null) {
+        final ok = await Navigator.of(
+          context,
+        ).push<bool>(MaterialPageRoute(builder: (_) => const LoginPage()));
+        if (ok != true) return;
+        auth = ref.read(authServiceProvider);
+      }
+      if (auth == null || !auth.isAdmin) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Acesso restrito a administradores')),
+        );
+        return;
+      }
+      open(context, MainScreen());
+    }
+
     return Scaffold(
       appBar: const WindowBar(title: 'Menu Principal', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.mainMenu),
@@ -28,47 +45,31 @@ class MainMenuPage extends ConsumerWidget {
           Image.asset('assets/images/logo.png', height: 120),
           const SizedBox(height: 32),
           Expanded(
-            child: GridView.count(
-              crossAxisCount: 4,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              padding: const EdgeInsets.all(8),
-              children: [
-                TextButton(
-                onPressed: () => open(context, const PreparacaoPage()),
-                style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                child: Image.asset('assets/images/FOR007.png'),),
-                TextButton(
-                  onPressed: () => open(context, const OperadorPage()),
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                  child: Image.asset('assets/images/Amostragem.png'),),
-                TextButton(
-                  onPressed: () => open(context, const OperadorPage()),
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                  child: Image.asset('assets/images/FOR008.png'),),
-                _MenuCard(
-                  title: 'Administração',
-                  onTap: () async {
-                    var auth = ref.read(authServiceProvider);
-                    if (auth == null) {
-                      final ok = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute(builder: (_) => const LoginPage()),
-                      );
-                      if (ok != true) return;
-                      auth = ref.read(authServiceProvider);
-                    }
-                    if (auth == null || !auth.isAdmin) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Acesso restrito a administradores'),
-                        ),
-                      );
-                      return;
-                    }
-                    open(context, MainScreen());
-                  },
+            child: SingleChildScrollView(
+              child: Center(
+                child: Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    _MenuImageButton(
+                      image: 'assets/images/FOR007.png',
+                      onPressed: () => open(context, const PreparacaoPage()),
+                    ),
+                    _MenuImageButton(
+                      image: 'assets/images/Amostragem.png',
+                      onPressed: () => open(context, const OperadorPage()),
+                    ),
+                    _MenuImageButton(
+                      image: 'assets/images/FOR008.png',
+                      onPressed: () => open(context, const OperadorPage()),
+                    ),
+                    _MenuImageButton(
+                      image: 'assets/images/dashboard.png',
+                      onPressed: openAdmin,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -77,24 +78,23 @@ class MainMenuPage extends ConsumerWidget {
   }
 }
 
-class _MenuCard extends StatelessWidget {
-  const _MenuCard({required this.title, required this.onTap});
+class _MenuImageButton extends StatelessWidget {
+  const _MenuImageButton({required this.image, required this.onPressed});
 
-  final String title;
-  final VoidCallback onTap;
+  final String image;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      child: InkWell(
-        onTap: onTap,
-        child: Center(
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium,
-            textAlign: TextAlign.center,
-          ),
+    return SizedBox(
+      width: 160,
+      height: 160,
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(padding: EdgeInsets.zero),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.asset(image, fit: BoxFit.cover),
         ),
       ),
     );
