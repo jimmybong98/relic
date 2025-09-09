@@ -48,8 +48,8 @@ class MainMenuPage extends ConsumerWidget {
             child: SingleChildScrollView(
               child: Center(
                 child: Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
+                  spacing: 24,
+                  runSpacing: 24,
                   children: [
                     _MenuImageButton(
                       image: 'assets/images/FOR007.png',
@@ -78,23 +78,44 @@ class MainMenuPage extends ConsumerWidget {
   }
 }
 
-class _MenuImageButton extends StatelessWidget {
+class _MenuImageButton extends StatefulWidget {
   const _MenuImageButton({required this.image, required this.onPressed});
 
   final String image;
   final VoidCallback onPressed;
 
   @override
+  State<_MenuImageButton> createState() => _MenuImageButtonState();
+}
+
+class _MenuImageButtonState extends State<_MenuImageButton> {
+  bool _hovering = false;
+  bool _pressed = false;
+
+  double get _scale => _pressed ? 0.95 : (_hovering ? 1.05 : 1.0);
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 160,
-      height: 160,
-      child: TextButton(
-        onPressed: onPressed,
-        style: TextButton.styleFrom(padding: EdgeInsets.zero),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.asset(image, fit: BoxFit.cover),
+      width: 200,
+      height: 200,
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 150),
+        child: InkWell(
+          onTap: widget.onPressed,
+          onHover: (v) => setState(() => _hovering = v),
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapUp: (_) => setState(() => _pressed = false),
+          onTapCancel: () => setState(() => _pressed = false),
+          mouseCursor: SystemMouseCursors.click,
+          hoverColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(widget.image, fit: BoxFit.cover),
+          ),
         ),
       ),
     );
