@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:admin/controllers/machine_controller.dart';
@@ -47,8 +48,10 @@ void main() {
     ]);
     final controller = MachineController(service: service);
 
-    await tester.pumpWidget(MaterialApp(
-      home: CadastroMaquinasPage(controller: controller),
+    await tester.pumpWidget(ProviderScope(
+      child: MaterialApp(
+        home: CadastroMaquinasPage(controller: controller),
+      ),
     ));
     await tester.pump(const Duration(milliseconds: 20));
 
@@ -70,8 +73,10 @@ void main() {
     ]);
     final controller = MachineController(service: service);
 
-    await tester.pumpWidget(MaterialApp(
-      home: CadastroMaquinasPage(controller: controller),
+    await tester.pumpWidget(ProviderScope(
+      child: MaterialApp(
+        home: CadastroMaquinasPage(controller: controller),
+      ),
     ));
     await tester.pump(const Duration(milliseconds: 20));
 

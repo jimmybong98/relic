@@ -109,9 +109,8 @@ class _MenuImageButtonState extends State<_MenuImageButton> {
           onTapUp: (_) => setState(() => _pressed = false),
           onTapCancel: () => setState(() => _pressed = false),
           mouseCursor: SystemMouseCursors.click,
-          hoverColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          splashColor: Colors.transparent,
+          overlayColor: MaterialStateProperty.all(Colors.transparent),
+          splashFactory: NoSplash.splashFactory,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.asset(widget.image, fit: BoxFit.cover),

@@ -43,6 +43,12 @@ class AuthService extends StateNotifier<AuthState?> {
 
 final authServiceProvider =
     StateNotifierProvider<AuthService, AuthState?>((ref) {
-  final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:5000';
+  // Safe access to dotenv: avoid NotInitializedError when dotenv is not loaded.
+  String baseUrl;
+  try {
+    baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:5000';
+  } catch (_) {
+    baseUrl = 'http://localhost:5000';
+  }
   return AuthService(http.Client(), baseUrl);
 });
