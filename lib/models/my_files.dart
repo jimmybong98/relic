@@ -33,7 +33,7 @@ List<CloudStorageInfo> buildStatusSummaries(List<Report> reports) {
     const Color(0xFF26E5FF),
     const Color(0xFFFFCF26),
     const Color(0xFFEE2727),
-    primaryColor.withOpacity(0.1),
+    primaryColor.withValues(alpha: 0.1),
   ];
 
   final total = reports.length;

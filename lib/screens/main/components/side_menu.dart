@@ -138,7 +138,6 @@ class SideMenu extends ConsumerWidget {
         ]);
         break;
       case SideMenuSection.mainMenu:
-      default:
         items.addAll([
           DrawerListTile(
             title: 'Preparador',

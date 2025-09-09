@@ -271,7 +271,7 @@ class MedidaItem {
         (uni != null && RegExp(r'[°º]').hasMatch(uni)) ||
         tituloNorm.contains('angulo');
     if (isAngulo && minimo != null && maximo != null) {
-      final vals = [minimo!.abs(), maximo!.abs()]..sort();
+      final vals = [minimo.abs(), maximo.abs()]..sort();
       minimo = vals.first;
       maximo = vals.last;
     }
