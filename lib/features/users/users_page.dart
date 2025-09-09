@@ -5,6 +5,7 @@ import '../../models/user.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import 'package:admin/widgets/window_bar.dart';
+import 'package:admin/screens/main/components/side_menu.dart';
 
 class UsersPage extends ConsumerStatefulWidget {
   const UsersPage({super.key});
@@ -34,10 +35,15 @@ class _UsersPageState extends ConsumerState<UsersPage> {
   Widget build(BuildContext context) {
     final auth = ref.watch(authServiceProvider);
     if (auth == null || !auth.isAdmin) {
-      return const Scaffold(body: Center(child: Text('Acesso negado')));
+      return Scaffold(
+        appBar: const WindowBar(title: 'Gerenciar Acessos', showMenu: true),
+        drawer: const SideMenu(current: SideMenuSection.dashboard),
+        body: const Center(child: Text('Acesso negado')),
+      );
     }
     return Scaffold(
-      appBar: const WindowBar(title: 'Gerenciar Acessos'),
+      appBar: const WindowBar(title: 'Gerenciar Acessos', showMenu: true),
+      drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: FutureBuilder<List<AppUser>>(
         future: _future,
         builder: (context, snapshot) {

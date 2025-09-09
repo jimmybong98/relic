@@ -353,6 +353,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     return Scaffold(
       appBar: WindowBar(
         title: 'Liberação de Máquina (FOR 007)',
+        showMenu: true,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12.0),

@@ -383,6 +383,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     return Scaffold(
       appBar: WindowBar(
         title: 'Área do Operador',
+        showMenu: true,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12.0),

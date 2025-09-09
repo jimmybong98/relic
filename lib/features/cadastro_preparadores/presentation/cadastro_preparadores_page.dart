@@ -8,7 +8,10 @@ class CadastroPreparadoresPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const WindowBar(title: 'Cadastro de Preparadores'),
+      appBar: const WindowBar(
+        title: 'Cadastro de Preparadores',
+        showMenu: true,
+      ),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: const Center(child: Text('Cadastro de Preparadores')),
     );

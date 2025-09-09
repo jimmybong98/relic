@@ -101,7 +101,7 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const WindowBar(title: 'Cadastro de novos itens'),
+      appBar: const WindowBar(title: 'Cadastro de novos itens', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: DefaultTabController(
         length: 2,

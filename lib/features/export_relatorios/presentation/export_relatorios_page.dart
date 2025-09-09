@@ -38,7 +38,7 @@ class _ExportRelatoriosPageState extends State<ExportRelatoriosPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const WindowBar(title: 'Exportar relatórios'),
+      appBar: const WindowBar(title: 'Exportar relatórios', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: Padding(
         padding: const EdgeInsets.all(16),

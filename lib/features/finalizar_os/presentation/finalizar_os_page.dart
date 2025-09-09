@@ -343,6 +343,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     return Scaffold(
       appBar: WindowBar(
         title: 'Finalizar OS',
+        showMenu: true,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12.0),
