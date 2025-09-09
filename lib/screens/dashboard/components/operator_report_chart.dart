@@ -183,7 +183,9 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                   final title = first.titulo.isNotEmpty
                       ? first.titulo
                       : 'Medida ${entry.key}';
-                  final faixa = first.faixaTexto;
+                  final faixa = first.faixaTexto.isNotEmpty
+                      ? first.faixaTexto
+                      : 'faixa_texto ${entry.key}';
                   final label = faixa.isNotEmpty ? '$title - $faixa' : title;
 
                   return Padding(

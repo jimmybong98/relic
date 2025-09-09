@@ -34,18 +34,18 @@ class MainMenuPage extends ConsumerWidget {
               mainAxisSpacing: 8,
               padding: const EdgeInsets.all(8),
               children: [
-                _MenuCard(
-                  title: 'Liberação de máquina (FOR007)',
-                  onTap: () => open(context, const PreparacaoPage()),
-                ),
-                _MenuCard(
-                  title: 'Amostragem (FOR009)',
-                  onTap: () => open(context, const OperadorPage()),
-                ),
-                _MenuCard(
-                  title: 'Finalização de OS (FOR008)',
-                  onTap: () => open(context, const FinalizarOsPage()),
-                ),
+                TextButton(
+                onPressed: () => open(context, const PreparacaoPage()),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                child: Image.asset('assets/images/FOR007.png'),),
+                TextButton(
+                  onPressed: () => open(context, const OperadorPage()),
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                  child: Image.asset('assets/images/Amostragem.png'),),
+                TextButton(
+                  onPressed: () => open(context, const OperadorPage()),
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                  child: Image.asset('assets/images/FOR008.png'),),
                 _MenuCard(
                   title: 'Administração',
                   onTap: () async {

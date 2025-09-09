@@ -6,6 +6,7 @@ import '../../constants.dart';
 import 'components/operator_report_chart.dart';
 import 'components/personnel_report_chart.dart';
 
+
 class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
