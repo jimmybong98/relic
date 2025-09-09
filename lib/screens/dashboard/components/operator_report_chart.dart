@@ -5,6 +5,7 @@ import '../../../constants.dart';
 import '../../../models/report.dart';
 import '../../../services/report_service.dart';
 import '../../../features/operador/data/models.dart';
+import 'package:intl/intl.dart';
 
 /// Displays a line chart showing the progression of operator samplings.
 /// The user must provide an OS number to fetch the report. End-of-shift
@@ -78,8 +79,10 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Progresso das Amostragens',
-              style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'Progresso das Amostragens',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: defaultPadding),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -113,7 +116,6 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                 ],
               );
             },
-
           ),
           const SizedBox(height: defaultPadding),
           FutureBuilder<List<Report>>(
@@ -121,7 +123,8 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
             builder: (context, snapshot) {
               if (_future == null) {
                 return const Text(
-                    'Informe o número da OS para visualizar o gráfico.');
+                  'Informe o número da OS para visualizar o gráfico.',
+                );
               }
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -144,10 +147,12 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: grouped.entries.map((entry) {
                   final reports = entry.value
-                    ..sort((a, b) =>
-                        (DateTime.tryParse(a.createdAt) ?? DateTime(0))
-                            .compareTo(
-                            DateTime.tryParse(b.createdAt) ?? DateTime(0)));
+                    ..sort(
+                      (a, b) => (DateTime.tryParse(a.createdAt) ?? DateTime(0))
+                          .compareTo(
+                            DateTime.tryParse(b.createdAt) ?? DateTime(0),
+                          ),
+                    );
                   final spots = <FlSpot>[];
                   final verticalLines = <VerticalLine>[];
                   for (var i = 0; i < reports.length; i++) {
@@ -155,30 +160,41 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                     final status = r.status.toLowerCase();
                     spots.add(FlSpot(i.toDouble(), _statusToValue(status)));
                     if (status.contains('fim') && status.contains('jornada')) {
-                      verticalLines.add(VerticalLine(
+                      verticalLines.add(
+                        VerticalLine(
                           x: i.toDouble(),
                           color: Colors.orange,
-                          strokeWidth: 2));
+                          strokeWidth: 2,
+                        ),
+                      );
                     } else if (status.contains('encerrar') ||
                         status.contains('encerramento')) {
-                      verticalLines.add(VerticalLine(
+                      verticalLines.add(
+                        VerticalLine(
                           x: i.toDouble(),
                           color: Colors.red,
-                          strokeWidth: 2));
+                          strokeWidth: 2,
+                        ),
+                      );
                     }
                   }
 
-                  final title = reports.first.titulo.isNotEmpty
-                      ? reports.first.titulo
+                  final first = reports.first;
+                  final title = first.titulo.isNotEmpty
+                      ? first.titulo
                       : 'Medida ${entry.key}';
+                  final faixa = first.faixaTexto;
+                  final label = faixa.isNotEmpty ? '$title - $faixa' : title;
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: defaultPadding),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(title,
-                            style: Theme.of(context).textTheme.titleSmall),
+                        Text(
+                          label,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
                         const SizedBox(height: defaultPadding / 2),
                         SizedBox(
                           height: 200,
@@ -187,6 +203,25 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                             LineChartData(
                               minY: -2,
                               maxY: 2,
+                              lineTouchData: LineTouchData(
+                                touchTooltipData: LineTouchTooltipData(
+                                  getTooltipItems: (touchedSpots) {
+                                    return touchedSpots.map((spot) {
+                                      final report = reports[spot.x.toInt()];
+                                      final dt = DateTime.tryParse(
+                                        report.createdAt,
+                                      );
+                                      final label = dt != null
+                                          ? DateFormat.Hm().format(dt.toLocal())
+                                          : report.createdAt;
+                                      return LineTooltipItem(
+                                        label,
+                                        const TextStyle(color: Colors.white),
+                                      );
+                                    }).toList();
+                                  },
+                                ),
+                              ),
                               titlesData: FlTitlesData(
                                 leftTitles: AxisTitles(
                                   sideTitles: SideTitles(
@@ -226,8 +261,9 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                                             width: 10,
                                             height: 10,
                                             decoration: BoxDecoration(
-                                                color: _statusColor(st),
-                                                shape: BoxShape.circle),
+                                              color: _statusColor(st),
+                                              shape: BoxShape.circle,
+                                            ),
                                           ),
                                           const SizedBox(width: 4),
                                           Text(text),
@@ -240,9 +276,11 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                                   sideTitles: SideTitles(showTitles: false),
                                 ),
                                 topTitles: AxisTitles(
-                                    sideTitles: SideTitles(showTitles: false)),
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
                                 rightTitles: AxisTitles(
-                                    sideTitles: SideTitles(showTitles: false)),
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
                               ),
                               lineBarsData: [
                                 LineChartBarData(
@@ -251,10 +289,11 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                                   barWidth: 3,
                                   color: Colors.blue,
                                   dotData: FlDotData(show: true),
-                                )
+                                ),
                               ],
-                              extraLinesData:
-                              ExtraLinesData(verticalLines: verticalLines),
+                              extraLinesData: ExtraLinesData(
+                                verticalLines: verticalLines,
+                              ),
                             ),
                           ),
                         ),
@@ -264,7 +303,7 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                 }).toList(),
               );
             },
-          )
+          ),
         ],
       ),
     );
