@@ -3,7 +3,6 @@ import 'package:admin/screens/dashboard/components/my_fields.dart';
 import 'package:flutter/material.dart';
 
 import '../../constants.dart';
-import 'components/header.dart';
 import 'components/operator_report_chart.dart';
 import 'components/personnel_report_chart.dart';
 
@@ -16,8 +15,6 @@ class DashboardScreen extends StatelessWidget {
         padding: EdgeInsets.all(defaultPadding),
         child: Column(
           children: [
-            Header(),
-            SizedBox(height: defaultPadding),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
