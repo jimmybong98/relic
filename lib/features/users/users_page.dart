@@ -36,12 +36,13 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     final auth = ref.watch(authServiceProvider);
     if (auth == null || !auth.isAdmin) {
       return Scaffold(
+        appBar: const WindowBar(title: 'Gerenciar Acessos', showMenu: true),
         drawer: const SideMenu(current: SideMenuSection.dashboard),
         body: const Center(child: Text('Acesso negado')),
       );
     }
     return Scaffold(
-      appBar: const WindowBar(title: 'Gerenciar Acessos'),
+      appBar: const WindowBar(title: 'Gerenciar Acessos', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: FutureBuilder<List<AppUser>>(
         future: _future,

@@ -4,10 +4,11 @@ import 'package:admin/utils/platform_utils.dart';
 
 /// Custom title bar with window controls and drag support.
 class WindowBar extends StatefulWidget implements PreferredSizeWidget {
-  const WindowBar({super.key, this.title, this.actions});
+  const WindowBar({super.key, this.title, this.actions, this.showMenu = false});
 
   final String? title;
   final List<Widget>? actions;
+  final bool showMenu;
 
   @override
   Size get preferredSize => const Size.fromHeight(40);
@@ -57,10 +58,23 @@ class _WindowBarState extends State<WindowBar> {
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(
           children: [
+            if (widget.showMenu)
+              Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                  tooltip: MaterialLocalizations.of(
+                    context,
+                  ).openAppDrawerTooltip,
+                ),
+              ),
             if (widget.title != null)
-              Text(
-                widget.title!,
-                style: Theme.of(context).textTheme.titleSmall,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  widget.title!,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
               ),
             const Spacer(),
             if (widget.actions != null) ...widget.actions!,

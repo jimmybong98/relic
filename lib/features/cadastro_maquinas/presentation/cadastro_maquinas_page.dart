@@ -46,7 +46,7 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
   Widget build(BuildContext context) {
     final ctrl = widget.controller;
     return Scaffold(
-      appBar: const WindowBar(title: 'Cadastro de máquinas'),
+      appBar: const WindowBar(title: 'Cadastro de máquinas', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: ctrl.isLoading
           ? const Center(child: CircularProgressIndicator())

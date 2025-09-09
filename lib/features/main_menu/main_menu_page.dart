@@ -20,7 +20,7 @@ class MainMenuPage extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: const WindowBar(title: 'Menu Principal'),
+      appBar: const WindowBar(title: 'Menu Principal', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.mainMenu),
       body: Column(
         children: [

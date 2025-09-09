@@ -141,7 +141,7 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
           };
     final headers = headerMap.keys.toList();
     return Scaffold(
-      appBar: const WindowBar(title: 'Visualizar relatórios'),
+      appBar: const WindowBar(title: 'Visualizar relatórios', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: Padding(
         padding: const EdgeInsets.all(16),

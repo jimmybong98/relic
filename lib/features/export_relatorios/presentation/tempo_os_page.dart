@@ -118,7 +118,7 @@ class _TempoOsPageState extends State<TempoOsPage> {
     };
     final headers = headerMap.keys.toList();
     return Scaffold(
-      appBar: const WindowBar(title: 'Tempo por OS'),
+      appBar: const WindowBar(title: 'Tempo por OS', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: Padding(
         padding: const EdgeInsets.all(16),
