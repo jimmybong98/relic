@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../controllers/machine_controller.dart';
+import 'package:admin/widgets/window_bar.dart';
 
 class CadastroMaquinasPage extends StatefulWidget {
   CadastroMaquinasPage({super.key, MachineController? controller})
@@ -44,7 +45,7 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
   Widget build(BuildContext context) {
     final ctrl = widget.controller;
     return Scaffold(
-      appBar: AppBar(title: const Text('Cadastro de máquinas')),
+      appBar: const WindowBar(title: 'Cadastro de máquinas'),
       body: ctrl.isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(

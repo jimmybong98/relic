@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/user.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
+import 'package:admin/widgets/window_bar.dart';
 
 class UsersPage extends ConsumerStatefulWidget {
   const UsersPage({super.key});
@@ -36,7 +37,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
       return const Scaffold(body: Center(child: Text('Acesso negado')));
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Gerenciar Acessos')),
+      appBar: const WindowBar(title: 'Gerenciar Acessos'),
       body: FutureBuilder<List<AppUser>>(
         future: _future,
         builder: (context, snapshot) {
@@ -49,11 +50,14 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               Expanded(
                 child: ListView(
                   children: users
-                      .map((u) => ListTile(
-                            title: Text(u.username),
-                            subtitle: Text(
-                                u.isAdmin ? 'Administrador' : 'Usuário'),
-                          ))
+                      .map(
+                        (u) => ListTile(
+                          title: Text(u.username),
+                          subtitle: Text(
+                            u.isAdmin ? 'Administrador' : 'Usuário',
+                          ),
+                        ),
+                      )
                       .toList(),
                 ),
               ),
@@ -63,13 +67,13 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                   children: [
                     TextField(
                       controller: _userCtrl,
-                      decoration:
-                          const InputDecoration(labelText: 'Novo usuário'),
+                      decoration: const InputDecoration(
+                        labelText: 'Novo usuário',
+                      ),
                     ),
                     TextField(
                       controller: _passCtrl,
-                      decoration:
-                          const InputDecoration(labelText: 'Senha'),
+                      decoration: const InputDecoration(labelText: 'Senha'),
                       obscureText: true,
                     ),
                     SwitchListTile(
@@ -80,11 +84,12 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                     ElevatedButton(
                       onPressed: () async {
                         final ok = await UserService().createUser(
-                            _userCtrl.text,
-                            _passCtrl.text,
-                            _isAdmin,
-                            auth.username,
-                            auth.password);
+                          _userCtrl.text,
+                          _passCtrl.text,
+                          _isAdmin,
+                          auth.username,
+                          auth.password,
+                        );
                         if (ok) {
                           setState(() {
                             _future = _load();
@@ -95,10 +100,10 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                         }
                       },
                       child: const Text('Adicionar'),
-                    )
+                    ),
                   ],
                 ),
-              )
+              ),
             ],
           );
         },

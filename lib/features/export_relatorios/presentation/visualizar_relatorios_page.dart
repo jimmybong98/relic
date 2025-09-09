@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../screens/main/components/side_menu.dart';
+import 'package:admin/widgets/window_bar.dart';
 import '../../../services/report_service.dart';
 
 /// Page that displays report data directly without exporting to Excel.
@@ -140,7 +141,7 @@ class _VisualizarRelatoriosPageState extends State<VisualizarRelatoriosPage> {
           };
     final headers = headerMap.keys.toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('Visualizar relatórios')),
+      appBar: const WindowBar(title: 'Visualizar relatórios'),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: Padding(
         padding: const EdgeInsets.all(16),

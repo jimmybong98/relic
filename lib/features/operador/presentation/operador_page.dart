@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -11,6 +10,7 @@ import 'package:http/http.dart' as http;
 import '../../preparacao/data/models.dart';
 import '../data/repository_provider.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
+import 'package:admin/widgets/window_bar.dart';
 import 'package:admin/utils/string_utils.dart';
 import 'package:admin/services/machine_service.dart';
 import 'package:admin/models/machine.dart';
@@ -18,10 +18,13 @@ import 'package:admin/models/machine.dart';
 /// >>>>> Ajuste para o endereço/porta do seu Flask <<<<<
 const String kBaseUrl = 'http://192.168.0.241:5005';
 
-final medidasOperadorControllerProvider = StateNotifierProvider.autoDispose<
-    MedidasOperadorController, AsyncValue<List<MedidaItem>>>((ref) {
-  return MedidasOperadorController(ref);
-});
+final medidasOperadorControllerProvider =
+    StateNotifierProvider.autoDispose<
+      MedidasOperadorController,
+      AsyncValue<List<MedidaItem>>
+    >((ref) {
+      return MedidasOperadorController(ref);
+    });
 
 class MedidasOperadorController
     extends StateNotifier<AsyncValue<List<MedidaItem>>> {
@@ -35,8 +38,10 @@ class MedidasOperadorController
     state = const AsyncValue.loading();
     try {
       final repo = _ref.read(operadorRepositoryProvider);
-      final itens =
-      await repo.getMedidas(partnumber: partnumber, operacao: operacao);
+      final itens = await repo.getMedidas(
+        partnumber: partnumber,
+        operacao: operacao,
+      );
       state = AsyncValue.data(itens);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -121,13 +126,15 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         setState(() {
           _maquinas.addAll(list);
           _categorias.addAll(
-              _maquinas.map((e) => e.categoria).toSet().toList()..sort());
+            _maquinas.map((e) => e.categoria).toSet().toList()..sort(),
+          );
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erro ao carregar máquinas: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao carregar máquinas: $e')),
+        );
       }
     }
   }
@@ -150,7 +157,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         (_maquinaSel ?? '').isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preencha RE, O.S. e máquina para registrar.')),
+        const SnackBar(
+          content: Text('Preencha RE, O.S. e máquina para registrar.'),
+        ),
       );
       return;
     }
@@ -168,8 +177,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content:
-            Text('Faltam ${faltando.length} medições para selecionar.')),
+          content: Text('Faltam ${faltando.length} medições para selecionar.'),
+        ),
       );
       return;
     }
@@ -241,15 +250,17 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(
-                  'Falha ao registrar: ${resp.statusCode} ${resp.body}')),
+            content: Text(
+              'Falha ao registrar: ${resp.statusCode} ${resp.body}',
+            ),
+          ),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao registrar: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao registrar: $e')));
     } finally {
       if (mounted) setState(() => _registrando = false);
     }
@@ -278,9 +289,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           .timeout(const Duration(seconds: 20));
       if (!mounted) return;
       if (resp.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Jornada pausada.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Jornada pausada.')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falha: ${resp.statusCode} ${resp.body}')),
@@ -288,8 +299,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erro: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro: $e')));
     }
   }
 
@@ -310,9 +322,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           .timeout(const Duration(seconds: 20));
       if (!mounted) return;
       if (resp.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Produção encerrada.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Produção encerrada.')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falha: ${resp.statusCode} ${resp.body}')),
@@ -320,8 +332,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erro: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro: $e')));
     }
   }
 
@@ -357,26 +370,31 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     final maquinaOk = (_maquinaSel ?? '').isNotEmpty;
 
     // todas respondidas?
-    final todasRespondidas = medidas.isNotEmpty &&
-        medidas.every((m) =>
-        m.status != StatusMedida.pendente && (m.medicao ?? '').isNotEmpty);
+    final todasRespondidas =
+        medidas.isNotEmpty &&
+        medidas.every(
+          (m) =>
+              m.status != StatusMedida.pendente && (m.medicao ?? '').isNotEmpty,
+        );
 
     final podeRegistrar =
         reOk && osOk && maquinaOk && todasRespondidas && !_registrando;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Área do Operador'),
+      appBar: WindowBar(
+        title: 'Área do Operador',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12.0),
             child: Center(
               child: Text(
-                Platform.isWindows ? 'Windows: leitura direta/API' : 'Android: via API',
+                Platform.isWindows
+                    ? 'Windows: leitura direta/API'
+                    : 'Android: via API',
                 style: const TextStyle(fontSize: 12),
               ),
             ),
-          )
+          ),
         ],
       ),
       drawer: const SideMenu(current: SideMenuSection.operador),
@@ -396,15 +414,19 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                             controller: _reCtrl,
                             textInputAction: TextInputAction.next,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: const InputDecoration(
-                              labelText: 'R.E. do Preparador', // ajuste o texto se for Operador
+                              labelText:
+                                  'R.E. do Preparador', // ajuste o texto se for Operador
                               border: OutlineInputBorder(),
                             ),
                             validator: (v) {
                               final s = (v ?? '').trim();
                               if (s.isEmpty) return 'Obrigatório';
-                              if (!RegExp(r'^\d+$').hasMatch(s)) return 'Apenas números';
+                              if (!RegExp(r'^\d+$').hasMatch(s))
+                                return 'Apenas números';
                               return null;
                             },
                           ),
@@ -416,7 +438,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                             controller: _osCtrl,
                             textInputAction: TextInputAction.next,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: const InputDecoration(
                               labelText: 'O.S.',
                               border: OutlineInputBorder(),
@@ -424,7 +448,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                             validator: (v) {
                               final s = (v ?? '').trim();
                               if (s.isEmpty) return 'Obrigatório';
-                              if (!RegExp(r'^\d+$').hasMatch(s)) return 'Apenas números';
+                              if (!RegExp(r'^\d+$').hasMatch(s))
+                                return 'Apenas números';
                               return null;
                             },
                           ),
@@ -444,8 +469,12 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                               border: OutlineInputBorder(),
                             ),
                             items: _categorias
-                                .map((c) =>
-                                    DropdownMenuItem(value: c, child: Text(c)))
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(c),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: (v) => setState(() {
                               _categoriaSel = v;
@@ -465,11 +494,14 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                             ),
                             items: _maquinas
                                 .where((m) => m.categoria == _categoriaSel)
-                                .map((m) => DropdownMenuItem(
-                                    value: m.codigo, child: Text(m.codigo)))
+                                .map(
+                                  (m) => DropdownMenuItem(
+                                    value: m.codigo,
+                                    child: Text(m.codigo),
+                                  ),
+                                )
                                 .toList(),
-                            onChanged: (v) =>
-                                setState(() => _maquinaSel = v),
+                            onChanged: (v) => setState(() => _maquinaSel = v),
                             validator: (v) =>
                                 (v == null || v.isEmpty) ? 'Obrigatório' : null,
                           ),
@@ -490,8 +522,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                               labelText: 'Código da peça (PartNumber)',
                               border: OutlineInputBorder(),
                             ),
-                            validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Obrigatório'
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -500,7 +533,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                           child: TextFormField(
                             controller: _opCtrl,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: const InputDecoration(
                               labelText: 'Operação',
                               border: OutlineInputBorder(),
@@ -508,7 +543,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                             validator: (v) {
                               final s = (v ?? '').trim();
                               if (s.isEmpty) return 'Obrigatório';
-                              if (!RegExp(r'^\d+$').hasMatch(s)) return 'Apenas números';
+                              if (!RegExp(r'^\d+$').hasMatch(s))
+                                return 'Apenas números';
                               return null;
                             },
                           ),
@@ -524,11 +560,13 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                           if (_formKey.currentState!.validate()) {
                             FocusScope.of(context).unfocus();
                             await ref
-                                .read(medidasOperadorControllerProvider.notifier)
+                                .read(
+                                  medidasOperadorControllerProvider.notifier,
+                                )
                                 .carregar(
-                              partnumber: normalizeCode(_partCtrl.text),
-                              operacao: normalizeCode(_opCtrl.text),
-                            );
+                                  partnumber: normalizeCode(_partCtrl.text),
+                                  operacao: normalizeCode(_opCtrl.text),
+                                );
                           }
                         },
                         icon: const Icon(Icons.search),
@@ -544,7 +582,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                   data: (list) {
                     if (list.isEmpty) {
                       return const Center(
-                        child: Text('Nenhuma medida encontrada para a chave informada.'),
+                        child: Text(
+                          'Nenhuma medida encontrada para a chave informada.',
+                        ),
                       );
                     }
                     return ListView.separated(
@@ -562,10 +602,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(
-                    child: Text('Erro ao carregar:\n${e.toString()}'),
-                  ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) =>
+                      Center(child: Text('Erro ao carregar:\n${e.toString()}')),
                 ),
               ),
               const SizedBox(height: 10),
@@ -577,17 +617,13 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                     if (value == 'encerrar') _confirmEncerrarProducao();
                   },
                   itemBuilder: (context) => const [
-                    PopupMenuItem(
-                      value: 'fim',
-                      child: Text('Fim de Jornada'),
-                    ),
+                    PopupMenuItem(value: 'fim', child: Text('Fim de Jornada')),
                     PopupMenuItem(
                       value: 'encerrar',
                       child: Text('Encerrar produção'),
                     ),
                   ],
                 ),
-
               ),
               const SizedBox(height: 10),
               SizedBox(
@@ -598,7 +634,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.save_outlined),
                   label: const Text('Registrar amostragem'),
                 ),
@@ -627,16 +664,28 @@ class _MeasurementTile extends StatelessWidget {
   String _nfd(String s) {
     // normalização simples (sem pacote intl)
     const rep = {
-      'á': 'a', 'à': 'a', 'ã': 'a', 'â': 'a',
-      'é': 'e', 'ê': 'e',
+      'á': 'a',
+      'à': 'a',
+      'ã': 'a',
+      'â': 'a',
+      'é': 'e',
+      'ê': 'e',
       'í': 'i',
-      'ó': 'o', 'ô': 'o', 'õ': 'o',
+      'ó': 'o',
+      'ô': 'o',
+      'õ': 'o',
       'ú': 'u',
       'ç': 'c',
-      'Á': 'A', 'À': 'A', 'Ã': 'A', 'Â': 'A',
-      'É': 'E', 'Ê': 'E',
+      'Á': 'A',
+      'À': 'A',
+      'Ã': 'A',
+      'Â': 'A',
+      'É': 'E',
+      'Ê': 'E',
       'Í': 'I',
-      'Ó': 'O', 'Ô': 'O', 'Õ': 'O',
+      'Ó': 'O',
+      'Ô': 'O',
+      'Õ': 'O',
       'Ú': 'U',
       'Ç': 'C',
     };
@@ -653,8 +702,24 @@ class _MeasurementTile extends StatelessWidget {
   bool get _isVisualRugParalelismoOrAfins {
     final t = _norm(item.titulo);
     final inst = _norm(item.instrumento);
-    return _containsAny(t, ['visual', 'rug', 'paralelismo', 'anel de rosca passa', 'cqf', 'simetria', 'concentricidade']) ||
-        _containsAny(inst, ['visual', 'rug', 'rugosimetro', 'paralelismo', 'anel de rosca passa', 'cqf', 'simetria']);
+    return _containsAny(t, [
+          'visual',
+          'rug',
+          'paralelismo',
+          'anel de rosca passa',
+          'cqf',
+          'simetria',
+          'concentricidade',
+        ]) ||
+        _containsAny(inst, [
+          'visual',
+          'rug',
+          'rugosimetro',
+          'paralelismo',
+          'anel de rosca passa',
+          'cqf',
+          'simetria',
+        ]);
   }
 
   bool get _isTampao {
@@ -664,23 +729,20 @@ class _MeasurementTile extends StatelessWidget {
         _containsAny(inst, ['tamp', 'tampao', 'tampão', 'tampa']);
   }
 
-  Set<String> _partsFromMedicao(String? medicao) =>
-      (medicao ?? '')
-          .split('|')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toSet();
+  Set<String> _partsFromMedicao(String? medicao) => (medicao ?? '')
+      .split('|')
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toSet();
 
   String _joinParts(Set<String> parts) => parts.join(' | ');
 
   StatusMedida _statusFromParts(Set<String> parts) {
     final hasPassa = parts.any((p) => p.startsWith('Lado passa'));
-    final hasNaoPassa =
-        parts.any((p) => p.startsWith('Lado não passa'));
+    final hasNaoPassa = parts.any((p) => p.startsWith('Lado não passa'));
     if (hasPassa && hasNaoPassa) {
       final passaReprovado = parts.contains('Lado passa — Reprovado');
-      final naoPassaReprovado =
-          parts.contains('Lado não passa — Reprovado');
+      final naoPassaReprovado = parts.contains('Lado não passa — Reprovado');
       if (passaReprovado && naoPassaReprovado) {
         return StatusMedida.reprovadaAcima;
       }
@@ -700,7 +762,9 @@ class _MeasurementTile extends StatelessWidget {
   bool _near(double a, double b) => (a - b).abs() <= 0.005;
 
   Color _fgOn(Color bg) =>
-      ThemeData.estimateBrightnessForColor(bg) == Brightness.dark ? Colors.white : Colors.black87;
+      ThemeData.estimateBrightnessForColor(bg) == Brightness.dark
+      ? Colors.white
+      : Colors.black87;
 
   Widget _pill({
     required String text,
@@ -726,10 +790,7 @@ class _MeasurementTile extends StatelessWidget {
         ),
         child: Text(
           text,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: fgColor,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w600, color: fgColor),
         ),
       ),
     );
@@ -762,111 +823,118 @@ class _MeasurementTile extends StatelessWidget {
       elevation: 0.5,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(item.titulo.isEmpty ? '(sem título)' : item.titulo, style: styleLabel),
-          if (subtitulo.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(subtitulo, style: styleSpec),
-          ],
-          if ((item.periodicidade ?? '').isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text('Periodicidade: ${item.periodicidade}', style: styleSpec),
-          ],
-          if ((item.instrumento ?? '').isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text('Instrumento: ${item.instrumento}', style: styleSpec),
-          ],
-          const SizedBox(height: 10),
-
-          // Modo 1: Visual/Rug/Paralelismo/Anel de rosca passa/CQF/Simetria (binário)
-          if (_isVisualRugParalelismoOrAfins) ...[
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _pill(
-                  text: 'Aprovado',
-                  bg: Colors.green.shade200,
-                  border: Colors.green.shade600,
-                  fg: Colors.green.shade900,
-                  selected: item.medicao == 'Aprovado',
-                  onTap: () => onSelect(StatusMedida.ok, 'Aprovado'),
-                ),
-                _pill(
-                  text: 'Reprovado',
-                  bg: Colors.red.shade100,
-                  border: Colors.red.shade400,
-                  selected: item.medicao == 'Reprovado',
-                  onTap: () =>
-                      onSelect(StatusMedida.reprovadaAcima, 'Reprovado'),
-                ),
-              ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              item.titulo.isEmpty ? '(sem título)' : item.titulo,
+              style: styleLabel,
             ),
-          ]
-          // Modo 2: Tampão (4 botões)
-          else if (_isTampao) ...[
-            Builder(builder: (context) {
-              final parts = _partsFromMedicao(item.medicao);
-              return Wrap(
+            if (subtitulo.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(subtitulo, style: styleSpec),
+            ],
+            if ((item.periodicidade ?? '').isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text('Periodicidade: ${item.periodicidade}', style: styleSpec),
+            ],
+            if ((item.instrumento ?? '').isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text('Instrumento: ${item.instrumento}', style: styleSpec),
+            ],
+            const SizedBox(height: 10),
+
+            // Modo 1: Visual/Rug/Paralelismo/Anel de rosca passa/CQF/Simetria (binário)
+            if (_isVisualRugParalelismoOrAfins) ...[
+              Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
                   _pill(
-                    text: 'Lado passa — Aprovado',
+                    text: 'Aprovado',
                     bg: Colors.green.shade200,
                     border: Colors.green.shade600,
                     fg: Colors.green.shade900,
-                    selected: parts.contains('Lado passa — Aprovado'),
-                    onTap: () {
-                      final p = _partsFromMedicao(item.medicao);
-                      p.removeWhere((e) => e.startsWith('Lado passa'));
-                      p.add('Lado passa — Aprovado');
-                      onSelect(_statusFromParts(p), _joinParts(p));
-                    },
+                    selected: item.medicao == 'Aprovado',
+                    onTap: () => onSelect(StatusMedida.ok, 'Aprovado'),
                   ),
                   _pill(
-                    text: 'Lado passa — Reprovado',
+                    text: 'Reprovado',
                     bg: Colors.red.shade100,
                     border: Colors.red.shade400,
-                    selected: parts.contains('Lado passa — Reprovado'),
-                    onTap: () {
-                      final p = _partsFromMedicao(item.medicao);
-                      p.removeWhere((e) => e.startsWith('Lado passa'));
-                      p.add('Lado passa — Reprovado');
-                      onSelect(_statusFromParts(p), _joinParts(p));
-                    },
-                  ),
-                  _pill(
-                    text: 'Lado não passa — Aprovado',
-                    bg: Colors.green.shade200,
-                    border: Colors.green.shade600,
-                    fg: Colors.green.shade900,
-                    selected: parts.contains('Lado não passa — Aprovado'),
-                    onTap: () {
-                      final p = _partsFromMedicao(item.medicao);
-                      p.removeWhere((e) => e.startsWith('Lado não passa'));
-                      p.add('Lado não passa — Aprovado');
-                      onSelect(_statusFromParts(p), _joinParts(p));
-                    },
-                  ),
-                  _pill(
-                    text: 'Lado não passa — Reprovado',
-                    bg: Colors.red.shade100,
-                    border: Colors.red.shade400,
-                    selected: parts.contains('Lado não passa — Reprovado'),
-                    onTap: () {
-                      final p = _partsFromMedicao(item.medicao);
-                      p.removeWhere((e) => e.startsWith('Lado não passa'));
-                      p.add('Lado não passa — Reprovado');
-                      onSelect(_statusFromParts(p), _joinParts(p));
-                    },
+                    selected: item.medicao == 'Reprovado',
+                    onTap: () =>
+                        onSelect(StatusMedida.reprovadaAcima, 'Reprovado'),
                   ),
                 ],
-              );
-            }),
-          ]
-          // Modo 3: Pílulas de tolerância + OK
-          else ...[
+              ),
+            ]
+            // Modo 2: Tampão (4 botões)
+            else if (_isTampao) ...[
+              Builder(
+                builder: (context) {
+                  final parts = _partsFromMedicao(item.medicao);
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _pill(
+                        text: 'Lado passa — Aprovado',
+                        bg: Colors.green.shade200,
+                        border: Colors.green.shade600,
+                        fg: Colors.green.shade900,
+                        selected: parts.contains('Lado passa — Aprovado'),
+                        onTap: () {
+                          final p = _partsFromMedicao(item.medicao);
+                          p.removeWhere((e) => e.startsWith('Lado passa'));
+                          p.add('Lado passa — Aprovado');
+                          onSelect(_statusFromParts(p), _joinParts(p));
+                        },
+                      ),
+                      _pill(
+                        text: 'Lado passa — Reprovado',
+                        bg: Colors.red.shade100,
+                        border: Colors.red.shade400,
+                        selected: parts.contains('Lado passa — Reprovado'),
+                        onTap: () {
+                          final p = _partsFromMedicao(item.medicao);
+                          p.removeWhere((e) => e.startsWith('Lado passa'));
+                          p.add('Lado passa — Reprovado');
+                          onSelect(_statusFromParts(p), _joinParts(p));
+                        },
+                      ),
+                      _pill(
+                        text: 'Lado não passa — Aprovado',
+                        bg: Colors.green.shade200,
+                        border: Colors.green.shade600,
+                        fg: Colors.green.shade900,
+                        selected: parts.contains('Lado não passa — Aprovado'),
+                        onTap: () {
+                          final p = _partsFromMedicao(item.medicao);
+                          p.removeWhere((e) => e.startsWith('Lado não passa'));
+                          p.add('Lado não passa — Aprovado');
+                          onSelect(_statusFromParts(p), _joinParts(p));
+                        },
+                      ),
+                      _pill(
+                        text: 'Lado não passa — Reprovado',
+                        bg: Colors.red.shade100,
+                        border: Colors.red.shade400,
+                        selected: parts.contains('Lado não passa — Reprovado'),
+                        onTap: () {
+                          final p = _partsFromMedicao(item.medicao);
+                          p.removeWhere((e) => e.startsWith('Lado não passa'));
+                          p.add('Lado não passa — Reprovado');
+                          onSelect(_statusFromParts(p), _joinParts(p));
+                        },
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ]
+            // Modo 3: Pílulas de tolerância + OK
+            else ...[
               Builder(
                 builder: (context) {
                   final chips = <Widget>[];
@@ -902,24 +970,26 @@ class _MeasurementTile extends StatelessWidget {
                         bd = Colors.red.shade400;
                         break;
                       default:
-
                         st = StatusMedida.alertaAbaixo;
 
                         bg = Colors.amber.shade100;
                         bd = Colors.amber.shade400;
                     }
 
-                    final label =
-                        d != null ? d.toStringAsFixed(2) : raw.toString();
+                    final label = d != null
+                        ? d.toStringAsFixed(2)
+                        : raw.toString();
                     final selected = item.medicao == label;
 
-                    chips.add(_pill(
-                      text: label,
-                      bg: bg,
-                      border: bd,
-                      selected: selected,
-                      onTap: () => onSelect(st, label),
-                    ));
+                    chips.add(
+                      _pill(
+                        text: label,
+                        bg: bg,
+                        border: bd,
+                        selected: selected,
+                        onTap: () => onSelect(st, label),
+                      ),
+                    );
                   }
 
                   // Insere OK central
@@ -936,15 +1006,12 @@ class _MeasurementTile extends StatelessWidget {
                     ),
                   );
 
-                  return Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: chips,
-                  );
+                  return Wrap(spacing: 8, runSpacing: 8, children: chips);
                 },
               ),
             ],
-        ]),
+          ],
+        ),
       ),
     );
   }
