@@ -8,6 +8,9 @@ class Report {
   final String status;
   final String createdAt;
 
+  /// Friendly text describing the allowed measurement range.
+  final String faixaTexto;
+
   /// Registration number (RE) of the preparer who handled this report.
   final String rePreparador;
 
@@ -26,6 +29,7 @@ class Report {
     required this.operacao,
     required this.status,
     required this.createdAt,
+    this.faixaTexto = '',
     this.rePreparador = '',
     this.reOperador = '',
     this.idxMedida,
@@ -37,9 +41,9 @@ class Report {
       os: json['os']?.toString() ?? '',
       partnumber: json['partnumber']?.toString() ?? '',
       operacao: json['operacao']?.toString() ?? '',
-      status:
-          (json['status_geral'] ?? json['status'])?.toString() ?? '',
+      status: (json['status_geral'] ?? json['status'])?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',
+      faixaTexto: (json['faixa_texto'] ?? json['faixaTexto'])?.toString() ?? '',
       rePreparador: json['re_preparador']?.toString() ?? '',
       reOperador: json['re_operador']?.toString() ?? '',
       idxMedida: json['idx_medida'] != null
