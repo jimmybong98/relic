@@ -1832,8 +1832,9 @@ def listar_relatorios_operador():
                 if os_num:
                     cur.execute(
                         """
-                        SELECT a.os, a.partnumber, a.operacao, a.re_operador,
-                               i.idx_medida, i.titulo, i.status, i.created_at
+                        SELECT a.os, a.partnumber, a.operacao, a.re_operador, a.maquina,
+                               i.idx_medida, i.titulo, i.instrumento,
+                               i.faixa_texto, i.escolha, i.status, i.created_at
                           FROM operador_amostragem a
                           JOIN operador_amostragem_item i ON i.amostragem_id = a.id
                          WHERE a.os = %s
