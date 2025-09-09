@@ -6,3 +6,7 @@ bool get isDesktop =>
     (defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux ||
         defaultTargetPlatform == TargetPlatform.macOS);
+
+/// Returns true if the current platform is Android.
+bool get isAndroid =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
