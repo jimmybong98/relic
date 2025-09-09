@@ -113,7 +113,7 @@ class _MenuImageButtonState extends State<_MenuImageButton> {
           splashFactory: NoSplash.splashFactory,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.asset(widget.image, fit: BoxFit.cover),
+            child: Image.asset(widget.image, fit: BoxFit.contain),
           ),
         ),
       ),
