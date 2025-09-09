@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../controllers/machine_controller.dart';
 import 'package:admin/widgets/window_bar.dart';
+import 'package:admin/screens/main/components/side_menu.dart';
 
 class CadastroMaquinasPage extends StatefulWidget {
   CadastroMaquinasPage({super.key, MachineController? controller})
@@ -46,6 +47,7 @@ class _CadastroMaquinasPageState extends State<CadastroMaquinasPage> {
     final ctrl = widget.controller;
     return Scaffold(
       appBar: const WindowBar(title: 'Cadastro de máquinas'),
+      drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: ctrl.isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
