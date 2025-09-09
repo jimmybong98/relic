@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:admin/utils/platform_utils.dart';
+import 'package:admin/widgets/profile_button.dart';
 
 /// Custom title bar with window controls and drag support.
 class WindowBar extends StatefulWidget implements PreferredSizeWidget {
-  const WindowBar({super.key, this.title, this.actions, this.showMenu = false});
+  const WindowBar({
+    super.key,
+    this.title,
+    this.actions,
+    this.showMenu = false,
+    this.showProfile = true,
+  });
 
   final String? title;
   final List<Widget>? actions;
   final bool showMenu;
+  final bool showProfile;
 
   @override
   Size get preferredSize => const Size.fromHeight(40);
@@ -40,7 +48,10 @@ class _WindowBarState extends State<WindowBar> {
       return AppBar(
         toolbarHeight: widget.preferredSize.height,
         title: widget.title != null ? Text(widget.title!) : null,
-        actions: widget.actions,
+        actions: [
+          if (widget.actions != null) ...widget.actions!,
+          if (widget.showProfile) const ProfileButton(),
+        ],
       );
     }
     return GestureDetector(
@@ -78,6 +89,7 @@ class _WindowBarState extends State<WindowBar> {
               ),
             const Spacer(),
             if (widget.actions != null) ...widget.actions!,
+            if (widget.showProfile) const ProfileButton(),
             _buildButton(Icons.remove, () => windowManager.minimize()),
             _buildButton(
               _isMaximized ? Icons.filter_none : Icons.crop_square,
