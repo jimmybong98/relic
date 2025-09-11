@@ -18,8 +18,11 @@ class MainMenuPage extends ConsumerStatefulWidget {
   ConsumerState<MainMenuPage> createState() => _MainMenuPageState();
 }
 
-class _LogoConfig {
-  const _LogoConfig({required this.asset, this.width, this.height});
+/// Configuration for a single alternating logo.
+///
+/// Edit the width and height here to change each logo's size individually.
+class LogoConfig {
+  const LogoConfig({required this.asset, this.width, this.height});
 
   final String asset;
   final double? width;
@@ -29,9 +32,12 @@ class _LogoConfig {
 class _MainMenuPageState extends ConsumerState<MainMenuPage> {
   int _logoIndex = 0;
   Timer? _timer;
-  static const _logos = [
-    _LogoConfig(asset: 'assets/images/logo.png', width: 100, height: 100),
-    _LogoConfig(asset: 'assets/images/logo1.png', width: 100, height: 100),
+
+  /// List of logos that the header alternates between. Adjust each entry to
+  /// customize its asset path or dimensions.
+  static const logoConfigs = <LogoConfig>[
+    LogoConfig(asset: 'assets/images/logo.png', width: 100, height: 100),
+    LogoConfig(asset: 'assets/images/logo1.png', width: 100, height: 100),
   ];
 
   @override
@@ -72,7 +78,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       open(context, MainScreen());
     }
 
-    final logo = _logos[_logoIndex];
+    final logo = logoConfigs[_logoIndex];
     return Scaffold(
       appBar: const WindowBar(title: 'Menu Principal', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.mainMenu),
