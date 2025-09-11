@@ -51,19 +51,19 @@ class MainMenuPage extends ConsumerWidget {
                   spacing: 0,
                   runSpacing: 0,
                   children: [
-                    _MenuImageButton(
+                    _MenuCard(
                       image: 'assets/images/FOR007.png',
                       onPressed: () => open(context, const PreparacaoPage()),
                     ),
-                    _MenuImageButton(
+                    _MenuCard(
                       image: 'assets/images/Amostragem.png',
                       onPressed: () => open(context, const OperadorPage()),
                     ),
-                    _MenuImageButton(
+                    _MenuCard(
                       image: 'assets/images/FOR008.png',
                       onPressed: () => open(context, const OperadorPage()),
                     ),
-                    _MenuImageButton(
+                    _MenuCard(
                       image: 'assets/images/dashboard.png',
                       onPressed: openAdmin,
                     ),
@@ -78,17 +78,17 @@ class MainMenuPage extends ConsumerWidget {
   }
 }
 
-class _MenuImageButton extends StatefulWidget {
-  const _MenuImageButton({required this.image, required this.onPressed});
+class _MenuCard extends StatefulWidget {
+  const _MenuCard({required this.image, required this.onPressed});
 
   final String image;
   final VoidCallback onPressed;
 
   @override
-  State<_MenuImageButton> createState() => _MenuImageButtonState();
+  State<_MenuCard> createState() => _MenuCardState();
 }
 
-class _MenuImageButtonState extends State<_MenuImageButton> {
+class _MenuCardState extends State<_MenuCard> {
   bool _hovering = false;
   bool _pressed = false;
 
@@ -102,19 +102,21 @@ class _MenuImageButtonState extends State<_MenuImageButton> {
       child: AnimatedScale(
         scale: _scale,
         duration: const Duration(milliseconds: 150),
-        child: InkWell(
-          onTap: widget.onPressed,
-          onHover: (v) => setState(() => _hovering = v),
-          onTapDown: (_) => setState(() => _pressed = true),
-          onTapUp: (_) => setState(() => _pressed = false),
-          onTapCancel: () => setState(() => _pressed = false),
-          mouseCursor: SystemMouseCursors.click,
-          hoverColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          splashColor: Colors.transparent,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.asset(widget.image, fit: BoxFit.contain),
+        child: Card(
+          clipBehavior: Clip.hardEdge,
+          child: InkWell(
+            onTap: widget.onPressed,
+            onHover: (v) => setState(() => _hovering = v),
+            onTapDown: (_) => setState(() => _pressed = true),
+            onTapUp: (_) => setState(() => _pressed = false),
+            onTapCancel: () => setState(() => _pressed = false),
+            mouseCursor: SystemMouseCursors.click,
+            hoverColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            splashColor: Colors.transparent,
+            child: ListTile(
+              title: Image.asset(widget.image, fit: BoxFit.contain),
+            ),
           ),
         ),
       ),
