@@ -18,9 +18,21 @@ class MainMenuPage extends ConsumerStatefulWidget {
   ConsumerState<MainMenuPage> createState() => _MainMenuPageState();
 }
 
+class _LogoConfig {
+  const _LogoConfig({required this.asset, this.width, this.height});
+
+  final String asset;
+  final double? width;
+  final double? height;
+}
+
 class _MainMenuPageState extends ConsumerState<MainMenuPage> {
   int _logoIndex = 0;
   Timer? _timer;
+  static const _logos = [
+    _LogoConfig(asset: 'assets/images/logo.png', width: 100, height: 100),
+    _LogoConfig(asset: 'assets/images/logo1.png', width: 100, height: 100),
+  ];
 
   @override
   void initState() {
@@ -60,6 +72,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       open(context, MainScreen());
     }
 
+    final logo = _logos[_logoIndex];
     return Scaffold(
       appBar: const WindowBar(title: 'Menu Principal', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.mainMenu),
@@ -69,11 +82,10 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 500),
             child: Image.asset(
-              _logoIndex == 0
-                  ? 'assets/images/logo.png'
-                  : 'assets/images/logo1.png',
+              logo.asset,
               key: ValueKey(_logoIndex),
-              height: 100,
+              height: logo.height,
+              width: logo.width,
             ),
           ),
           const SizedBox(height: 0),
