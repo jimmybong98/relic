@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,11 +11,33 @@ import '../operador/presentation/operador_page.dart';
 import '../login/login_page.dart';
 import '../../services/auth_service.dart';
 
-class MainMenuPage extends ConsumerWidget {
+class MainMenuPage extends ConsumerStatefulWidget {
   const MainMenuPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainMenuPage> createState() => _MainMenuPageState();
+}
+
+class _MainMenuPageState extends ConsumerState<MainMenuPage> {
+  int _logoIndex = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+      setState(() => _logoIndex = 1 - _logoIndex);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     void open(BuildContext context, Widget page) {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
     }
@@ -42,23 +66,45 @@ class MainMenuPage extends ConsumerWidget {
       body: Column(
         children: [
           const SizedBox(height: 20),
-          Image.asset('assets/images/logo.png', height: 100),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 500),
+            child: Image.asset(
+              _logoIndex == 0
+                  ? 'assets/images/logo.png'
+                  : 'assets/images/logo1.png',
+              key: ValueKey(_logoIndex),
+              height: 100,
+            ),
+          ),
           const SizedBox(height: 0),
-      Expanded(
-        child: Center(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Column( // sem scroll
-                children: [
-                  _MenuButton(image: 'assets/images/FOR007.png', onPressed: () => open(context, const PreparacaoPage())),
-                  _MenuButton(image: 'assets/images/Amostragem.png', onPressed: () => open(context, const OperadorPage())),
-                  _MenuButton(image: 'assets/images/FOR008.png', onPressed: () => open(context, const OperadorPage())),
-                  _MenuButton(image: 'assets/images/dashboard.png', onPressed: openAdmin),
-                ],
+          Expanded(
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  // sem scroll
+                  children: [
+                    _MenuButton(
+                      image: 'assets/images/FOR007.png',
+                      onPressed: () => open(context, const PreparacaoPage()),
+                    ),
+                    _MenuButton(
+                      image: 'assets/images/Amostragem.png',
+                      onPressed: () => open(context, const OperadorPage()),
+                    ),
+                    _MenuButton(
+                      image: 'assets/images/FOR008.png',
+                      onPressed: () => open(context, const OperadorPage()),
+                    ),
+                    _MenuButton(
+                      image: 'assets/images/dashboard.png',
+                      onPressed: openAdmin,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-      ),
         ],
       ),
     );
