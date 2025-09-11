@@ -41,35 +41,24 @@ class MainMenuPage extends ConsumerWidget {
       drawer: const SideMenu(current: SideMenuSection.mainMenu),
       body: Column(
         children: [
-          const SizedBox(height: 1),
-          Image.asset('assets/images/logo.png', height: 120),
-          const SizedBox(height: 1),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Center(
-                child: Column(
-                  children: [
-                    _MenuButton(
-                      image: 'assets/images/FOR007.png',
-                      onPressed: () => open(context, const PreparacaoPage()),
-                    ),
-                    _MenuButton(
-                      image: 'assets/images/Amostragem.png',
-                      onPressed: () => open(context, const OperadorPage()),
-                    ),
-                    _MenuButton(
-                      image: 'assets/images/FOR008.png',
-                      onPressed: () => open(context, const OperadorPage()),
-                    ),
-                    _MenuButton(
-                      image: 'assets/images/dashboard.png',
-                      onPressed: openAdmin,
-                    ),
-                  ],
-                ),
+          const SizedBox(height: 20),
+          Image.asset('assets/images/logo.png', height: 100),
+          const SizedBox(height: 0),
+      Expanded(
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column( // sem scroll
+                children: [
+                  _MenuButton(image: 'assets/images/FOR007.png', onPressed: () => open(context, const PreparacaoPage())),
+                  _MenuButton(image: 'assets/images/Amostragem.png', onPressed: () => open(context, const OperadorPage())),
+                  _MenuButton(image: 'assets/images/FOR008.png', onPressed: () => open(context, const OperadorPage())),
+                  _MenuButton(image: 'assets/images/dashboard.png', onPressed: openAdmin),
+                ],
               ),
             ),
           ),
+      ),
         ],
       ),
     );

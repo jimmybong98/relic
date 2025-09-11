@@ -19,7 +19,7 @@ class WindowBar extends StatefulWidget implements PreferredSizeWidget {
   final bool showProfile;
 
   @override
-  Size get preferredSize => const Size.fromHeight(40);
+  Size get preferredSize => const Size.fromHeight(60);
 
   @override
   State<WindowBar> createState() => _WindowBarState();

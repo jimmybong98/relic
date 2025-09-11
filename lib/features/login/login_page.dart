@@ -48,7 +48,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset('assets/images/logo.png', height: 120),
+              Image.asset('assets/images/logo.png', height: 85),
               const SizedBox(height: 32),
               TextField(
                 controller: _userCtrl,
