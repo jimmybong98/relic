@@ -23,8 +23,6 @@ class DashboardScreen extends StatelessWidget {
                   flex: 8,
                   child: Column(
                     children: [
-                      MyFiles(),
-                      SizedBox(height: defaultPadding),
                       OperatorReportChart(),
                       SizedBox(height: defaultPadding),
                       PersonnelReportChart(),

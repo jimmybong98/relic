@@ -41,15 +41,15 @@ class MainMenuPage extends ConsumerWidget {
       drawer: const SideMenu(current: SideMenuSection.mainMenu),
       body: Column(
         children: [
-          const SizedBox(height: 32),
+          const SizedBox(height: 1),
           Image.asset('assets/images/logo.png', height: 120),
-          const SizedBox(height: 32),
+          const SizedBox(height: 1),
           Expanded(
             child: SingleChildScrollView(
               child: Center(
                 child: Wrap(
-                  spacing: 24,
-                  runSpacing: 24,
+                  spacing: 0,
+                  runSpacing: 0,
                   children: [
                     _MenuImageButton(
                       image: 'assets/images/FOR007.png',
@@ -109,8 +109,9 @@ class _MenuImageButtonState extends State<_MenuImageButton> {
           onTapUp: (_) => setState(() => _pressed = false),
           onTapCancel: () => setState(() => _pressed = false),
           mouseCursor: SystemMouseCursors.click,
-          overlayColor: MaterialStateProperty.all(Colors.transparent),
-          splashFactory: NoSplash.splashFactory,
+          hoverColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          splashColor: Colors.transparent,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.asset(widget.image, fit: BoxFit.contain),
