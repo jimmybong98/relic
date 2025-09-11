@@ -98,7 +98,7 @@ class _MenuCardState extends State<_MenuCard> {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 200,
-      height: 200,
+      height: 150,
       child: AnimatedScale(
         scale: _scale,
         duration: const Duration(milliseconds: 150),
@@ -114,8 +114,11 @@ class _MenuCardState extends State<_MenuCard> {
             hoverColor: Colors.transparent,
             highlightColor: Colors.transparent,
             splashColor: Colors.transparent,
-            child: ListTile(
-              title: Image.asset(widget.image, fit: BoxFit.contain),
+            child: Center(
+              child: Image.asset(
+                widget.image,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
         ),
