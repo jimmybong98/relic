@@ -31,7 +31,11 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
   Timer? _timer;
   static const _logos = [
     _LogoConfig(asset: 'assets/images/logo.png', width: 250, height: 110),
-    _LogoConfig(asset: 'assets/images/logotuptech.png', width: 250 , height: 110),
+    _LogoConfig(
+      asset: 'assets/images/logotuptech.png',
+      width: 250,
+      height: 110,
+    ),
   ];
 
   @override
@@ -88,7 +92,9 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
               width: logo.width,
             ),
           ),
-          const SizedBox(height: 0),
+          const SizedBox(height: 10),
+          Image.asset('assets/images/traco.png'),
+          const SizedBox(height: 10),
           Expanded(
             child: Center(
               child: FittedBox(
