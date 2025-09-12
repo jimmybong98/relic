@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:admin/screens/main/main_screen.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
@@ -10,6 +11,7 @@ import '../preparacao/presentation/preparacao_page.dart';
 import '../operador/presentation/operador_page.dart';
 import '../login/login_page.dart';
 import '../../services/auth_service.dart';
+
 
 class MainMenuPage extends ConsumerStatefulWidget {
   const MainMenuPage({super.key});
@@ -30,7 +32,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
   int _logoIndex = 0;
   Timer? _timer;
   static const _logos = [
-    _LogoConfig(asset: 'assets/images/logo.png', width: 250, height: 110),
+    _LogoConfig(asset: 'assets/images/Relictt.png', width: 250, height: 110),
     _LogoConfig(asset: 'assets/images/logotuptech.png', width: 250 , height: 110),
   ];
 
@@ -76,46 +78,73 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
     return Scaffold(
       appBar: const WindowBar(title: 'Menu Principal', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.mainMenu),
-      body: Column(
+
+      // ====== INÍCIO: Wallpaper (única mudança) ======
+      body: Stack(
         children: [
-          const SizedBox(height: 20),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 500),
+          // Papel de parede da página
+          Positioned.fill(
             child: Image.asset(
-              logo.asset,
-              key: ValueKey(_logoIndex),
-              height: logo.height,
-              width: logo.width,
+              'assets/images/BOA.jpg', // ajuste o caminho/arquivo conforme seu asset
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.low,
             ),
           ),
-          const SizedBox(height: 0),
-          Expanded(
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Column(
-                  // sem scroll
-                  children: [
-                    _MenuButton(
-                      image: 'assets/images/FOR007.png',
-                      onPressed: () => open(context, const PreparacaoPage()),
-                    ),
-                    _MenuButton(
-                      image: 'assets/images/Amostragem.png',
-                      onPressed: () => open(context, const OperadorPage()),
-                    ),
-                    _MenuButton(
-                      image: 'assets/images/FOR008.png',
-                      onPressed: () => open(context, const OperadorPage()),
-                    ),
-                    _MenuButton(
-                      image: 'assets/images/dashboard.png',
-                      onPressed: openAdmin,
-                    ),
-                  ],
-                ),
+          // Camada opcional para legibilidade (escurece levemente)
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.30),
               ),
             ),
+          ),
+          // ====== FIM: Wallpaper ======
+
+          // Conteúdo original inalterado
+          Column(
+            children: [
+              const SizedBox(height: 20),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                child: Image.asset(
+                  logo.asset,
+                  key: ValueKey(_logoIndex),
+                  height: logo.height,
+                  width: logo.width,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Image.asset('assets/images/traco.png'),
+              const SizedBox(height: 0),
+              Expanded(
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      // sem scroll
+                      children: [
+                        _MenuButton(
+                          image: 'assets/icons/FOR007.svg',
+                          onPressed: () => open(context, const PreparacaoPage()),
+                        ),
+                        _MenuButton(
+                          image: 'assets/icons/Amostragem.svg',
+                          onPressed: () => open(context, const OperadorPage()),
+                        ),
+                        _MenuButton(
+                          image: 'assets/icons/FOR008.svg',
+                          onPressed: () => open(context, const OperadorPage()),
+                        ),
+                        _MenuButton(
+                          image: 'assets/icons/Dashboard.svg',
+                          onPressed: openAdmin,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -164,7 +193,7 @@ class _MenuButtonState extends State<_MenuButton> {
               hoverColor: Colors.transparent,
               highlightColor: Colors.transparent,
               splashColor: Colors.transparent,
-              child: Image.asset(widget.image, fit: BoxFit.contain),
+              child: SvgPicture.asset(widget.image, fit: BoxFit.contain),
             ),
           ),
         ),
