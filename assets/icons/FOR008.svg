@@ -15,25 +15,6 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="mm">
-    <inkscape:page
-       x="-1.3054868e-14"
-       y="1.3133975e-16"
-       width="159.77386"
-       height="26.337975"
-       id="page2"
-       margin="0"
-       bleed="0" />
-  </sodipodi:namedview>
   <defs
      id="defs1">
     <linearGradient
@@ -66,13 +47,13 @@
      transform="translate(-10.903883,-8.4168783)">
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:25.4px;font-family:Orbitron;-inkscape-font-specification:'Orbitron Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:url(#linearGradient19);fill-rule:evenodd;stroke:#000000;stroke-width:1.065;stroke-dasharray:none;stroke-opacity:1"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:25.4px;font-family:Orbitron;-inkscape-font-specification:'Orbitron Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:url(#linearGradient19);fill-rule:evenodd"
        x="9.9632168"
        y="30.386974"
        id="text17"><tspan
          sodipodi:role="line"
          id="tspan17"
-         style="fill:url(#linearGradient19);stroke-width:1.065"
+         style="fill:url(#linearGradient19)"
          x="9.9632168"
          y="30.386974">Finalização</tspan></text>
   </g>
