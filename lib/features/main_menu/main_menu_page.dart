@@ -76,46 +76,71 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
     return Scaffold(
       appBar: const WindowBar(title: 'Menu Principal', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.mainMenu),
-      body: Column(
+
+      // ====== INÍCIO: Wallpaper (única mudança) ======
+      body: Stack(
         children: [
-          const SizedBox(height: 20),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 500),
+          // Papel de parede da página
+          Positioned.fill(
             child: Image.asset(
-              logo.asset,
-              key: ValueKey(_logoIndex),
-              height: logo.height,
-              width: logo.width,
+              'assets/images/BOA.jpg', // ajuste o caminho/arquivo conforme seu asset
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.low,
             ),
           ),
-          const SizedBox(height: 0),
-          Expanded(
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Column(
-                  // sem scroll
-                  children: [
-                    _MenuButton(
-                      image: 'assets/images/FOR007.png',
-                      onPressed: () => open(context, const PreparacaoPage()),
-                    ),
-                    _MenuButton(
-                      image: 'assets/images/Amostragem.png',
-                      onPressed: () => open(context, const OperadorPage()),
-                    ),
-                    _MenuButton(
-                      image: 'assets/images/FOR008.png',
-                      onPressed: () => open(context, const OperadorPage()),
-                    ),
-                    _MenuButton(
-                      image: 'assets/images/dashboard.png',
-                      onPressed: openAdmin,
-                    ),
-                  ],
-                ),
+          // Camada opcional para legibilidade (escurece levemente)
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.30),
               ),
             ),
+          ),
+          // ====== FIM: Wallpaper ======
+
+          // Conteúdo original inalterado
+          Column(
+            children: [
+              const SizedBox(height: 20),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                child: Image.asset(
+                  logo.asset,
+                  key: ValueKey(_logoIndex),
+                  height: logo.height,
+                  width: logo.width,
+                ),
+              ),
+              const SizedBox(height: 0),
+              Expanded(
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      // sem scroll
+                      children: [
+                        _MenuButton(
+                          image: 'assets/images/FOR007.png',
+                          onPressed: () => open(context, const PreparacaoPage()),
+                        ),
+                        _MenuButton(
+                          image: 'assets/images/Amostragem.png',
+                          onPressed: () => open(context, const OperadorPage()),
+                        ),
+                        _MenuButton(
+                          image: 'assets/images/FOR008.png',
+                          onPressed: () => open(context, const OperadorPage()),
+                        ),
+                        _MenuButton(
+                          image: 'assets/images/dashboard.png',
+                          onPressed: openAdmin,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
