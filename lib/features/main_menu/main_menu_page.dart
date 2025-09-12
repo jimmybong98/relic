@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:admin/screens/main/main_screen.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
@@ -31,7 +32,11 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
   Timer? _timer;
   static const _logos = [
     _LogoConfig(asset: 'assets/images/logo.png', width: 250, height: 110),
-    _LogoConfig(asset: 'assets/images/logotuptech.png', width: 250 , height: 110),
+    _LogoConfig(
+      asset: 'assets/images/logotuptech.png',
+      width: 250,
+      height: 110,
+    ),
   ];
 
   @override
@@ -97,19 +102,19 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                   // sem scroll
                   children: [
                     _MenuButton(
-                      image: 'assets/images/FOR007.png',
+                      image: 'assets/icons/FOR007.svg',
                       onPressed: () => open(context, const PreparacaoPage()),
                     ),
                     _MenuButton(
-                      image: 'assets/images/Amostragem.png',
+                      image: 'assets/icons/Amostragem.svg',
                       onPressed: () => open(context, const OperadorPage()),
                     ),
                     _MenuButton(
-                      image: 'assets/images/FOR008.png',
+                      image: 'assets/icons/FOR008.svg',
                       onPressed: () => open(context, const OperadorPage()),
                     ),
                     _MenuButton(
-                      image: 'assets/images/dashboard.png',
+                      image: 'assets/icons/Dashboard.svg',
                       onPressed: openAdmin,
                     ),
                   ],
@@ -164,7 +169,7 @@ class _MenuButtonState extends State<_MenuButton> {
               hoverColor: Colors.transparent,
               highlightColor: Colors.transparent,
               splashColor: Colors.transparent,
-              child: Image.asset(widget.image, fit: BoxFit.contain),
+              child: SvgPicture.asset(widget.image, fit: BoxFit.contain),
             ),
           ),
         ),
