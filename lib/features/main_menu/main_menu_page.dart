@@ -111,6 +111,8 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                   width: logo.width,
                 ),
               ),
+              const SizedBox(height: 10),
+              Image.asset('assets/images/traco.png'),
               const SizedBox(height: 0),
               Expanded(
                 child: Center(

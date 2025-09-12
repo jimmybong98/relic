@@ -183,18 +183,19 @@ class SideMenu extends ConsumerWidget {
     return Drawer(
       child: ListView(
         children: [
-          DrawerHeader(
-            child: Center(
-              child: SizedBox(
-                width: 150,
-                height: 150,
-                child: Image.asset(
-                  'assets/images/logo.png',
-                  fit: BoxFit.contain,
-                ),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: 150,
+              height: 150,
+              child: Image.asset(
+                'assets/images/logo.png',
+                fit: BoxFit.contain,
               ),
             ),
           ),
+          Image.asset('assets/images/traco.png'),
           ...items,
         ],
       ),
