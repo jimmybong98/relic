@@ -1,11 +1,9 @@
 import 'package:admin/responsive.dart';
-import 'package:admin/screens/dashboard/components/my_fields.dart';
 import 'package:flutter/material.dart';
 
 import '../../constants.dart';
 import 'components/operator_report_chart.dart';
 import 'components/personnel_report_chart.dart';
-
 
 class DashboardScreen extends StatelessWidget {
   @override
@@ -24,6 +22,8 @@ class DashboardScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       OperatorReportChart(),
+                      SizedBox(height: defaultPadding),
+                      Image.asset('assets/images/traco.png'),
                       SizedBox(height: defaultPadding),
                       PersonnelReportChart(),
                       if (Responsive.isMobile(context))

@@ -195,6 +195,7 @@ class SideMenu extends ConsumerWidget {
               ),
             ),
           ),
+          Image.asset('assets/images/traco.png'),
           ...items,
         ],
       ),
