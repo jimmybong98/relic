@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="180.01323mm"
+   height="26.134737mm"
+   viewBox="0 0 180.01323 26.134737"
+   version="1.1"
+   id="svg1"
+   inkscape:export-filename="Finalizacao.svg"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm">
+    <inkscape:page
+       x="0"
+       y="-1.4214773e-14"
+       width="180.01323"
+       height="26.134739"
+       id="page2"
+       margin="0"
+       bleed="0" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient14"
+       id="linearGradient15"
+       x1="30.010712"
+       y1="175.3091"
+       x2="210.02394"
+       y2="175.3091"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-22.333307,-147.29805)" />
+    <linearGradient
+       id="linearGradient14"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#0003ff;stop-opacity:1;"
+         offset="0"
+         id="stop14" />
+      <stop
+         style="stop-color:#00ffff;stop-opacity:1;"
+         offset="1"
+         id="stop15" />
+    </linearGradient>
+  </defs>
+  <g
+     inkscape:label="Camada 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-7.6774047,-14.94367)">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:25.4px;font-family:Orbitron;-inkscape-font-specification:'Orbitron Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:url(#linearGradient15);fill-rule:evenodd;stroke:#ffcc00;stroke-width:1.065;stroke-dasharray:none;stroke-opacity:1"
+       x="6.7367387"
+       y="34.729355"
+       id="text14"><tspan
+         sodipodi:role="line"
+         id="tspan14"
+         style="fill:url(#linearGradient15);stroke:#000000;stroke-width:1.065"
+         x="6.7367387"
+         y="34.729355">Amostragem</tspan></text>
+  </g>
+</svg>
