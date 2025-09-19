@@ -453,11 +453,9 @@ class _MeasurementTileState extends State<MeasurementTile> {
               Builder(
                 builder: (context) {
                   final chips = <Widget>[];
-
                   for (var i = 0; i < tolerancias.length; i++) {
                     final raw = tolerancias[i];
                     final d = _toDoubleNum(raw);
-
                     StatusMedida st;
                     Color bg;
                     Color bd;
@@ -503,7 +501,6 @@ class _MeasurementTileState extends State<MeasurementTile> {
                       ),
                     );
                   }
-
                   final mid = chips.isEmpty ? 0 : (chips.length ~/ 2);
                   chips.insert(
                     mid,

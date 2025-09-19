@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
@@ -206,7 +207,6 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
       );
       return;
     }
-
     final reAtual = _reController.text.trim();
     if (reAtual.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -220,7 +220,6 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
       );
       return;
     }
-
     final pendentes = _medidasSelecionadas.where(
       (m) =>
           m.status == StatusMedida.pendente ||
