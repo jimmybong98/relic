@@ -310,7 +310,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     final motivo = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Fim de Jornada'),
+        title: const Text('Pausa de Jornada'),
         content: DropdownButtonFormField<String>(
           value: null,
           decoration: const InputDecoration(
