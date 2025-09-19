@@ -141,10 +141,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
   }
 
   bool _isRosca(MedidaItem item) {
-    return _stringHasRoscaPattern(item.titulo) ||
-        _stringHasRoscaPattern(item.instrumento) ||
-        _stringHasRoscaPattern(item.observacao) ||
-        _stringHasRoscaPattern(item.faixaTexto);
+    return _stringHasRoscaPattern(item.titulo);
   }
 
   Set<String> _partsFromMedicao(String? medicao) => (medicao ?? '')
