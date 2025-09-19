@@ -157,9 +157,10 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                   final verticalLines = <VerticalLine>[];
                   for (var i = 0; i < reports.length; i++) {
                     final r = reports[i];
-                    final status = r.status.toLowerCase();
-                    spots.add(FlSpot(i.toDouble(), _statusToValue(status)));
-                    if (status.contains('fim') && status.contains('jornada')) {
+                    final lowered = r.status.toLowerCase();
+                    spots.add(FlSpot(i.toDouble(), _statusToValue(lowered)));
+                    if (lowered.contains('pausa') &&
+                        lowered.contains('jornada')) {
                       verticalLines.add(
                         VerticalLine(
                           x: i.toDouble(),
@@ -167,8 +168,17 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
                           strokeWidth: 2,
                         ),
                       );
-                    } else if (status.contains('encerrar') ||
-                        status.contains('encerramento')) {
+                    } else if (lowered.contains('fim') &&
+                        lowered.contains('jornada')) {
+                      verticalLines.add(
+                        VerticalLine(
+                          x: i.toDouble(),
+                          color: Colors.orange,
+                          strokeWidth: 2,
+                        ),
+                      );
+                    } else if (lowered.contains('encerrar') ||
+                        lowered.contains('encerramento')) {
                       verticalLines.add(
                         VerticalLine(
                           x: i.toDouble(),
