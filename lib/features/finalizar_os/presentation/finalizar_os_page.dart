@@ -14,12 +14,14 @@ import 'package:admin/widgets/window_bar.dart';
 import 'package:admin/utils/string_utils.dart';
 import 'package:admin/services/machine_service.dart';
 import 'package:admin/models/machine.dart';
+import 'package:admin/features/shared/data_transfer_objects.dart';
 
 /// Mesmo base URL usado no Operador
 const String kBaseUrl = 'http://192.168.0.241:5005';
 
 class FinalizarOsPage extends ConsumerStatefulWidget {
-  const FinalizarOsPage({super.key});
+  final OperadorToFinalizarData? initialData; // Adicione este parâmetro
+  const FinalizarOsPage({super.key, this.initialData}); // Modifique o construtor
 
   @override
   ConsumerState<FinalizarOsPage> createState() => _FinalizarOsPageState();
@@ -143,6 +145,28 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     _partCtrl.addListener(_resetFinalizada);
     _opCtrl.addListener(_resetFinalizada);
     _carregarMaquinas();
+
+    // Preenche os campos se houver dados iniciais
+    if (widget.initialData != null) {
+      _osCtrl.text = widget.initialData!.os;
+      _partCtrl.text = widget.initialData!.partnumber;
+      _opCtrl.text = widget.initialData!.operacao;
+      _categoriaSel = widget.initialData!.categoria;
+      _maquinaSel = widget.initialData!.maquina;
+    }
+  }
+
+  @override
+  void didUpdateWidget(FinalizarOsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialData != null) {
+      // Atualiza os campos se os dados iniciais mudarem
+      _osCtrl.text = widget.initialData!.os;
+      _partCtrl.text = widget.initialData!.partnumber;
+      _opCtrl.text = widget.initialData!.operacao;
+      _categoriaSel = widget.initialData!.categoria;
+      _maquinaSel = widget.initialData!.maquina;
+    }
   }
 
   Future<void> _carregarMaquinas() async {
@@ -342,7 +366,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
 
     return Scaffold(
       appBar: WindowBar(
-        title: 'Finalizar OS',
+        title: 'Finalizar O.S - FOR008',
         showMenu: true,
         actions: [
           Padding(
@@ -723,6 +747,30 @@ class _MeasurementTilePrepState extends State<_MeasurementTilePrep> {
             if (subtitulo.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(subtitulo, style: Theme.of(context).textTheme.bodyMedium),
+            ],
+            // Exibição do instrumento - mais destacada
+            if (m.instrumento != null && m.instrumento!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.build, size: 14, color: Colors.blue),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Instrumento: ${m.instrumento}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.blue.shade800,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
             const SizedBox(height: 10),
             TextField(

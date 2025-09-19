@@ -1,5 +1,6 @@
 # app.py
 from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS
 from pathlib import Path
 from typing import Optional, Tuple
 import os
@@ -17,6 +18,7 @@ import pymysql
 from pymysql.cursors import DictCursor
 
 app = Flask(__name__)
+CORS(app)
 app.config["JSON_AS_ASCII"] = False  # Flask 2.x
 try:  # Flask 3.x
     app.json.ensure_ascii = False
@@ -647,6 +649,7 @@ def _medidas_preparador_db(part: str, op: str):
     for row in rows:
         titulo = row.get("titulo") or ""
         faixa = row.get("faixa_texto") or ""
+        instrumento = row.get("instrumento") or ""
         mn = row.get("minimo")
         mx = row.get("maximo")
         uni = None

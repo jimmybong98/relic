@@ -14,6 +14,9 @@ import 'package:admin/widgets/window_bar.dart';
 import 'package:admin/utils/string_utils.dart';
 import 'package:admin/services/machine_service.dart';
 import 'package:admin/models/machine.dart';
+import 'package:admin/features/operador/presentation/operador_page.dart';
+import 'package:admin/features/shared/data_transfer_objects.dart';
+
 
 /// Mesmo base URL usado no Operador
 const String kBaseUrl = 'http://192.168.0.241:5005';
@@ -25,13 +28,14 @@ class PreparacaoPage extends ConsumerStatefulWidget {
   ConsumerState<PreparacaoPage> createState() => _PreparacaoPageState();
 }
 
+
 final medidasPreparadorControllerProvider =
-    StateNotifierProvider.autoDispose<
-      MedidasPreparadorController,
-      AsyncValue<List<MedidaItem>>
-    >((ref) {
-      return MedidasPreparadorController(ref);
-    });
+StateNotifierProvider.autoDispose<
+    MedidasPreparadorController,
+    AsyncValue<List<MedidaItem>>
+>((ref) {
+  return MedidasPreparadorController(ref);
+});
 
 class MedidasPreparadorController
     extends StateNotifier<AsyncValue<List<MedidaItem>>> {
@@ -54,19 +58,19 @@ class MedidasPreparadorController
       final normalizados = itens
           .map(
             (m) => MedidaItem(
-              titulo: m.titulo,
-              faixaTexto: m.faixaTexto,
-              minimo: m.minimo,
-              maximo: m.maximo,
-              unidade: m.unidade,
-              status: StatusMedida.pendente,
-              medicao: null,
-              observacao: m.observacao,
-              periodicidade: m.periodicidade,
-              instrumento: m.instrumento,
-              tolerancias: m.tolerancias,
-            ),
-          )
+          titulo: m.titulo,
+          faixaTexto: m.faixaTexto,
+          minimo: m.minimo,
+          maximo: m.maximo,
+          unidade: m.unidade,
+          status: StatusMedida.pendente,
+          medicao: null,
+          observacao: m.observacao,
+          periodicidade: m.periodicidade,
+          instrumento: m.instrumento,
+          tolerancias: m.tolerancias,
+        ),
+      )
           .toList();
 
       state = AsyncValue.data(normalizados);
@@ -135,6 +139,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   void _resetLiberada() {
     if (_osLiberada) setState(() => _osLiberada = false);
   }
+
+
 
   @override
   void initState() {
@@ -233,9 +239,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     final reprovadas = medidas
         .where(
           (m) =>
-              m.status == StatusMedida.reprovadaAbaixo ||
-              m.status == StatusMedida.reprovadaAcima,
-        )
+      m.status == StatusMedida.reprovadaAbaixo ||
+          m.status == StatusMedida.reprovadaAcima,
+    )
         .toList();
     if (reprovadas.isNotEmpty) {
       if (!mounted) return;
@@ -253,6 +259,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
         'indice': i,
         'titulo': m.titulo,
         'faixaTexto': m.faixaTexto,
+        'instrumento': m.instrumento,
         'min': m.minimo,
         'max': m.maximo,
         'unidade': m.unidade,
@@ -269,6 +276,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       'operacao': normalizeCode(_opCtrl.text),
       'maquina': _maquinaSel,
       'itens': itens,
+
     });
 
     final uri = Uri.parse('$kBaseUrl/preparador/resultado');
@@ -294,9 +302,24 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
           const SnackBar(content: Text('Resultado registrado com sucesso!')),
         );
         ref.read(medidasPreparadorControllerProvider.notifier).resetSelecoes();
+
         if (liberada) {
           await Future.delayed(const Duration(seconds: 1));
-          if (mounted) Navigator.of(context).pop();
+          if (mounted) {
+            Navigator.of(context).pushReplacement(  // Alterado para pushReplacement
+              MaterialPageRoute(
+                builder: (_) => OperadorPage(
+                  initialData: PreparacaoToOperadorData(
+                    os: _osCtrl.text.trim(),
+                    partnumber: normalizeCode(_partCtrl.text),
+                    operacao: normalizeCode(_opCtrl.text),
+                    maquina: _maquinaSel ?? '',
+                    categoria: _categoriaSel ?? '',
+                  ),
+                ),
+              ),
+            );
+          }
         }
       } else if (resp.statusCode == 409) {
         final data = jsonDecode(resp.body);
@@ -343,16 +366,16 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     final maquinaOk = (_maquinaSel ?? '').isNotEmpty;
     final todasOk =
         medidas.isNotEmpty &&
-        medidas.every(
-          (m) =>
+            medidas.every(
+                  (m) =>
               (m.medicao ?? '').isNotEmpty && m.status != StatusMedida.pendente,
-        );
+            );
     final podeRegistrar =
         reOk && osOk && maquinaOk && todasOk && !_registrando && !_osLiberada;
 
     return Scaffold(
       appBar: WindowBar(
-        title: 'Liberação de Máquina (FOR 007)',
+        title: 'Liberação de Máquina - FOR007',
         showMenu: true,
         actions: [
           Padding(
@@ -390,7 +413,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             ],
                             decoration: const InputDecoration(
                               labelText:
-                                  'R.E. do Preparador', // ajuste o texto se for Operador
+                              'R.E. do Preparador', // ajuste o texto se for Operador
                               border: OutlineInputBorder(),
                             ),
                             validator: (v) {
@@ -442,17 +465,17 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             items: _categorias
                                 .map(
                                   (c) => DropdownMenuItem(
-                                    value: c,
-                                    child: Text(c),
-                                  ),
-                                )
+                                value: c,
+                                child: Text(c),
+                              ),
+                            )
                                 .toList(),
                             onChanged: (v) => setState(() {
                               _categoriaSel = v;
                               _maquinaSel = null;
                             }),
                             validator: (v) =>
-                                (v == null || v.isEmpty) ? 'Obrigatório' : null,
+                            (v == null || v.isEmpty) ? 'Obrigatório' : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -467,14 +490,14 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                 .where((m) => m.categoria == _categoriaSel)
                                 .map(
                                   (m) => DropdownMenuItem(
-                                    value: m.codigo,
-                                    child: Text(m.codigo),
-                                  ),
-                                )
+                                value: m.codigo,
+                                child: Text(m.codigo),
+                              ),
+                            )
                                 .toList(),
                             onChanged: (v) => setState(() => _maquinaSel = v),
                             validator: (v) =>
-                                (v == null || v.isEmpty) ? 'Obrigatório' : null,
+                            (v == null || v.isEmpty) ? 'Obrigatório' : null,
                           ),
                         ),
                       ],
@@ -532,12 +555,12 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             FocusScope.of(context).unfocus();
                             await ref
                                 .read(
-                                  medidasPreparadorControllerProvider.notifier,
-                                )
+                              medidasPreparadorControllerProvider.notifier,
+                            )
                                 .carregar(
-                                  partnumber: normalizeCode(_partCtrl.text),
-                                  operacao: normalizeCode(_opCtrl.text),
-                                );
+                              partnumber: normalizeCode(_partCtrl.text),
+                              operacao: normalizeCode(_opCtrl.text),
+                            );
                           }
                         },
                         icon: const Icon(Icons.search),
@@ -568,15 +591,15 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                           item: item,
                           onChanged: (status, valor) => ref
                               .read(
-                                medidasPreparadorControllerProvider.notifier,
-                              )
+                            medidasPreparadorControllerProvider.notifier,
+                          )
                               .setStatusAndMedicao(index, status, valor),
                         );
                       },
                     );
                   },
                   loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                  const Center(child: CircularProgressIndicator()),
                   error: (e, _) =>
                       Center(child: Text('Erro ao carregar:\n${e.toString()}')),
                 ),
@@ -588,10 +611,10 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                   onPressed: podeRegistrar ? _registrarResultado : null,
                   icon: _registrando
                       ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                       : const Icon(Icons.save_outlined),
                   label: const Text('Registrar resultado'),
                 ),
@@ -631,7 +654,6 @@ class _MeasurementTilePrepState extends State<_MeasurementTilePrep> {
   @override
   void didUpdateWidget(covariant _MeasurementTilePrep oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // só atualiza o controller quando o valor vindo do pai REALMENTE mudou
     if (oldWidget.item.medicao != widget.item.medicao) {
       _setTextFromParent(widget.item.medicao);
     }
@@ -639,11 +661,9 @@ class _MeasurementTilePrepState extends State<_MeasurementTilePrep> {
 
   void _setTextFromParent(String? txt) {
     final newText = (txt ?? '');
-    if (newText == _ctrl.text)
-      return; // evita sobrescrever e mexer no cursor à toa
+    if (newText == _ctrl.text) return;
     _ctrl.value = TextEditingValue(
       text: newText,
-      // cursor no final do texto (sem selecionar tudo)
       selection: TextSelection.collapsed(offset: newText.length),
       composing: TextRange.empty,
     );
@@ -734,6 +754,30 @@ class _MeasurementTilePrepState extends State<_MeasurementTilePrep> {
               const SizedBox(height: 4),
               Text(subtitulo, style: Theme.of(context).textTheme.bodyMedium),
             ],
+            // Exibição do instrumento - mais destacada
+            if (m.instrumento != null && m.instrumento!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.build, size: 14, color: Colors.blue),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Instrumento: ${m.instrumento}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.blue.shade800,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
             TextField(
               controller: _ctrl,
@@ -749,8 +793,8 @@ class _MeasurementTilePrepState extends State<_MeasurementTilePrep> {
                     : st == StatusMedida.pendente
                     ? 'Preencha o valor para classificar'
                     : (st == StatusMedida.reprovadaAbaixo
-                          ? 'Abaixo do mínimo'
-                          : 'Acima do máximo'),
+                    ? 'Abaixo do mínimo'
+                    : 'Acima do máximo'),
                 helperStyle: TextStyle(color: _statusColor(st)),
               ),
               onChanged: (txt) {

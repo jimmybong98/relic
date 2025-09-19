@@ -14,18 +14,19 @@ import 'package:admin/widgets/window_bar.dart';
 import 'package:admin/utils/string_utils.dart';
 import 'package:admin/services/machine_service.dart';
 import 'package:admin/models/machine.dart';
+import 'package:admin/features/finalizar_os/presentation/finalizar_os_page.dart';
+import 'package:admin/features/shared/data_transfer_objects.dart';
 
 /// >>>>> Ajuste para o endereço/porta do seu Flask <<<<<
 const String kBaseUrl = 'http://192.168.0.241:5005';
 
 final medidasOperadorControllerProvider =
-    StateNotifierProvider.autoDispose<
-      MedidasOperadorController,
-      AsyncValue<List<MedidaItem>>
-    >((ref) {
-      return MedidasOperadorController(ref);
-    });
-
+StateNotifierProvider.autoDispose<
+    MedidasOperadorController,
+    AsyncValue<List<MedidaItem>>
+>((ref) {
+  return MedidasOperadorController(ref);
+});
 class MedidasOperadorController
     extends StateNotifier<AsyncValue<List<MedidaItem>>> {
   final Ref _ref;
@@ -93,7 +94,8 @@ class MedidasOperadorController
 }
 
 class OperadorPage extends ConsumerStatefulWidget {
-  const OperadorPage({super.key});
+  final PreparacaoToOperadorData? initialData;
+  const OperadorPage({super.key, this.initialData});
 
   @override
   ConsumerState<OperadorPage> createState() => _OperadorPageState();
@@ -117,6 +119,28 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
   void initState() {
     super.initState();
     _carregarMaquinas();
+
+    // Preenche os campos se houver dados iniciais
+    if (widget.initialData != null) {
+      _osCtrl.text = widget.initialData!.os;
+      _partCtrl.text = widget.initialData!.partnumber;
+      _opCtrl.text = widget.initialData!.operacao;
+      _categoriaSel = widget.initialData!.categoria;
+      _maquinaSel = widget.initialData!.maquina;
+    }
+  }
+
+  @override
+  void didUpdateWidget(OperadorPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialData != null) {
+      // Atualiza os campos se os dados iniciais mudarem
+      _osCtrl.text = widget.initialData!.os;
+      _partCtrl.text = widget.initialData!.partnumber;
+      _opCtrl.text = widget.initialData!.operacao;
+      _categoriaSel = widget.initialData!.categoria;
+      _maquinaSel = widget.initialData!.maquina;
+    }
   }
 
   Future<void> _carregarMaquinas() async {
@@ -266,7 +290,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
-  Future<void> _fimJornada() async {
+  Future<void> _fimJornada(String motivo) async {
     if (_reCtrl.text.trim().isEmpty || _osCtrl.text.trim().isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -280,6 +304,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       'os': _osCtrl.text.trim(),
       'partnumber': normalizeCode(_partCtrl.text),
       'operacao': normalizeCode(_opCtrl.text),
+      'motivo': motivo, // Adiciona o motivo selecionado
     });
 
     final uri = Uri.parse('$kBaseUrl/operador/fim_jornada');
@@ -291,7 +316,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       if (resp.statusCode == 200) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Jornada pausada.')));
+        ).showSnackBar(SnackBar(content: Text('Jornada pausada. Motivo: $motivo')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falha: ${resp.statusCode} ${resp.body}')),
@@ -302,6 +327,45 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erro: $e')));
+    }
+  }
+
+  Future<void> _showFimJornadaDialog() async {
+    final motivo = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Fim de Jornada'),
+        content: DropdownButtonFormField<String>(
+          value: null,
+          decoration: const InputDecoration(
+            labelText: 'Selecione o motivo',
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'Banheiro', child: Text('Banheiro')),
+            DropdownMenuItem(value: 'Almoço', child: Text('Almoço')),
+            DropdownMenuItem(value: 'Troca de ferramenta', child: Text('Troca de ferramenta')),
+            DropdownMenuItem(value: 'Fim do Turno', child: Text('Fim do Turno')),
+            DropdownMenuItem(value: 'Manutenção', child: Text('Manutenção')),
+            DropdownMenuItem(value: 'Falta de Material', child: Text('Falta de Material')),
+            DropdownMenuItem(value: 'Problema de Qualidade', child: Text('Problema de Qualidade')),
+            DropdownMenuItem(value: 'Outros', child: Text('Outros')),
+          ],
+          onChanged: (value) {
+            Navigator.of(context).pop(value);
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (motivo != null) {
+      await _fimJornada(motivo);
     }
   }
 
@@ -325,6 +389,20 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Produção encerrada.')));
+
+        // Navegar para a FinalizarOsPage com os dados atuais
+        final data = OperadorToFinalizarData(
+          os: _osCtrl.text.trim(),
+          partnumber: normalizeCode(_partCtrl.text),
+          operacao: normalizeCode(_opCtrl.text),
+          maquina: _maquinaSel ?? '',
+          categoria: _categoriaSel ?? '',
+        );
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => FinalizarOsPage(initialData: data),
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falha: ${resp.statusCode} ${resp.body}')),
@@ -372,17 +450,17 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     // todas respondidas?
     final todasRespondidas =
         medidas.isNotEmpty &&
-        medidas.every(
-          (m) =>
+            medidas.every(
+                  (m) =>
               m.status != StatusMedida.pendente && (m.medicao ?? '').isNotEmpty,
-        );
+            );
 
     final podeRegistrar =
         reOk && osOk && maquinaOk && todasRespondidas && !_registrando;
 
     return Scaffold(
       appBar: WindowBar(
-        title: 'Área do Operador',
+        title: 'Verificação de Processo - FOR009-14',
         showMenu: true,
         actions: [
           Padding(
@@ -420,7 +498,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                             ],
                             decoration: const InputDecoration(
                               labelText:
-                                  'R.E. do Preparador', // ajuste o texto se for Operador
+                              'R.E. do Operador', // ajuste o texto se for Operador
                               border: OutlineInputBorder(),
                             ),
                             validator: (v) {
@@ -472,17 +550,17 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                             items: _categorias
                                 .map(
                                   (c) => DropdownMenuItem(
-                                    value: c,
-                                    child: Text(c),
-                                  ),
-                                )
+                                value: c,
+                                child: Text(c),
+                              ),
+                            )
                                 .toList(),
                             onChanged: (v) => setState(() {
                               _categoriaSel = v;
                               _maquinaSel = null;
                             }),
                             validator: (v) =>
-                                (v == null || v.isEmpty) ? 'Obrigatório' : null,
+                            (v == null || v.isEmpty) ? 'Obrigatório' : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -497,14 +575,14 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                 .where((m) => m.categoria == _categoriaSel)
                                 .map(
                                   (m) => DropdownMenuItem(
-                                    value: m.codigo,
-                                    child: Text(m.codigo),
-                                  ),
-                                )
+                                value: m.codigo,
+                                child: Text(m.codigo),
+                              ),
+                            )
                                 .toList(),
                             onChanged: (v) => setState(() => _maquinaSel = v),
                             validator: (v) =>
-                                (v == null || v.isEmpty) ? 'Obrigatório' : null,
+                            (v == null || v.isEmpty) ? 'Obrigatório' : null,
                           ),
                         ),
                       ],
@@ -562,12 +640,12 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                             FocusScope.of(context).unfocus();
                             await ref
                                 .read(
-                                  medidasOperadorControllerProvider.notifier,
-                                )
+                              medidasOperadorControllerProvider.notifier,
+                            )
                                 .carregar(
-                                  partnumber: normalizeCode(_partCtrl.text),
-                                  operacao: normalizeCode(_opCtrl.text),
-                                );
+                              partnumber: normalizeCode(_partCtrl.text),
+                              operacao: normalizeCode(_opCtrl.text),
+                            );
                           }
                         },
                         icon: const Icon(Icons.search),
@@ -604,7 +682,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                     );
                   },
                   loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                  const Center(child: CircularProgressIndicator()),
                   error: (e, _) =>
                       Center(child: Text('Erro ao carregar:\n${e.toString()}')),
                 ),
@@ -614,7 +692,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                 alignment: Alignment.centerRight,
                 child: PopupMenuButton<String>(
                   onSelected: (value) {
-                    if (value == 'fim') _fimJornada();
+                    if (value == 'fim') _showFimJornadaDialog();
                     if (value == 'encerrar') _confirmEncerrarProducao();
                   },
                   itemBuilder: (context) => const [
@@ -633,10 +711,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                   onPressed: podeRegistrar ? _registrarAmostragem : null,
                   icon: _registrando
                       ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                       : const Icon(Icons.save_outlined),
                   label: const Text('Registrar amostragem'),
                 ),
@@ -704,14 +782,14 @@ class _MeasurementTile extends StatelessWidget {
     final t = _norm(item.titulo);
     final inst = _norm(item.instrumento);
     return _containsAny(t, [
-          'visual',
-          'rug',
-          'paralelismo',
-          'anel de rosca passa',
-          'cqf',
-          'simetria',
-          'concentricidade',
-        ]) ||
+      'visual',
+      'rug',
+      'paralelismo',
+      'anel de rosca passa',
+      'cqf',
+      'simetria',
+      'concentricidade',
+    ]) ||
         _containsAny(inst, [
           'visual',
           'rug',
@@ -762,8 +840,8 @@ class _MeasurementTile extends StatelessWidget {
 
   Color _fgOn(Color bg) =>
       ThemeData.estimateBrightnessForColor(bg) == Brightness.dark
-      ? Colors.white
-      : Colors.black87;
+          ? Colors.white
+          : Colors.black87;
 
   Widget _pill({
     required String text,
@@ -773,23 +851,27 @@ class _MeasurementTile extends StatelessWidget {
     Color? fg,
     VoidCallback? onTap,
   }) {
-    final fgColor = fg ?? _fgOn(bg);
+    // Altera as cores se a pílula estiver selecionada
+    final Color effectiveBg = selected ? border.withAlpha(200) : bg;
+    final Color effectiveBorder = selected ? border.withAlpha(255) : border;
+    final Color effectiveFg = selected ? Colors.white : (fg ?? _fgOn(bg));
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: bg,
+          color: effectiveBg,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected ? border.withValues(alpha: 0.9) : border,
+            color: effectiveBorder,
             width: selected ? 2 : 1,
           ),
         ),
         child: Text(
           text,
-          style: TextStyle(fontWeight: FontWeight.w600, color: fgColor),
+          style: TextStyle(fontWeight: FontWeight.w600, color: effectiveFg),
         ),
       ),
     );
@@ -934,81 +1016,81 @@ class _MeasurementTile extends StatelessWidget {
             ]
             // Modo 3: Pílulas de tolerância + OK
             else ...[
-              Builder(
-                builder: (context) {
-                  final chips = <Widget>[];
+                Builder(
+                  builder: (context) {
+                    final chips = <Widget>[];
 
-                  // Monta as 4 pílulas coloridas na ordem recebida
-                  for (var i = 0; i < tolerancias.length; i++) {
-                    final raw = tolerancias[i];
-                    final d = _toDoubleNum(raw);
+                    // Monta as 4 pílulas coloridas na ordem recebida
+                    for (var i = 0; i < tolerancias.length; i++) {
+                      final raw = tolerancias[i];
+                      final d = _toDoubleNum(raw);
 
-                    // Define cores e status conforme a posição
-                    StatusMedida st;
-                    Color bg;
-                    Color bd;
-                    switch (i) {
-                      case 0:
-                        st = StatusMedida.reprovadaAbaixo;
-                        bg = Colors.red.shade100;
-                        bd = Colors.red.shade400;
-                        break;
-                      case 1:
-                        st = StatusMedida.alertaAbaixo;
-                        bg = Colors.amber.shade100;
-                        bd = Colors.amber.shade400;
-                        break;
-                      case 2:
-                        st = StatusMedida.alertaAcima;
-                        bg = Colors.amber.shade100;
-                        bd = Colors.amber.shade400;
-                        break;
-                      case 3:
-                        st = StatusMedida.reprovadaAcima;
-                        bg = Colors.red.shade100;
-                        bd = Colors.red.shade400;
-                        break;
-                      default:
-                        st = StatusMedida.alertaAbaixo;
+                      // Define cores e status conforme a posição
+                      StatusMedida st;
+                      Color bg;
+                      Color bd;
+                      switch (i) {
+                        case 0:
+                          st = StatusMedida.reprovadaAbaixo;
+                          bg = Colors.red.shade100;
+                          bd = Colors.red.shade400;
+                          break;
+                        case 1:
+                          st = StatusMedida.alertaAbaixo;
+                          bg = Colors.amber.shade100;
+                          bd = Colors.amber.shade400;
+                          break;
+                        case 2:
+                          st = StatusMedida.alertaAcima;
+                          bg = Colors.amber.shade100;
+                          bd = Colors.amber.shade400;
+                          break;
+                        case 3:
+                          st = StatusMedida.reprovadaAcima;
+                          bg = Colors.red.shade100;
+                          bd = Colors.red.shade400;
+                          break;
+                        default:
+                          st = StatusMedida.alertaAbaixo;
 
-                        bg = Colors.amber.shade100;
-                        bd = Colors.amber.shade400;
+                          bg = Colors.amber.shade100;
+                          bd = Colors.amber.shade400;
+                      }
+
+                      final label = d != null
+                          ? d.toStringAsFixed(2)
+                          : raw.toString();
+                      final selected = item.medicao == label;
+
+                      chips.add(
+                        _pill(
+                          text: label,
+                          bg: bg,
+                          border: bd,
+                          selected: selected,
+                          onTap: () => onSelect(st, label),
+                        ),
+                      );
                     }
 
-                    final label = d != null
-                        ? d.toStringAsFixed(2)
-                        : raw.toString();
-                    final selected = item.medicao == label;
-
-                    chips.add(
+                    // Insere OK central
+                    final mid = chips.isEmpty ? 0 : (chips.length ~/ 2);
+                    chips.insert(
+                      mid,
                       _pill(
-                        text: label,
-                        bg: bg,
-                        border: bd,
-                        selected: selected,
-                        onTap: () => onSelect(st, label),
+                        text: 'OK',
+                        bg: Colors.green.shade200,
+                        border: Colors.green.shade600,
+                        fg: Colors.green.shade900,
+                        selected: item.medicao == 'OK',
+                        onTap: () => onSelect(StatusMedida.ok, 'OK'),
                       ),
                     );
-                  }
 
-                  // Insere OK central
-                  final mid = chips.isEmpty ? 0 : (chips.length ~/ 2);
-                  chips.insert(
-                    mid,
-                    _pill(
-                      text: 'OK',
-                      bg: Colors.green.shade200,
-                      border: Colors.green.shade600,
-                      fg: Colors.green.shade900,
-                      selected: item.medicao == 'OK',
-                      onTap: () => onSelect(StatusMedida.ok, 'OK'),
-                    ),
-                  );
-
-                  return Wrap(spacing: 8, runSpacing: 8, children: chips);
-                },
-              ),
-            ],
+                    return Wrap(spacing: 8, runSpacing: 8, children: chips);
+                  },
+                ),
+              ],
           ],
         ),
       ),

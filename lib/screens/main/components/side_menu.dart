@@ -187,10 +187,11 @@ class SideMenu extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 10),
             alignment: Alignment.center,
             child: SizedBox(
-              width: 150,
-              height: 150,
-              child: Image.asset(
-                'assets/images/logo.png',
+              width: 150
+              ,
+              height: 75,
+              child: SvgPicture.asset(
+                'assets/icons/Reliclimpo.svg',
                 fit: BoxFit.contain,
               ),
             ),

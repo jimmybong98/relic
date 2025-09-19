@@ -11,6 +11,7 @@ import '../preparacao/presentation/preparacao_page.dart';
 import '../operador/presentation/operador_page.dart';
 import '../login/login_page.dart';
 import '../../services/auth_service.dart';
+import '../finalizar_os/presentation/finalizar_os_page.dart';
 
 
 class MainMenuPage extends ConsumerStatefulWidget {
@@ -33,7 +34,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
   Timer? _timer;
   static const _logos = [
     _LogoConfig(asset: 'assets/images/Relictt.png', width: 250, height: 110),
-    _LogoConfig(asset: 'assets/images/logotuptech.png', width: 250 , height: 110),
+    _LogoConfig(asset: 'assets/images/logotuptech1.png', width: 250 , height: 110),
   ];
 
   @override
@@ -82,37 +83,9 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       // ====== INÍCIO: Wallpaper (única mudança) ======
       body: Stack(
         children: [
-          // Papel de parede da página
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/BOA.jpg', // ajuste o caminho/arquivo conforme seu asset
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.low,
-            ),
-          ),
-          // Camada opcional para legibilidade (escurece levemente)
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.30),
-              ),
-            ),
-          ),
-          // ====== FIM: Wallpaper ======
-
-          // Conteúdo original inalterado
+          // Conteúdo principal
           Column(
             children: [
-              const SizedBox(height: 20),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                child: Image.asset(
-                  logo.asset,
-                  key: ValueKey(_logoIndex),
-                  height: logo.height,
-                  width: logo.width,
-                ),
-              ),
               const SizedBox(height: 10),
               Image.asset('assets/images/traco.png'),
               const SizedBox(height: 0),
@@ -133,7 +106,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                         ),
                         _MenuButton(
                           image: 'assets/icons/FOR008.svg',
-                          onPressed: () => open(context, const OperadorPage()),
+                          onPressed: () => open(context, const FinalizarOsPage()),
                         ),
                         _MenuButton(
                           image: 'assets/icons/Dashboard.svg',
@@ -145,6 +118,23 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                 ),
               ),
             ],
+          ),
+
+          // Logo no canto inferior direito
+          Align(
+            alignment: Alignment.bottomRight,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                child: Image.asset(
+                  logo.asset,
+                  key: ValueKey(_logoIndex),
+                  height: logo.height,
+                  width: logo.width,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -180,7 +170,7 @@ class _MenuButtonState extends State<_MenuButton> {
         duration: const Duration(milliseconds: 150),
         child: SizedBox(
           width: buttonWidth,
-          height: 150,
+          height: 120,
           child: Material(
             color: Colors.transparent,
             child: InkWell(

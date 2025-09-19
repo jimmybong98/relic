@@ -35,20 +35,15 @@ class ProfileButton extends ConsumerWidget {
         margin: const EdgeInsets.only(left: defaultPadding),
         padding: const EdgeInsets.symmetric(
           horizontal: defaultPadding,
-          vertical: defaultPadding / 2,
-        ),
-        decoration: BoxDecoration(
-          color: secondaryColor,
-          borderRadius: const BorderRadius.all(Radius.circular(10)),
-          border: Border.all(color: Colors.white10),
+          vertical: defaultPadding / 1,
         ),
         child: Row(
           children: [
-            Image.asset('assets/images/profile_pic.png', height: 38),
+            Image.asset('assets/images/profile_picazul.png', height: 24),
             if (!Responsive.isMobile(context))
               Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: defaultPadding / 2,
+                  horizontal: defaultPadding / 1,
                 ),
                 child: Text(auth.username),
               ),
