@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 import 'package:admin/features/preparacao/data/models.dart';
 import 'package:admin/features/operador/data/repository_provider.dart';
+import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import 'package:admin/widgets/window_bar.dart';
 import 'package:admin/utils/string_utils.dart';
@@ -132,6 +133,10 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   bool _registrando = false;
   bool _osLiberada = false;
 
+  late final VoidCallback _osSyncListener;
+  late final VoidCallback _partSyncListener;
+  late final VoidCallback _opSyncListener;
+
   void _resetLiberada() {
     if (_osLiberada) setState(() => _osLiberada = false);
   }
@@ -139,9 +144,30 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   @override
   void initState() {
     super.initState();
+    final shared = ref.read(sharedSearchFormProvider);
+    _osCtrl.text = shared.os;
+    _partCtrl.text = shared.partNumber;
+    _opCtrl.text = shared.operacao;
+    _categoriaSel = shared.categoria;
+    _maquinaSel = shared.maquina;
+
+    _osSyncListener = () {
+      ref.read(sharedSearchFormProvider.notifier).setOs(_osCtrl.text);
+    };
+    _partSyncListener = () {
+      ref.read(sharedSearchFormProvider.notifier).setPartNumber(_partCtrl.text);
+    };
+    _opSyncListener = () {
+      ref.read(sharedSearchFormProvider.notifier).setOperacao(_opCtrl.text);
+    };
+
     _osCtrl.addListener(_resetLiberada);
     _partCtrl.addListener(_resetLiberada);
     _opCtrl.addListener(_resetLiberada);
+
+    _osCtrl.addListener(_osSyncListener);
+    _partCtrl.addListener(_partSyncListener);
+    _opCtrl.addListener(_opSyncListener);
     _carregarMaquinas();
   }
 
@@ -150,10 +176,33 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       final list = await MachineService().fetchMaquinas();
       if (mounted) {
         setState(() {
-          _maquinas.addAll(list);
-          _categorias.addAll(
-            _maquinas.map((e) => e.categoria).toSet().toList()..sort(),
-          );
+          _maquinas
+            ..clear()
+            ..addAll(list);
+          _categorias
+            ..clear()
+            ..addAll(
+              _maquinas.map((e) => e.categoria).toSet().toList()..sort(),
+            );
+          final notifier = ref.read(sharedSearchFormProvider.notifier);
+          final categoriaAtual = _categoriaSel;
+          if (categoriaAtual != null && !_categorias.contains(categoriaAtual)) {
+            _categoriaSel = null;
+            notifier.setCategoria(null);
+          }
+
+          if (_categoriaSel != null) {
+            final possuiMaquina = _maquinas.any(
+              (m) => m.categoria == _categoriaSel && m.codigo == _maquinaSel,
+            );
+            if (!possuiMaquina && _maquinaSel != null) {
+              _maquinaSel = null;
+              notifier.setMaquina(null);
+            }
+          } else if (_maquinaSel != null) {
+            _maquinaSel = null;
+            notifier.setMaquina(null);
+          }
         });
       }
     } catch (e) {
@@ -170,6 +219,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     _osCtrl.removeListener(_resetLiberada);
     _partCtrl.removeListener(_resetLiberada);
     _opCtrl.removeListener(_resetLiberada);
+    _osCtrl.removeListener(_osSyncListener);
+    _partCtrl.removeListener(_partSyncListener);
+    _opCtrl.removeListener(_opSyncListener);
     _reCtrl.dispose();
     _osCtrl.dispose();
     _partCtrl.dispose();
@@ -340,7 +392,19 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     // Pode registrar quando: RE e OS preenchidos + todas as medições preenchidas
     final reOk = _reCtrl.text.trim().isNotEmpty;
     final osOk = _osCtrl.text.trim().isNotEmpty;
-    final maquinaOk = (_maquinaSel ?? '').isNotEmpty;
+    final categoriaValue =
+        (_categoriaSel != null && _categorias.contains(_categoriaSel))
+        ? _categoriaSel
+        : null;
+    final maquinasDisponiveis = _maquinas
+        .where((m) => m.categoria == categoriaValue)
+        .toList();
+    final maquinaValue =
+        (_maquinaSel != null &&
+            maquinasDisponiveis.any((m) => m.codigo == _maquinaSel))
+        ? _maquinaSel
+        : null;
+    final maquinaOk = (maquinaValue ?? '').isNotEmpty;
     final todasOk =
         medidas.isNotEmpty &&
         medidas.every(
@@ -435,7 +499,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _categoriaSel,
+                            value: categoriaValue,
                             decoration: const InputDecoration(
                               labelText: 'Categoria',
                               border: OutlineInputBorder(),
@@ -448,10 +512,15 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                   ),
                                 )
                                 .toList(),
-                            onChanged: (v) => setState(() {
-                              _categoriaSel = v;
-                              _maquinaSel = null;
-                            }),
+                            onChanged: (v) {
+                              ref
+                                  .read(sharedSearchFormProvider.notifier)
+                                  .setCategoria(v);
+                              setState(() {
+                                _categoriaSel = v;
+                                _maquinaSel = null;
+                              });
+                            },
                             validator: (v) =>
                                 (v == null || v.isEmpty) ? 'Obrigatório' : null,
                           ),
@@ -459,13 +528,12 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _maquinaSel,
+                            value: maquinaValue,
                             decoration: const InputDecoration(
                               labelText: 'Código da máquina',
                               border: OutlineInputBorder(),
                             ),
-                            items: _maquinas
-                                .where((m) => m.categoria == _categoriaSel)
+                            items: maquinasDisponiveis
                                 .map(
                                   (m) => DropdownMenuItem(
                                     value: m.codigo,
@@ -473,7 +541,12 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                   ),
                                 )
                                 .toList(),
-                            onChanged: (v) => setState(() => _maquinaSel = v),
+                            onChanged: (v) {
+                              ref
+                                  .read(sharedSearchFormProvider.notifier)
+                                  .setMaquina(v);
+                              setState(() => _maquinaSel = v);
+                            },
                             validator: (v) =>
                                 (v == null || v.isEmpty) ? 'Obrigatório' : null,
                           ),
