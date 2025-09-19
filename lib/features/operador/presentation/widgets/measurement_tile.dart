@@ -2,22 +2,64 @@ import 'package:flutter/material.dart';
 
 import 'package:admin/features/preparacao/data/models.dart';
 
-class MeasurementTile extends StatelessWidget {
+class MeasurementTile extends StatefulWidget {
   final int index;
   final MedidaItem item;
   final void Function(StatusMedida status, String? medicao) onSelect;
+  final bool manualEntry;
 
   const MeasurementTile({
     super.key,
     required this.index,
     required this.item,
     required this.onSelect,
+    this.manualEntry = false,
   });
 
-  // ---------- helpers ----------
+  @override
+  State<MeasurementTile> createState() => _MeasurementTileState();
+}
+
+class _MeasurementTileState extends State<MeasurementTile> {
+  TextEditingController? _manualCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.manualEntry) {
+      _manualCtrl = TextEditingController(text: widget.item.medicao ?? '');
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MeasurementTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.manualEntry) {
+      _manualCtrl ??= TextEditingController();
+      final newText = widget.item.medicao ?? '';
+      if (oldWidget.item.medicao != widget.item.medicao &&
+          _manualCtrl!.text != newText) {
+        _manualCtrl!.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: newText.length),
+          composing: TextRange.empty,
+        );
+      }
+    } else if (_manualCtrl != null) {
+      _manualCtrl!.dispose();
+      _manualCtrl = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _manualCtrl?.dispose();
+    super.dispose();
+  }
+
   String _norm(String? s) => (s ?? '').trim();
+
   String _nfd(String s) {
-    // normalização simples (sem pacote intl)
     const rep = {
       'á': 'a',
       'à': 'a',
@@ -54,7 +96,7 @@ class MeasurementTile extends StatelessWidget {
     return needles.any((n) => h.contains(_nfd(n.toLowerCase())));
   }
 
-  bool get _isVisualRugParalelismoOrAfins {
+  bool _isVisualRugParalelismoOrAfins(MedidaItem item) {
     final t = _norm(item.titulo);
     final inst = _norm(item.instrumento);
     return _containsAny(t, [
@@ -77,7 +119,7 @@ class MeasurementTile extends StatelessWidget {
         ]);
   }
 
-  bool get _isTampao {
+  bool _isTampao(MedidaItem item) {
     final t = _norm(item.titulo);
     final inst = _norm(item.instrumento);
     return _containsAny(t, ['tamp', 'tampao', 'tampão', 'tampa']) ||
@@ -149,29 +191,153 @@ class MeasurementTile extends StatelessWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  String _subtitleFor(MedidaItem item) {
+    if (item.faixaTexto.isNotEmpty) return item.faixaTexto;
+    final min = item.minimo;
+    final max = item.maximo;
+    final uni = (item.unidade ?? '').isNotEmpty ? ' ${item.unidade}' : '';
+    if (min != null && max != null) {
+      return '${min.toStringAsFixed(2)} – ${max.toStringAsFixed(2)}$uni';
+    }
+    if (min != null) {
+      return '≥ ${min.toStringAsFixed(2)}$uni';
+    }
+    if (max != null) {
+      return '≤ ${max.toStringAsFixed(2)}$uni';
+    }
+    return '';
+  }
+
+  double? _parseManualValue(String txt) {
+    final normalized = txt.replaceAll(',', '.').trim();
+    if (normalized.isEmpty) return null;
+    return double.tryParse(normalized);
+  }
+
+  Color _statusColor(StatusMedida st) {
+    switch (st) {
+      case StatusMedida.ok:
+        return Colors.green.shade600;
+      case StatusMedida.reprovadaAbaixo:
+      case StatusMedida.reprovadaAcima:
+        return Colors.red.shade400;
+      case StatusMedida.alertaAbaixo:
+      case StatusMedida.alertaAcima:
+        return Colors.amber.shade700;
+      case StatusMedida.pendente:
+        return Colors.grey;
+    }
+  }
+
+  String _statusHelper(StatusMedida st) {
+    switch (st) {
+      case StatusMedida.ok:
+        return 'Dentro da tolerância';
+      case StatusMedida.reprovadaAbaixo:
+        return 'Abaixo do mínimo';
+      case StatusMedida.reprovadaAcima:
+        return 'Acima do máximo';
+      case StatusMedida.alertaAbaixo:
+      case StatusMedida.alertaAcima:
+        return 'Fora da faixa ideal';
+      case StatusMedida.pendente:
+        return 'Preencha o valor para classificar';
+    }
+  }
+
+  Widget _buildManualEntry(BuildContext context) {
+    final item = widget.item;
+    final ctrl = _manualCtrl ??= TextEditingController(
+      text: item.medicao ?? '',
+    );
+    final valor = _parseManualValue(ctrl.text);
+    final status = item.avaliarStatus(valor);
+    final theme = Theme.of(context);
+    final subtitulo = _subtitleFor(item);
+    final unidadeLabel = (item.unidade ?? '').isNotEmpty
+        ? ' (${item.unidade})'
+        : '';
+    final helper = _statusHelper(status);
+    final helperColor = _statusColor(status);
+
+    return Card(
+      elevation: 0.5,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: helperColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.titulo.isEmpty ? '(sem título)' : item.titulo,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+            if (subtitulo.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(subtitulo, style: theme.textTheme.bodyMedium),
+            ],
+            if ((item.periodicidade ?? '').isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Periodicidade: ${item.periodicidade}',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+            if ((item.instrumento ?? '').isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                'Instrumento: ${item.instrumento}',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+            const SizedBox(height: 10),
+            TextField(
+              controller: ctrl,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+                signed: false,
+              ),
+              decoration: InputDecoration(
+                labelText: 'Medição$unidadeLabel',
+                border: const OutlineInputBorder(),
+                helperText: helper,
+                helperStyle: TextStyle(color: helperColor),
+              ),
+              onChanged: (txt) {
+                final v = _parseManualValue(txt);
+                final novoStatus = item.avaliarStatus(v);
+                widget.onSelect(novoStatus, txt);
+                setState(() {});
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAutomaticEntry(BuildContext context) {
+    final item = widget.item;
     final styleLabel = Theme.of(context).textTheme.titleMedium;
     final styleSpec = Theme.of(context).textTheme.bodyMedium;
 
-    String subtitulo = item.faixaTexto;
-    if (subtitulo.isEmpty && (item.minimo != null || item.maximo != null)) {
-      final minStr = item.minimo?.toStringAsFixed(2) ?? '';
-      final maxStr = item.maximo?.toStringAsFixed(2) ?? '';
-      final uni = (item.unidade ?? '').isNotEmpty ? ' ${item.unidade}' : '';
-      if (minStr.isNotEmpty && maxStr.isNotEmpty) {
-        subtitulo = '$minStr – $maxStr$uni';
-      } else if (minStr.isNotEmpty) {
-        subtitulo = '≥ $minStr$uni';
-      } else if (maxStr.isNotEmpty) {
-        subtitulo = '≤ $maxStr$uni';
-      }
-    }
-
-    // NÃO usar ?? [] se tolerancias for não-nulo (evita dead_null_aware_expression)
+    final subtitulo = _subtitleFor(item);
     final tolerancias = item.tolerancias;
 
-    // ------- UI -------
     return Card(
       elevation: 0.5,
       child: Padding(
@@ -196,9 +362,7 @@ class MeasurementTile extends StatelessWidget {
               Text('Instrumento: ${item.instrumento}', style: styleSpec),
             ],
             const SizedBox(height: 10),
-
-            // Modo 1: Visual/Rug/Paralelismo/Anel de rosca passa/CQF/Simetria (binário)
-            if (_isVisualRugParalelismoOrAfins) ...[
+            if (_isVisualRugParalelismoOrAfins(item)) ...[
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -209,21 +373,21 @@ class MeasurementTile extends StatelessWidget {
                     border: Colors.green.shade600,
                     fg: Colors.green.shade900,
                     selected: item.medicao == 'Aprovado',
-                    onTap: () => onSelect(StatusMedida.ok, 'Aprovado'),
+                    onTap: () => widget.onSelect(StatusMedida.ok, 'Aprovado'),
                   ),
                   _pill(
                     text: 'Reprovado',
                     bg: Colors.red.shade100,
                     border: Colors.red.shade400,
                     selected: item.medicao == 'Reprovado',
-                    onTap: () =>
-                        onSelect(StatusMedida.reprovadaAcima, 'Reprovado'),
+                    onTap: () => widget.onSelect(
+                      StatusMedida.reprovadaAcima,
+                      'Reprovado',
+                    ),
                   ),
                 ],
               ),
-            ]
-            // Modo 2: Tampão (4 botões)
-            else if (_isTampao) ...[
+            ] else if (_isTampao(item)) ...[
               Builder(
                 builder: (context) {
                   final parts = _partsFromMedicao(item.medicao);
@@ -241,7 +405,7 @@ class MeasurementTile extends StatelessWidget {
                           final p = _partsFromMedicao(item.medicao);
                           p.removeWhere((e) => e.startsWith('Lado passa'));
                           p.add('Lado passa — Aprovado');
-                          onSelect(_statusFromParts(p), _joinParts(p));
+                          widget.onSelect(_statusFromParts(p), _joinParts(p));
                         },
                       ),
                       _pill(
@@ -253,7 +417,7 @@ class MeasurementTile extends StatelessWidget {
                           final p = _partsFromMedicao(item.medicao);
                           p.removeWhere((e) => e.startsWith('Lado passa'));
                           p.add('Lado passa — Reprovado');
-                          onSelect(_statusFromParts(p), _joinParts(p));
+                          widget.onSelect(_statusFromParts(p), _joinParts(p));
                         },
                       ),
                       _pill(
@@ -266,7 +430,7 @@ class MeasurementTile extends StatelessWidget {
                           final p = _partsFromMedicao(item.medicao);
                           p.removeWhere((e) => e.startsWith('Lado não passa'));
                           p.add('Lado não passa — Aprovado');
-                          onSelect(_statusFromParts(p), _joinParts(p));
+                          widget.onSelect(_statusFromParts(p), _joinParts(p));
                         },
                       ),
                       _pill(
@@ -278,26 +442,20 @@ class MeasurementTile extends StatelessWidget {
                           final p = _partsFromMedicao(item.medicao);
                           p.removeWhere((e) => e.startsWith('Lado não passa'));
                           p.add('Lado não passa — Reprovado');
-                          onSelect(_statusFromParts(p), _joinParts(p));
+                          widget.onSelect(_statusFromParts(p), _joinParts(p));
                         },
                       ),
                     ],
                   );
                 },
               ),
-            ]
-            // Modo 3: Pílulas de tolerância + OK
-            else ...[
+            ] else ...[
               Builder(
                 builder: (context) {
                   final chips = <Widget>[];
-
-                  // Monta as 4 pílulas coloridas na ordem recebida
                   for (var i = 0; i < tolerancias.length; i++) {
                     final raw = tolerancias[i];
                     final d = _toDoubleNum(raw);
-
-                    // Define cores e status conforme a posição
                     StatusMedida st;
                     Color bg;
                     Color bd;
@@ -339,12 +497,10 @@ class MeasurementTile extends StatelessWidget {
                         bg: bg,
                         border: bd,
                         selected: selected,
-                        onTap: () => onSelect(st, label),
+                        onTap: () => widget.onSelect(st, label),
                       ),
                     );
                   }
-
-                  // Insere OK central
                   final mid = chips.isEmpty ? 0 : (chips.length ~/ 2);
                   chips.insert(
                     mid,
@@ -354,7 +510,7 @@ class MeasurementTile extends StatelessWidget {
                       border: Colors.green.shade600,
                       fg: Colors.green.shade900,
                       selected: item.medicao == 'OK',
-                      onTap: () => onSelect(StatusMedida.ok, 'OK'),
+                      onTap: () => widget.onSelect(StatusMedida.ok, 'OK'),
                     ),
                   );
 
@@ -366,5 +522,13 @@ class MeasurementTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.manualEntry) {
+      return _buildManualEntry(context);
+    }
+    return _buildAutomaticEntry(context);
   }
 }

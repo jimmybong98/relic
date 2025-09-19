@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:admin/features/operador/presentation/widgets/measurement_tile.dart';
@@ -30,6 +32,7 @@ class TrocaFerramentaPage extends StatefulWidget {
 }
 
 class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
+  late final TextEditingController _reController;
   bool _loading = true;
   String? _erro;
   List<MedidaItem> _todas = [];
@@ -41,7 +44,14 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
   @override
   void initState() {
     super.initState();
+    _reController = TextEditingController(text: widget.re);
     _carregarMedidas();
+  }
+
+  @override
+  void dispose() {
+    _reController.dispose();
+    super.dispose();
   }
 
   Future<void> _carregarMedidas() async {
@@ -180,6 +190,15 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
     return '';
   }
 
+  String _observacaoComContexto(String? original) {
+    const marcador = 'Troca de ferramenta';
+    final atual = (original ?? '').trim();
+    if (atual.isEmpty) return marcador;
+    final lowerAtual = atual.toLowerCase();
+    if (lowerAtual.contains(marcador.toLowerCase())) return atual;
+    return '$marcador | $atual';
+  }
+
   Future<void> _registrarMedicoes() async {
     if (_registrando) return;
     if (_medidasSelecionadas.isEmpty) {
@@ -188,7 +207,19 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
       );
       return;
     }
-
+    final reAtual = _reController.text.trim();
+    if (reAtual.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe o R.E. de quem está medindo.')),
+      );
+      return;
+    }
+    if (int.tryParse(reAtual) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('O R.E. deve conter apenas números.')),
+      );
+      return;
+    }
     final pendentes = _medidasSelecionadas.where(
       (m) =>
           m.status == StatusMedida.pendente ||
@@ -227,17 +258,21 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
         'unidade': m.unidade,
         'medicao': m.medicao ?? '',
         'status': statusToString(m.status),
-        'observacao': m.observacao ?? '',
+        'observacao': _observacaoComContexto(m.observacao),
+        'periodicidade': m.periodicidade ?? '',
+        'instrumento': m.instrumento ?? '',
+        'tolerancias': m.tolerancias,
       });
     }
 
     final uri = Uri.parse('${widget.baseUrl}/preparador/resultado');
     final body = jsonEncode({
-      're': widget.re,
+      're': reAtual,
       'os': widget.os,
       'partnumber': normalizeCode(widget.partnumber),
       'operacao': normalizeCode(widget.operacao),
       'maquina': widget.maquina,
+      'contexto': 'troca_ferramenta',
       'itens': itens,
     });
 
@@ -293,6 +328,30 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
     } else {
       Navigator.of(context).pop(false);
     }
+  }
+
+  Widget _buildEditableReChip() {
+    final theme = Theme.of(context);
+    return SizedBox(
+      width: 160,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('R.E.', style: theme.textTheme.labelSmall),
+          const SizedBox(height: 4),
+          TextField(
+            controller: _reController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              hintText: 'Informe o R.E.',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildInfoChip(String label, String value) {
@@ -359,7 +418,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
                           spacing: 24,
                           runSpacing: 12,
                           children: [
-                            _buildInfoChip('R.E.', widget.re),
+                            _buildEditableReChip(),
                             _buildInfoChip('O.S.', widget.os),
                             _buildInfoChip('Peça', widget.partnumber),
                             _buildInfoChip('Operação', widget.operacao),
@@ -431,6 +490,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
                             return MeasurementTile(
                               index: index,
                               item: item,
+                              manualEntry: true,
                               onSelect: (status, medicao) =>
                                   _atualizarMedicao(index, status, medicao),
                             );
