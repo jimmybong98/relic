@@ -120,46 +120,100 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         final rows = <Map<String, dynamic>>[];
         if (data != null) {
           if (_tipo == 'preparador') {
-            final Map<String, Map<String, dynamic>> combined = {};
+            String buildKey(Map<String, dynamic> map) {
+              String normalize(dynamic value) {
+                final str = value?.toString() ?? '';
+                return str.trim();
+              }
+
+              return [
+                normalize(map['partnumber']),
+                normalize(map['operacao']),
+                normalize(map['idx_medida']),
+                normalize(map['titulo']),
+                normalize(map['maquina']),
+              ].join('|');
+            }
+
+            Map<String, dynamic>? findMatch(
+              List<Map<String, dynamic>> source,
+              String key,
+            ) {
+              for (final row in source) {
+                if (row['__matchKey'] != key) continue;
+                final createdFinal = row['created_at_final'];
+                final medFinal = row['medicao_final'];
+                final reFinal = row['re_finalizacao'];
+                final hasFinalizacao =
+                    (createdFinal != null &&
+                        createdFinal.toString().isNotEmpty) ||
+                    (medFinal != null && medFinal.toString().isNotEmpty) ||
+                    (reFinal != null && reFinal.toString().isNotEmpty);
+                if (!hasFinalizacao) return row;
+              }
+              return null;
+            }
+
+            final releaseRows = <Map<String, dynamic>>[];
             for (final e in (data['liberacao'] as List? ?? [])) {
               if (e is Map<String, dynamic>) {
                 final createdAt = _formatDate(e['created_at']);
-                final key = '${e['partnumber']}_${e['idx_medida']}';
-                combined[key] = {
-                  'os': e['os'],
-                  're_liberacao': e['re_preparador'],
+                releaseRows.add({
+                  '__dt': _parseDateTime(e['created_at']),
+                  '__matchKey': buildKey(e),
+                  'os': e['os']?.toString() ?? '',
+                  're_liberacao': e['re_preparador']?.toString() ?? '',
                   're_finalizacao': '',
                   'created_at': createdAt,
-                  '__dt': _parseDateTime(e['created_at']),
-                  'partnumber': e['partnumber'],
-                  'maquina': e['maquina'],
-                  'faixa_texto': e['faixa_texto'],
-                  'medicao': e['medicao'],
-                };
+                  'created_at_final': '',
+                  'partnumber': e['partnumber']?.toString() ?? '',
+                  'operacao': e['operacao']?.toString() ?? '',
+                  'maquina': e['maquina']?.toString() ?? '',
+                  'faixa_texto': e['faixa_texto']?.toString() ?? '',
+                  'medicao': e['medicao']?.toString() ?? '',
+                  'medicao_final': '',
+                  'idx_medida': e['idx_medida']?.toString() ?? '',
+                  'titulo': e['titulo']?.toString() ?? '',
+                });
               }
             }
             for (final e in (data['finalizacao'] as List? ?? [])) {
               if (e is Map<String, dynamic>) {
                 final createdAt = _formatDate(e['created_at']);
-                final key = '${e['partnumber']}_${e['idx_medida']}';
-                final row = combined.putIfAbsent(key, () {
-                  return {
-                    'os': e['os'],
+                final key = buildKey(e);
+                final row = findMatch(releaseRows, key);
+                if (row != null) {
+                  row['created_at_final'] = createdAt;
+                  row['medicao_final'] = e['medicao']?.toString() ?? '';
+                  row['re_finalizacao'] = e['re_preparador']?.toString() ?? '';
+                  if (row['__dt'] == null) {
+                    row['__dt'] = _parseDateTime(e['created_at']);
+                  }
+                } else {
+                  releaseRows.add({
+                    '__dt': _parseDateTime(e['created_at']),
+                    '__matchKey': key,
+                    'os': e['os']?.toString() ?? '',
                     're_liberacao': '',
+                    're_finalizacao': e['re_preparador']?.toString() ?? '',
                     'created_at': '',
-                    '__dt': null,
-                    'partnumber': e['partnumber'],
-                    'maquina': e['maquina'],
-                    'faixa_texto': e['faixa_texto'],
+                    'created_at_final': createdAt,
+                    'partnumber': e['partnumber']?.toString() ?? '',
+                    'operacao': e['operacao']?.toString() ?? '',
+                    'maquina': e['maquina']?.toString() ?? '',
+                    'faixa_texto': e['faixa_texto']?.toString() ?? '',
                     'medicao': '',
-                  };
-                });
-                row['created_at_final'] = createdAt;
-                row['medicao_final'] = e['medicao'];
-                row['re_finalizacao'] = e['re_preparador'];
+                    'medicao_final': e['medicao']?.toString() ?? '',
+                    'idx_medida': e['idx_medida']?.toString() ?? '',
+                    'titulo': e['titulo']?.toString() ?? '',
+                  });
+                }
               }
             }
-            rows.addAll(combined.values);
+            for (final row in releaseRows) {
+              row.remove('__matchKey');
+            }
+            rows.addAll(releaseRows);
           } else {
             final list = data[section];
             if (list is List) {
