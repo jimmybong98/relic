@@ -74,6 +74,7 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
   }
 
   void setPartNumber(String value) {
+
     if (_isActive == false) return;
     final trimmed = value.trim();
     if (trimmed == state.partNumber) return;
@@ -89,6 +90,7 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
 
   void setCategoria(String? categoria) {
     if (_isActive == false) return;
+
     if (categoria == state.categoria) return;
     state = state.copyWith(
       categoria: categoria,
