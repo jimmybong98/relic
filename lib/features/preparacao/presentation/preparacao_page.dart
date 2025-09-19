@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 import 'package:admin/features/preparacao/data/models.dart';
 import 'package:admin/features/operador/data/repository_provider.dart';
+import 'package:admin/features/operador/presentation/operador_page.dart';
 import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import 'package:admin/widgets/window_bar.dart';
@@ -145,11 +146,13 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   void initState() {
     super.initState();
     final shared = ref.read(sharedSearchFormProvider);
-    _osCtrl.text = shared.os;
-    _partCtrl.text = shared.partNumber;
-    _opCtrl.text = shared.operacao;
-    _categoriaSel = shared.categoria;
-    _maquinaSel = shared.maquina;
+    if (shared.isActive) {
+      _osCtrl.text = shared.os;
+      _partCtrl.text = shared.partNumber;
+      _opCtrl.text = shared.operacao;
+      _categoriaSel = shared.categoria;
+      _maquinaSel = shared.maquina;
+    }
 
     _osSyncListener = () {
       ref.read(sharedSearchFormProvider.notifier).setOs(_osCtrl.text);
@@ -212,6 +215,28 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
         );
       }
     }
+  }
+
+  Future<void> _abrirPaginaOperador() async {
+    final notifier = ref.read(sharedSearchFormProvider.notifier);
+    notifier.beginFlow(
+      os: _osCtrl.text,
+      partNumber: _partCtrl.text,
+      operacao: _opCtrl.text,
+      categoria: _categoriaSel,
+      maquina: _maquinaSel,
+    );
+
+    if (mounted) {
+      FocusScope.of(context).unfocus();
+    }
+
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(MaterialPageRoute(builder: (_) => const OperadorPage()));
   }
 
   @override
@@ -347,23 +372,19 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
         );
         ref.read(medidasPreparadorControllerProvider.notifier).resetSelecoes();
         if (liberada) {
-          await Future.delayed(const Duration(seconds: 1));
-          if (mounted) Navigator.of(context).pop();
+          await _abrirPaginaOperador();
         }
       } else if (resp.statusCode == 409) {
         final data = jsonDecode(resp.body);
         final liberada = (data['code'] ?? '') == 'ja_liberada';
-        if (liberada) {
-          setState(() => _osLiberada = true);
-        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Falha ao registrar: ${data['error'] ?? resp.body}'),
           ),
         );
         if (liberada) {
-          await Future.delayed(const Duration(seconds: 1));
-          if (mounted) Navigator.of(context).pop();
+          setState(() => _osLiberada = true);
+          await _abrirPaginaOperador();
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

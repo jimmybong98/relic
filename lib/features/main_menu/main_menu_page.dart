@@ -12,7 +12,7 @@ import '../operador/presentation/operador_page.dart';
 import '../login/login_page.dart';
 import '../../services/auth_service.dart';
 import '../finalizar_os/presentation/finalizar_os_page.dart';
-
+import '../shared/providers/search_flow_form_provider.dart';
 
 class MainMenuPage extends ConsumerStatefulWidget {
   const MainMenuPage({super.key});
@@ -34,7 +34,11 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
   Timer? _timer;
   static const _logos = [
     _LogoConfig(asset: 'assets/images/Relictt.png', width: 250, height: 110),
-    _LogoConfig(asset: 'assets/images/logotuptech1.png', width: 250 , height: 110),
+    _LogoConfig(
+      asset: 'assets/images/logotuptech1.png',
+      width: 250,
+      height: 110,
+    ),
   ];
 
   @override
@@ -54,6 +58,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
   @override
   Widget build(BuildContext context) {
     void open(BuildContext context, Widget page) {
+      ref.read(sharedSearchFormProvider.notifier).clear();
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
     }
 
@@ -98,7 +103,8 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                       children: [
                         _MenuButton(
                           image: 'assets/icons/FOR007.svg',
-                          onPressed: () => open(context, const PreparacaoPage()),
+                          onPressed: () =>
+                              open(context, const PreparacaoPage()),
                         ),
                         _MenuButton(
                           image: 'assets/icons/Amostragem.svg',
@@ -106,7 +112,8 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                         ),
                         _MenuButton(
                           image: 'assets/icons/FOR008.svg',
-                          onPressed: () => open(context, const FinalizarOsPage()),
+                          onPressed: () =>
+                              open(context, const FinalizarOsPage()),
                         ),
                         _MenuButton(
                           image: 'assets/icons/Dashboard.svg',

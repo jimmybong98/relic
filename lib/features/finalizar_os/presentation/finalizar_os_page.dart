@@ -145,11 +145,13 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
   void initState() {
     super.initState();
     final shared = ref.read(sharedSearchFormProvider);
-    _osCtrl.text = shared.os;
-    _partCtrl.text = shared.partNumber;
-    _opCtrl.text = shared.operacao;
-    _categoriaSel = shared.categoria;
-    _maquinaSel = shared.maquina;
+    if (shared.isActive) {
+      _osCtrl.text = shared.os;
+      _partCtrl.text = shared.partNumber;
+      _opCtrl.text = shared.operacao;
+      _categoriaSel = shared.categoria;
+      _maquinaSel = shared.maquina;
+    }
 
     _osSyncListener = () {
       ref.read(sharedSearchFormProvider.notifier).setOs(_osCtrl.text);
@@ -353,10 +355,12 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
           const SnackBar(content: Text('OS finalizada com sucesso!')),
         );
         ref.read(medidasFinalizadorControllerProvider.notifier).resetSelecoes();
+        ref.read(sharedSearchFormProvider.notifier).clear();
       } else if (resp.statusCode == 409) {
         final data = jsonDecode(resp.body);
         if ((data['code'] ?? '') == 'ja_finalizada') {
           setState(() => _osFinalizada = true);
+          ref.read(sharedSearchFormProvider.notifier).clear();
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

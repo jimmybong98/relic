@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 import '../../preparacao/data/models.dart';
 import '../data/repository_provider.dart';
+import 'package:admin/features/finalizar_os/presentation/finalizar_os_page.dart';
 import 'package:admin/features/operador/presentation/troca_ferramenta_page.dart';
 import 'package:admin/features/operador/presentation/widgets/measurement_tile.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
@@ -124,11 +125,13 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
   void initState() {
     super.initState();
     final shared = ref.read(sharedSearchFormProvider);
-    _osCtrl.text = shared.os;
-    _partCtrl.text = shared.partNumber;
-    _opCtrl.text = shared.operacao;
-    _categoriaSel = shared.categoria;
-    _maquinaSel = shared.maquina;
+    if (shared.isActive) {
+      _osCtrl.text = shared.os;
+      _partCtrl.text = shared.partNumber;
+      _opCtrl.text = shared.operacao;
+      _categoriaSel = shared.categoria;
+      _maquinaSel = shared.maquina;
+    }
 
     _osSyncListener = () {
       ref.read(sharedSearchFormProvider.notifier).setOs(_osCtrl.text);
@@ -508,6 +511,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Produção encerrada.')));
+        await _abrirPaginaFinalizacaoOs();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falha: ${resp.statusCode} ${resp.body}')),
@@ -542,6 +546,28 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     if (confirma == true) {
       await _encerrarProducao();
     }
+  }
+
+  Future<void> _abrirPaginaFinalizacaoOs() async {
+    final notifier = ref.read(sharedSearchFormProvider.notifier);
+    notifier.beginFlow(
+      os: _osCtrl.text,
+      partNumber: _partCtrl.text,
+      operacao: _opCtrl.text,
+      categoria: _categoriaSel,
+      maquina: _maquinaSel,
+    );
+
+    if (mounted) {
+      FocusScope.of(context).unfocus();
+    }
+
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(MaterialPageRoute(builder: (_) => const FinalizarOsPage()));
   }
 
   @override
