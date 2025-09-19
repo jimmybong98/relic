@@ -383,6 +383,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     return Scaffold(
       appBar: WindowBar(
         title: 'Área do Operador',
+        titleSvgAsset: 'assets/icons/Amostragem.svg',
         showMenu: true,
         actions: [
           Padding(
