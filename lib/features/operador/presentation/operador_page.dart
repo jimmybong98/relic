@@ -461,7 +461,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                             ],
                             decoration: const InputDecoration(
                               labelText:
-                                  'R.E. do Preparador', // ajuste o texto se for Operador
+                                  'R.E. do Operador', // ajuste o texto se for Operador
                               border: OutlineInputBorder(),
                             ),
                             validator: (v) {
