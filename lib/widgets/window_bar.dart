@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:admin/utils/platform_utils.dart';
 import 'package:admin/widgets/profile_button.dart';
@@ -8,12 +9,14 @@ class WindowBar extends StatefulWidget implements PreferredSizeWidget {
   const WindowBar({
     super.key,
     this.title,
+    this.titleSvgAsset,
     this.actions,
     this.showMenu = false,
     this.showProfile = true,
   });
 
   final String? title;
+  final String? titleSvgAsset;
   final List<Widget>? actions;
   final bool showMenu;
   final bool showProfile;
@@ -47,7 +50,7 @@ class _WindowBarState extends State<WindowBar> {
     if (!isDesktop) {
       return AppBar(
         toolbarHeight: widget.preferredSize.height,
-        title: widget.title != null ? Text(widget.title!) : null,
+        title: widget.title != null ? _buildTitle(context) : null,
         actions: [
           if (widget.actions != null) ...widget.actions!,
           if (widget.showProfile) const ProfileButton(),
@@ -82,8 +85,8 @@ class _WindowBarState extends State<WindowBar> {
             if (widget.title != null)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  widget.title!,
+                child: _buildTitle(
+                  context,
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
@@ -113,6 +116,24 @@ class _WindowBarState extends State<WindowBar> {
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
       onPressed: onPressed,
+    );
+  }
+
+  Widget _buildTitle(BuildContext context, {TextStyle? style}) {
+    final textWidget = Text(widget.title!, style: style);
+
+    if (widget.titleSvgAsset == null) {
+      return textWidget;
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SvgPicture.asset(widget.titleSvgAsset!, height: 20, width: 20),
+        const SizedBox(width: 8),
+        textWidget,
+      ],
     );
   }
 }
