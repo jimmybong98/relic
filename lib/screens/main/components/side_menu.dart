@@ -16,6 +16,7 @@ import 'package:admin/features/login/login_page.dart';
 import 'package:admin/features/users/users_page.dart';
 import 'package:admin/services/auth_service.dart';
 import 'package:admin/screens/main/main_screen.dart';
+import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
 
 enum SideMenuSection { mainMenu, dashboard, preparador, operador, finalizar }
 
@@ -24,18 +25,20 @@ class SideMenu extends ConsumerWidget {
 
   final SideMenuSection current;
 
-  void _navigate(BuildContext context, Widget page) {
+  void _navigate(BuildContext context, WidgetRef ref, Widget page) {
     final navigator = Navigator.of(context, rootNavigator: true);
     navigator.pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(sharedSearchFormProvider.notifier).clear();
       navigator.push(MaterialPageRoute(builder: (_) => page));
     });
   }
 
-  void _goHome(BuildContext context) {
+  void _goHome(BuildContext context, WidgetRef ref) {
     final navigator = Navigator.of(context, rootNavigator: true);
     navigator.pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(sharedSearchFormProvider.notifier).clear();
       navigator.popUntil((route) => route.isFirst);
     });
   }
@@ -46,7 +49,7 @@ class SideMenu extends ConsumerWidget {
       DrawerListTile(
         title: 'Menu Principal',
         svgSrc: 'assets/icons/menu_dashboard.svg',
-        press: () => _goHome(context),
+        press: () => _goHome(context, ref),
       ),
     ];
 
@@ -55,17 +58,18 @@ class SideMenu extends ConsumerWidget {
         DrawerListTile(
           title: 'Exportar relatórios',
           svgSrc: 'assets/icons/menu_doc.svg',
-          press: () => _navigate(context, const ExportRelatoriosPage()),
+          press: () => _navigate(context, ref, const ExportRelatoriosPage()),
         ),
         DrawerListTile(
           title: 'Visualizar relatórios',
           svgSrc: 'assets/icons/menu_doc.svg',
-          press: () => _navigate(context, const VisualizarRelatoriosPage()),
+          press: () =>
+              _navigate(context, ref, const VisualizarRelatoriosPage()),
         ),
         DrawerListTile(
           title: 'Tempo por OS',
           svgSrc: 'assets/icons/menu_doc.svg',
-          press: () => _navigate(context, const TempoOsPage()),
+          press: () => _navigate(context, ref, const TempoOsPage()),
         ),
       ]);
     }
@@ -76,22 +80,23 @@ class SideMenu extends ConsumerWidget {
           DrawerListTile(
             title: 'Cadastro/Edição de itens',
             svgSrc: 'assets/icons/menu_store.svg',
-            press: () => _navigate(context, const CadastroItensPage()),
+            press: () => _navigate(context, ref, const CadastroItensPage()),
           ),
           DrawerListTile(
             title: 'Cadastro de Preparadores',
             svgSrc: 'assets/icons/menu_profile.svg',
-            press: () => _navigate(context, const CadastroPreparadoresPage()),
+            press: () =>
+                _navigate(context, ref, const CadastroPreparadoresPage()),
           ),
           DrawerListTile(
             title: 'Cadastro de Máquinas',
             svgSrc: 'assets/icons/menu_setting.svg',
-            press: () => _navigate(context, CadastroMaquinasPage()),
+            press: () => _navigate(context, ref, CadastroMaquinasPage()),
           ),
           DrawerListTile(
             title: 'Gerenciar Acessos',
             svgSrc: 'assets/icons/menu_profile.svg',
-            press: () => _navigate(context, const UsersPage()),
+            press: () => _navigate(context, ref, const UsersPage()),
           ),
         ]);
         break;
@@ -100,12 +105,12 @@ class SideMenu extends ConsumerWidget {
           DrawerListTile(
             title: 'Operador',
             svgSrc: 'assets/icons/menu_profile.svg',
-            press: () => _navigate(context, const OperadorPage()),
+            press: () => _navigate(context, ref, const OperadorPage()),
           ),
           DrawerListTile(
             title: 'Finalizar OS',
             svgSrc: 'assets/icons/menu_doc.svg',
-            press: () => _navigate(context, const FinalizarOsPage()),
+            press: () => _navigate(context, ref, const FinalizarOsPage()),
           ),
         ]);
         break;
@@ -114,12 +119,12 @@ class SideMenu extends ConsumerWidget {
           DrawerListTile(
             title: 'Preparador',
             svgSrc: 'assets/icons/menu_setting.svg',
-            press: () => _navigate(context, const PreparacaoPage()),
+            press: () => _navigate(context, ref, const PreparacaoPage()),
           ),
           DrawerListTile(
             title: 'Finalizar OS',
             svgSrc: 'assets/icons/menu_doc.svg',
-            press: () => _navigate(context, const FinalizarOsPage()),
+            press: () => _navigate(context, ref, const FinalizarOsPage()),
           ),
         ]);
         break;
@@ -128,12 +133,12 @@ class SideMenu extends ConsumerWidget {
           DrawerListTile(
             title: 'Preparador',
             svgSrc: 'assets/icons/menu_setting.svg',
-            press: () => _navigate(context, const PreparacaoPage()),
+            press: () => _navigate(context, ref, const PreparacaoPage()),
           ),
           DrawerListTile(
             title: 'Operador',
             svgSrc: 'assets/icons/menu_profile.svg',
-            press: () => _navigate(context, const OperadorPage()),
+            press: () => _navigate(context, ref, const OperadorPage()),
           ),
         ]);
         break;
@@ -142,17 +147,17 @@ class SideMenu extends ConsumerWidget {
           DrawerListTile(
             title: 'Preparador',
             svgSrc: 'assets/icons/menu_setting.svg',
-            press: () => _navigate(context, const PreparacaoPage()),
+            press: () => _navigate(context, ref, const PreparacaoPage()),
           ),
           DrawerListTile(
             title: 'Operador',
             svgSrc: 'assets/icons/menu_profile.svg',
-            press: () => _navigate(context, const OperadorPage()),
+            press: () => _navigate(context, ref, const OperadorPage()),
           ),
           DrawerListTile(
             title: 'Finalizar OS',
             svgSrc: 'assets/icons/menu_doc.svg',
-            press: () => _navigate(context, const FinalizarOsPage()),
+            press: () => _navigate(context, ref, const FinalizarOsPage()),
           ),
           DrawerListTile(
             title: 'Supervisão',
@@ -174,7 +179,7 @@ class SideMenu extends ConsumerWidget {
                 );
                 return;
               }
-              _navigate(context, MainScreen());
+              _navigate(context, ref, MainScreen());
             },
           ),
         ]);
@@ -187,8 +192,7 @@ class SideMenu extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 10),
             alignment: Alignment.center,
             child: SizedBox(
-              width: 150
-              ,
+              width: 150,
               height: 75,
               child: SvgPicture.asset(
                 'assets/icons/Reliclimpo.svg',

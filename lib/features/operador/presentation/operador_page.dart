@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 import '../../preparacao/data/models.dart';
 import '../data/repository_provider.dart';
+import 'package:admin/features/finalizar_os/presentation/finalizar_os_page.dart';
 import 'package:admin/features/operador/presentation/troca_ferramenta_page.dart';
 import 'package:admin/features/operador/presentation/widgets/measurement_tile.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
@@ -16,6 +17,7 @@ import 'package:admin/widgets/window_bar.dart';
 import 'package:admin/utils/string_utils.dart';
 import 'package:admin/services/machine_service.dart';
 import 'package:admin/models/machine.dart';
+import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
 
 /// >>>>> Ajuste para o endereço/porta do seu Flask <<<<<
 const String kBaseUrl = 'http://192.168.0.241:5005';
@@ -115,9 +117,35 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
 
   bool _registrando = false;
 
+  late final VoidCallback _osSyncListener;
+  late final VoidCallback _partSyncListener;
+  late final VoidCallback _opSyncListener;
+
   @override
   void initState() {
     super.initState();
+    final shared = ref.read(sharedSearchFormProvider);
+    if (shared.isActive) {
+      _osCtrl.text = shared.os;
+      _partCtrl.text = shared.partNumber;
+      _opCtrl.text = shared.operacao;
+      _categoriaSel = shared.categoria;
+      _maquinaSel = shared.maquina;
+    }
+
+    _osSyncListener = () {
+      ref.read(sharedSearchFormProvider.notifier).setOs(_osCtrl.text);
+    };
+    _partSyncListener = () {
+      ref.read(sharedSearchFormProvider.notifier).setPartNumber(_partCtrl.text);
+    };
+    _opSyncListener = () {
+      ref.read(sharedSearchFormProvider.notifier).setOperacao(_opCtrl.text);
+    };
+
+    _osCtrl.addListener(_osSyncListener);
+    _partCtrl.addListener(_partSyncListener);
+    _opCtrl.addListener(_opSyncListener);
     _carregarMaquinas();
   }
 
@@ -126,10 +154,33 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       final list = await MachineService().fetchMaquinas();
       if (mounted) {
         setState(() {
-          _maquinas.addAll(list);
-          _categorias.addAll(
-            _maquinas.map((e) => e.categoria).toSet().toList()..sort(),
-          );
+          _maquinas
+            ..clear()
+            ..addAll(list);
+          _categorias
+            ..clear()
+            ..addAll(
+              _maquinas.map((e) => e.categoria).toSet().toList()..sort(),
+            );
+          final notifier = ref.read(sharedSearchFormProvider.notifier);
+          final categoriaAtual = _categoriaSel;
+          if (categoriaAtual != null && !_categorias.contains(categoriaAtual)) {
+            _categoriaSel = null;
+            notifier.setCategoria(null);
+          }
+
+          if (_categoriaSel != null) {
+            final possuiMaquina = _maquinas.any(
+              (m) => m.categoria == _categoriaSel && m.codigo == _maquinaSel,
+            );
+            if (!possuiMaquina && _maquinaSel != null) {
+              _maquinaSel = null;
+              notifier.setMaquina(null);
+            }
+          } else if (_maquinaSel != null) {
+            _maquinaSel = null;
+            notifier.setMaquina(null);
+          }
         });
       }
     } catch (e) {
@@ -141,8 +192,20 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
+  bool _maquinaSelecionadaValida() {
+    final categoria = _categoriaSel;
+    final maquina = _maquinaSel;
+    if (categoria == null || maquina == null) return false;
+    return _maquinas.any(
+      (m) => m.categoria == categoria && m.codigo == maquina,
+    );
+  }
+
   @override
   void dispose() {
+    _osCtrl.removeListener(_osSyncListener);
+    _partCtrl.removeListener(_partSyncListener);
+    _opCtrl.removeListener(_opSyncListener);
     _reCtrl.dispose();
     _osCtrl.dispose();
     _partCtrl.dispose();
@@ -156,7 +219,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     // Valida RE/OS/Máquina
     if (_reCtrl.text.trim().isEmpty ||
         _osCtrl.text.trim().isEmpty ||
-        (_maquinaSel ?? '').isEmpty) {
+        !_maquinaSelecionadaValida()) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -387,13 +450,14 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       final os = _osCtrl.text.trim();
       final part = _partCtrl.text.trim();
       final operacao = _opCtrl.text.trim();
-      final maquina = (_maquinaSel ?? '').trim();
+      final maquinaValida = _maquinaSelecionadaValida();
+      final maquina = maquinaValida ? (_maquinaSel ?? '').trim() : '';
 
       if (re.isEmpty ||
           os.isEmpty ||
           part.isEmpty ||
           operacao.isEmpty ||
-          maquina.isEmpty) {
+          !maquinaValida) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -447,6 +511,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Produção encerrada.')));
+        await _abrirPaginaFinalizacaoOs();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falha: ${resp.statusCode} ${resp.body}')),
@@ -483,13 +548,47 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
+  Future<void> _abrirPaginaFinalizacaoOs() async {
+    final notifier = ref.read(sharedSearchFormProvider.notifier);
+    notifier.beginFlow(
+      os: _osCtrl.text,
+      partNumber: _partCtrl.text,
+      operacao: _opCtrl.text,
+      categoria: _categoriaSel,
+      maquina: _maquinaSel,
+    );
+
+    if (mounted) {
+      FocusScope.of(context).unfocus();
+    }
+
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(MaterialPageRoute(builder: (_) => const FinalizarOsPage()));
+  }
+
   @override
   Widget build(BuildContext context) {
     final medidasAsync = ref.watch(medidasOperadorControllerProvider);
     final medidas = medidasAsync.value ?? [];
     final reOk = _reCtrl.text.trim().isNotEmpty;
     final osOk = _osCtrl.text.trim().isNotEmpty;
-    final maquinaOk = (_maquinaSel ?? '').isNotEmpty;
+    final categoriaValue =
+        (_categoriaSel != null && _categorias.contains(_categoriaSel))
+        ? _categoriaSel
+        : null;
+    final maquinasDisponiveis = _maquinas
+        .where((m) => m.categoria == categoriaValue)
+        .toList();
+    final maquinaValue =
+        (_maquinaSel != null &&
+            maquinasDisponiveis.any((m) => m.codigo == _maquinaSel))
+        ? _maquinaSel
+        : null;
+    final maquinaOk = (maquinaValue ?? '').isNotEmpty;
 
     // todas respondidas?
     final todasRespondidas =
@@ -587,7 +686,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _categoriaSel,
+                            value: categoriaValue,
                             decoration: const InputDecoration(
                               labelText: 'Categoria',
                               border: OutlineInputBorder(),
@@ -600,10 +699,15 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                   ),
                                 )
                                 .toList(),
-                            onChanged: (v) => setState(() {
-                              _categoriaSel = v;
-                              _maquinaSel = null;
-                            }),
+                            onChanged: (v) {
+                              ref
+                                  .read(sharedSearchFormProvider.notifier)
+                                  .setCategoria(v);
+                              setState(() {
+                                _categoriaSel = v;
+                                _maquinaSel = null;
+                              });
+                            },
                             validator: (v) =>
                                 (v == null || v.isEmpty) ? 'Obrigatório' : null,
                           ),
@@ -611,13 +715,12 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _maquinaSel,
+                            value: maquinaValue,
                             decoration: const InputDecoration(
                               labelText: 'Código da máquina',
                               border: OutlineInputBorder(),
                             ),
-                            items: _maquinas
-                                .where((m) => m.categoria == _categoriaSel)
+                            items: maquinasDisponiveis
                                 .map(
                                   (m) => DropdownMenuItem(
                                     value: m.codigo,
@@ -625,7 +728,12 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                   ),
                                 )
                                 .toList(),
-                            onChanged: (v) => setState(() => _maquinaSel = v),
+                            onChanged: (v) {
+                              ref
+                                  .read(sharedSearchFormProvider.notifier)
+                                  .setMaquina(v);
+                              setState(() => _maquinaSel = v);
+                            },
                             validator: (v) =>
                                 (v == null || v.isEmpty) ? 'Obrigatório' : null,
                           ),
