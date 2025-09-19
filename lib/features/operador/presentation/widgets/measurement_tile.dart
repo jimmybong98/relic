@@ -22,10 +22,12 @@ class MeasurementTile extends StatefulWidget {
 
 class _MeasurementTileState extends State<MeasurementTile> {
   TextEditingController? _manualCtrl;
+  String? _roscaSelection;
 
   @override
   void initState() {
     super.initState();
+    _roscaSelection = widget.item.medicao;
     if (widget.manualEntry) {
       _manualCtrl = TextEditingController(text: widget.item.medicao ?? '');
     }
@@ -48,6 +50,10 @@ class _MeasurementTileState extends State<MeasurementTile> {
     } else if (_manualCtrl != null) {
       _manualCtrl!.dispose();
       _manualCtrl = null;
+    }
+
+    if (oldWidget.item.medicao != widget.item.medicao) {
+      _roscaSelection = widget.item.medicao;
     }
   }
 
@@ -124,6 +130,21 @@ class _MeasurementTileState extends State<MeasurementTile> {
     final inst = _norm(item.instrumento);
     return _containsAny(t, ['tamp', 'tampao', 'tampão', 'tampa']) ||
         _containsAny(inst, ['tamp', 'tampao', 'tampão', 'tampa']);
+  }
+
+  bool _stringHasRoscaPattern(String? value) {
+    if (value == null || value.trim().isEmpty) return false;
+    final normalized = _nfd(value).toLowerCase();
+    if (normalized.contains('rosca')) return true;
+    final upper = value.toUpperCase();
+    return RegExp(r'\bM\s*\d').hasMatch(upper);
+  }
+
+  bool _isRosca(MedidaItem item) {
+    return _stringHasRoscaPattern(item.titulo) ||
+        _stringHasRoscaPattern(item.instrumento) ||
+        _stringHasRoscaPattern(item.observacao) ||
+        _stringHasRoscaPattern(item.faixaTexto);
   }
 
   Set<String> _partsFromMedicao(String? medicao) => (medicao ?? '')
@@ -259,19 +280,44 @@ class _MeasurementTileState extends State<MeasurementTile> {
     }
   }
 
+  String _roscaHelper(StatusMedida st) {
+    switch (st) {
+      case StatusMedida.ok:
+        return 'Resultado aprovado';
+      case StatusMedida.reprovadaAbaixo:
+      case StatusMedida.reprovadaAcima:
+        return 'Resultado reprovado';
+      case StatusMedida.alertaAbaixo:
+      case StatusMedida.alertaAcima:
+        return 'Resultado fora da tolerância';
+      case StatusMedida.pendente:
+        return 'Selecione o resultado';
+    }
+  }
+
   Widget _buildManualEntry(BuildContext context) {
     final item = widget.item;
+    final isRosca = _isRosca(item);
     final ctrl = _manualCtrl ??= TextEditingController(
       text: item.medicao ?? '',
     );
-    final valor = _parseManualValue(ctrl.text);
-    final status = item.avaliarStatus(valor);
+    final roscaSelection = (_roscaSelection ?? item.medicao ?? '')
+        .trim()
+        .toLowerCase();
+    final valor = isRosca ? null : _parseManualValue(ctrl.text);
+    final status = isRosca
+        ? (roscaSelection == 'aprovado'
+              ? StatusMedida.ok
+              : roscaSelection == 'reprovado'
+              ? StatusMedida.reprovadaAcima
+              : StatusMedida.pendente)
+        : item.avaliarStatus(valor);
     final theme = Theme.of(context);
     final subtitulo = _subtitleFor(item);
     final unidadeLabel = (item.unidade ?? '').isNotEmpty
         ? ' (${item.unidade})'
         : '';
-    final helper = _statusHelper(status);
+    final helper = isRosca ? _roscaHelper(status) : _statusHelper(status);
     final helperColor = _statusColor(status);
 
     return Card(
@@ -319,25 +365,63 @@ class _MeasurementTileState extends State<MeasurementTile> {
               ),
             ],
             const SizedBox(height: 10),
-            TextField(
-              controller: ctrl,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-                signed: false,
+            if (isRosca) ...[
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _pill(
+                    text: 'Aprovado',
+                    bg: Colors.green.shade200,
+                    border: Colors.green.shade600,
+                    fg: Colors.green.shade900,
+                    selected: roscaSelection == 'aprovado',
+                    onTap: () {
+                      FocusScope.of(context).unfocus();
+                      setState(() {
+                        _roscaSelection = 'Aprovado';
+                      });
+                      widget.onSelect(StatusMedida.ok, 'Aprovado');
+                    },
+                  ),
+                  _pill(
+                    text: 'Reprovado',
+                    bg: Colors.red.shade100,
+                    border: Colors.red.shade400,
+                    selected: roscaSelection == 'reprovado',
+                    onTap: () {
+                      FocusScope.of(context).unfocus();
+                      setState(() {
+                        _roscaSelection = 'Reprovado';
+                      });
+                      widget.onSelect(StatusMedida.reprovadaAcima, 'Reprovado');
+                    },
+                  ),
+                ],
               ),
-              decoration: InputDecoration(
-                labelText: 'Medição$unidadeLabel',
-                border: const OutlineInputBorder(),
-                helperText: helper,
-                helperStyle: TextStyle(color: helperColor),
+              const SizedBox(height: 6),
+              Text(helper, style: TextStyle(color: helperColor)),
+            ] else ...[
+              TextField(
+                controller: ctrl,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: false,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Medição$unidadeLabel',
+                  border: const OutlineInputBorder(),
+                  helperText: helper,
+                  helperStyle: TextStyle(color: helperColor),
+                ),
+                onChanged: (txt) {
+                  final v = _parseManualValue(txt);
+                  final novoStatus = item.avaliarStatus(v);
+                  widget.onSelect(novoStatus, txt);
+                  setState(() {});
+                },
               ),
-              onChanged: (txt) {
-                final v = _parseManualValue(txt);
-                final novoStatus = item.avaliarStatus(v);
-                widget.onSelect(novoStatus, txt);
-                setState(() {});
-              },
-            ),
+            ],
           ],
         ),
       ),

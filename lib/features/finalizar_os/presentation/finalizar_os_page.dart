@@ -15,6 +15,7 @@ import 'package:admin/utils/string_utils.dart';
 import 'package:admin/services/machine_service.dart';
 import 'package:admin/models/machine.dart';
 import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
+import 'package:admin/features/operador/presentation/widgets/measurement_tile.dart';
 
 /// Mesmo base URL usado no Operador
 const String kBaseUrl = 'http://192.168.0.241:5005';
@@ -639,14 +640,15 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final item = list[index];
-                        return _MeasurementTilePrep(
+                        return MeasurementTile(
                           index: index,
                           item: item,
-                          onChanged: (status, valor) => ref
+                          manualEntry: true,
+                          onSelect: (status, medicao) => ref
                               .read(
                                 medidasFinalizadorControllerProvider.notifier,
                               )
-                              .setStatusAndMedicao(index, status, valor),
+                              .setStatusAndMedicao(index, status, medicao),
                         );
                       },
                     );
@@ -674,169 +676,6 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MeasurementTilePrep extends StatefulWidget {
-  final int index;
-  final MedidaItem item;
-  final void Function(StatusMedida status, String valor) onChanged;
-
-  const _MeasurementTilePrep({
-    required this.index,
-    required this.item,
-    required this.onChanged,
-  });
-
-  @override
-  State<_MeasurementTilePrep> createState() => _MeasurementTilePrepState();
-}
-
-class _MeasurementTilePrepState extends State<_MeasurementTilePrep> {
-  final _ctrl = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _setTextFromParent(widget.item.medicao);
-  }
-
-  @override
-  void didUpdateWidget(covariant _MeasurementTilePrep oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // só atualiza o controller quando o valor vindo do pai REALMENTE mudou
-    if (oldWidget.item.medicao != widget.item.medicao) {
-      _setTextFromParent(widget.item.medicao);
-    }
-  }
-
-  void _setTextFromParent(String? txt) {
-    final newText = (txt ?? '');
-    if (newText == _ctrl.text)
-      return; // evita sobrescrever e mexer no cursor à toa
-    _ctrl.value = TextEditingValue(
-      text: newText,
-      // cursor no final do texto (sem selecionar tudo)
-      selection: TextSelection.collapsed(offset: newText.length),
-      composing: TextRange.empty,
-    );
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  double? _toDouble(String? s) {
-    if (s == null || s.trim().isEmpty) return null;
-    return double.tryParse(s.replaceAll(',', '.'));
-  }
-
-  StatusMedida _classifica(double? v, double? min, double? max) {
-    if (v == null) return StatusMedida.pendente;
-    if (min != null && v < min) return StatusMedida.reprovadaAbaixo;
-    if (max != null && v > max) return StatusMedida.reprovadaAcima;
-    return StatusMedida.ok;
-  }
-
-  Color _statusColor(StatusMedida st) {
-    switch (st) {
-      case StatusMedida.ok:
-        return Colors.green.shade600;
-      case StatusMedida.reprovadaAbaixo:
-        return Colors.red.shade400;
-      case StatusMedida.reprovadaAcima:
-        return Colors.red.shade400;
-      case StatusMedida.alertaAbaixo:
-      case StatusMedida.alertaAcima:
-        return Colors.amber.shade700;
-      case StatusMedida.pendente:
-        return Colors.grey;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final m = widget.item;
-
-    String subtitulo = m.faixaTexto;
-    if (subtitulo.isEmpty && (m.minimo != null || m.maximo != null)) {
-      final minStr = m.minimo?.toStringAsFixed(2) ?? '';
-      final maxStr = m.maximo?.toStringAsFixed(2) ?? '';
-      final uni = (m.unidade ?? '').isNotEmpty ? ' ${m.unidade}' : '';
-      if (minStr.isNotEmpty && maxStr.isNotEmpty) {
-        subtitulo = '$minStr – $maxStr$uni';
-      } else if (minStr.isNotEmpty) {
-        subtitulo = '≥ $minStr$uni';
-      } else if (maxStr.isNotEmpty) {
-        subtitulo = '≤ $maxStr$uni';
-      }
-    }
-
-    final vNum = _toDouble(_ctrl.text);
-    final st = _classifica(vNum, m.minimo, m.maximo);
-
-    return Card(
-      elevation: 0.5,
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: _statusColor(st),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    m.titulo.isEmpty ? '(sem título)' : m.titulo,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-              ],
-            ),
-            if (subtitulo.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(subtitulo, style: Theme.of(context).textTheme.bodyMedium),
-            ],
-            const SizedBox(height: 10),
-            TextField(
-              controller: _ctrl,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-                signed: false,
-              ),
-              decoration: InputDecoration(
-                labelText: 'Medição (${m.unidade ?? ''})',
-                border: const OutlineInputBorder(),
-                helperText: st == StatusMedida.ok
-                    ? 'Dentro da tolerância'
-                    : st == StatusMedida.pendente
-                    ? 'Preencha o valor para classificar'
-                    : (st == StatusMedida.reprovadaAbaixo
-                          ? 'Abaixo do mínimo'
-                          : 'Acima do máximo'),
-                helperStyle: TextStyle(color: _statusColor(st)),
-              ),
-              onChanged: (txt) {
-                final v = _toDouble(txt);
-                final novoStatus = _classifica(v, m.minimo, m.maximo);
-                widget.onChanged(novoStatus, txt);
-                setState(() {});
-              },
-            ),
-          ],
         ),
       ),
     );
