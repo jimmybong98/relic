@@ -83,9 +83,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           dt.day,
           dt.hour,
           dt.minute,
+          dt.second,
         );
         if (lastGroup == null || normalized != lastGroup) {
-          final label = DateFormat('dd/MM/yyyy HH:mm').format(dt);
+          final label = DateFormat('dd/MM/yyyy HH:mm:ss').format(dt);
           result.add({
             '__isGroup': true,
             '__dt': normalized,
