@@ -169,23 +169,37 @@ class _MeasurementTileState extends State<MeasurementTile> {
     Color? fg,
     VoidCallback? onTap,
   }) {
-    final fgColor = fg ?? _fgOn(bg);
+    final baseFg = fg ?? _fgOn(bg);
+    final effectiveBg = selected ? border : bg;
+    final effectiveBorder = selected ? border : border.withValues(alpha: 0.7);
+    final effectiveFg = selected
+        ? (fg != null ? Colors.white : _fgOn(effectiveBg))
+        : baseFg;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: bg,
+          color: effectiveBg,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? border.withValues(alpha: 0.9) : border,
-            width: selected ? 2 : 1,
-          ),
+          border: Border.all(color: effectiveBorder, width: selected ? 2 : 1),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: border.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           text,
-          style: TextStyle(fontWeight: FontWeight.w600, color: fgColor),
+          style: TextStyle(
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+            color: effectiveFg,
+          ),
         ),
       ),
     );
