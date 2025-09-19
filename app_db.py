@@ -755,6 +755,39 @@ def _medidas_operador_db(part: str, op: str):
 
 
 # ========= HELPERS DE NEGÓCIO =========
+def _outra_os_em_andamento(
+    conn, os_num: str, maquina: str
+) -> Tuple[bool, Optional[str]]:
+    os_num = _norm(os_num)
+    maquina = _norm(maquina)
+    if not os_num or not maquina:
+        return (False, None)
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT DISTINCT os
+              FROM preparador_liberacao
+             WHERE maquina=%s
+               AND os<>%s
+            """,
+            (maquina, os_num),
+        )
+        outros = [row.get("os") for row in cur.fetchall() if row.get("os")]
+
+    for outro in outros:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT status FROM ordem_servico WHERE os=%s", (outro,)
+            )
+            st_row = cur.fetchone()
+        status = (st_row.get("status") or "").strip().lower() if st_row else ""
+        if status != "encerrada":
+            return (True, outro)
+
+    return (False, None)
+
+
 def _maquina_liberada(
         conn, os_num: str, part: str, op: str, maquina: str
 ) -> Tuple[bool, str, str]:
@@ -1053,6 +1086,8 @@ def resultado_preparador():
     part = _norm_part(payload.get("partnumber"))
     op = _norm_op(payload.get("operacao"))
     maquina = _norm(payload.get("maquina"))
+    contexto = _norm(payload.get("contexto"))
+    contexto_tipo = contexto.lower()
     itens = payload.get("itens", [])
 
     if not os_num or not re_prep or not part or not op or not maquina:
@@ -1108,8 +1143,26 @@ def resultado_preparador():
                         409,
                     )
 
+            conflito_os, os_bloqueadora = _outra_os_em_andamento(
+                c, os_num, maquina
+            )
+            if conflito_os and os_bloqueadora:
+                return (
+                    jsonify(
+                        {
+                            "code": "maquina_ocupada",
+                            "error": (
+                                f"Máquina {maquina} já está liberada para a OS "
+                                f"{os_bloqueadora}. Finalize essa OS antes de registrar uma nova."
+                            ),
+                            "os_em_andamento": os_bloqueadora,
+                        }
+                    ),
+                    409,
+                )
+
             ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op, maquina)
-            if ok:
+            if ok and contexto_tipo != "troca_ferramenta":
                 return (
                     jsonify(
                         {
@@ -1136,7 +1189,7 @@ def resultado_preparador():
                     (os_num, part, maquina),
                 )
                 row_os = cur.fetchone()
-                if row_os:
+                if row_os and contexto_tipo != "troca_ferramenta":
                     return (
                         jsonify(
                             {
@@ -1154,6 +1207,8 @@ def resultado_preparador():
                     "INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,)
                 )
 
+                amostragem_id = None
+
                 # cabeçalho
                 cur.execute(
                     """
@@ -1165,6 +1220,7 @@ def resultado_preparador():
                 registro_id = cur.lastrowid
 
                 # itens
+                parsed_items = []
                 all_status = []
                 for it in itens:
                     idx = int(it.get("indice", 0))
@@ -1173,9 +1229,37 @@ def resultado_preparador():
                     minimo = it.get("min")
                     maximo = it.get("max")
                     unidade = _norm(it.get("unidade"))
-                    medicao = _norm(it.get("medicao")).replace(",", ".")
-                    status = _norm(it.get("status")).lower()
+                    medicao_txt = _norm(it.get("medicao"))
+                    medicao_sanitizada = medicao_txt.replace(",", ".")
+                    status_original = _norm(it.get("status"))
+                    status_lower = status_original.lower()
                     observacao = _norm(it.get("observacao"))
+                    periodicidade = _norm(it.get("periodicidade"))
+                    instrumento = _norm(it.get("instrumento"))
+                    tolerancias = it.get("tolerancias", [])
+                    if isinstance(tolerancias, (list, tuple)):
+                        tolerancias = list(tolerancias)
+                    else:
+                        tolerancias = []
+
+                    parsed = {
+                        "idx": idx,
+                        "titulo": titulo,
+                        "faixa_texto": faixa_texto,
+                        "minimo": minimo,
+                        "maximo": maximo,
+                        "unidade": unidade,
+                        "medicao_txt": medicao_txt,
+                        "medicao_sanitizada": medicao_sanitizada,
+                        "medicao_float": _to_float(medicao_sanitizada),
+                        "status_original": status_original,
+                        "status_lower": status_lower,
+                        "observacao": observacao,
+                        "periodicidade": periodicidade,
+                        "instrumento": instrumento,
+                        "tolerancias": tolerancias,
+                    }
+                    parsed_items.append(parsed)
 
                     cur.execute(
                         """
@@ -1194,12 +1278,12 @@ def resultado_preparador():
                             minimo,
                             maximo,
                             unidade,
-                            medicao,
-                            status,
+                            medicao_sanitizada,
+                            status_lower,
                             observacao,
                         ),
                     )
-                    all_status.append(status)
+                    all_status.append(status_lower)
 
                 # Consolida liberação
                 has_reprov = any(
@@ -1246,21 +1330,7 @@ def resultado_preparador():
                     "DELETE FROM preparador_liberacao_item WHERE liberacao_id=%s",
                     (liberacao_id,),
                 )
-                for it in itens:
-                    idx = int(it.get("indice", 0))
-                    titulo = _norm(it.get("titulo"))
-                    faixa_texto = _norm(it.get("faixaTexto"))
-                    minimo = it.get("min")
-                    maximo = it.get("max")
-                    unidade = _norm(it.get("unidade"))
-                    medicao_raw = _norm(it.get("medicao")).replace(",", ".")
-                    status = _norm(it.get("status")).lower()
-                    observacao = _norm(it.get("observacao"))
-                    medicao_val = None
-                    try:
-                        medicao_val = float(medicao_raw) if medicao_raw else None
-                    except Exception:
-                        medicao_val = None
+                for parsed in parsed_items:
                     cur.execute(
                         """
                         INSERT INTO preparador_liberacao_item
@@ -1272,29 +1342,79 @@ def resultado_preparador():
                         """,
                         (
                             liberacao_id,
-                            idx,
-                            titulo,
-                            faixa_texto,
-                            minimo,
-                            maximo,
-                            unidade,
-                            medicao_val,
-                            status,
-                            None,
-                            None,
-                            observacao,
+                            parsed["idx"],
+                            parsed["titulo"],
+                            parsed["faixa_texto"],
+                            parsed["minimo"],
+                            parsed["maximo"],
+                            parsed["unidade"],
+                            parsed["medicao_float"],
+                            parsed["status_lower"],
+                            parsed["periodicidade"] or None,
+                            parsed["instrumento"] or None,
+                            parsed["observacao"],
                         ),
                     )
 
+                if contexto_tipo == "troca_ferramenta":
+                    cur.execute(
+                        """
+                        INSERT INTO operador_amostragem (os, partnumber, operacao, re_operador, maquina)
+                        VALUES (%s, %s, %s, %s, %s)
+                        """,
+                        (os_num, part, op, re_prep, maquina),
+                    )
+                    amostragem_id = cur.lastrowid
+
+                    for parsed in parsed_items:
+                        tolerancias = parsed["tolerancias"]
+                        tol_txt = None
+                        if tolerancias:
+                            try:
+                                tol_txt = json.dumps(tolerancias, ensure_ascii=False)
+                            except Exception:
+                                tol_txt = None
+
+                        cur.execute(
+                            """
+                            INSERT INTO operador_amostragem_item
+                              (amostragem_id, idx_medida, titulo, instrumento, faixa_texto,
+                               minimo, maximo, unidade, periodicidade, tolerancias,
+                               escolha, status, observacao)
+                            VALUES
+                              (%s, %s, %s, %s, %s,
+                               %s, %s, %s, %s, %s,
+                               %s, %s, %s)
+                            """,
+                            (
+                                amostragem_id,
+                                parsed["idx"],
+                                parsed["titulo"],
+                                parsed["instrumento"] or None,
+                                parsed["faixa_texto"],
+                                parsed["minimo"],
+                                parsed["maximo"],
+                                parsed["unidade"],
+                                parsed["periodicidade"] or None,
+                                tol_txt,
+                                parsed["medicao_txt"],
+                                parsed["status_original"]
+                                or parsed["status_lower"],
+                                parsed["observacao"] or "Troca de ferramenta",
+                            ),
+                        )
+
             c.commit()
 
-            return jsonify(
-                {
-                    "status": "ok",
-                    "registro_id": registro_id,
-                    "status_geral": status_geral,
-                }
-            )
+            resposta = {
+                "status": "ok",
+                "registro_id": registro_id,
+                "status_geral": status_geral,
+            }
+            if amostragem_id is not None:
+                resposta["amostragem_id"] = amostragem_id
+
+            return jsonify(resposta)
 
     except Exception as e:
         return jsonify({"error": f"Falha ao inserir registro do preparador: {e}"}), 500
