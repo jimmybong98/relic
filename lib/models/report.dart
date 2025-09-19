@@ -23,6 +23,15 @@ class Report {
   /// Measurement title associated with [idxMedida].
   final String titulo;
 
+  /// Timestamp indicating when a pause ended (if applicable).
+  final String retornoAt;
+
+  /// Event type or category returned by the backend (e.g., pausa_jornada).
+  final String evento;
+
+  /// Optional reason associated with special events such as pauses.
+  final String motivo;
+
   Report({
     required this.os,
     required this.partnumber,
@@ -34,6 +43,9 @@ class Report {
     this.reOperador = '',
     this.idxMedida,
     this.titulo = '',
+    this.retornoAt = '',
+    this.evento = '',
+    this.motivo = '',
   });
 
   factory Report.fromJson(Map<String, dynamic> json) {
@@ -50,6 +62,9 @@ class Report {
           ? int.tryParse(json['idx_medida'].toString())
           : null,
       titulo: json['titulo']?.toString() ?? '',
+      retornoAt: json['retorno_at']?.toString() ?? '',
+      evento: json['evento']?.toString() ?? '',
+      motivo: json['motivo']?.toString() ?? '',
     );
   }
 

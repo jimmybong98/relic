@@ -205,11 +205,22 @@ def _ensure_schema():
                     partnumber VARCHAR(128) DEFAULT NULL,
                     operacao VARCHAR(64) DEFAULT NULL,
                     re_operador VARCHAR(64) NOT NULL,
+                    motivo VARCHAR(128) DEFAULT NULL,
                     pausa_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    retorno_at TIMESTAMP NULL DEFAULT NULL,
                     KEY idx_oj_os (os),
                     CONSTRAINT fk_oj_os FOREIGN KEY (os) REFERENCES ordem_servico(os) ON UPDATE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
+            )
+            _ensure_column(
+                c, "operador_jornada", "motivo", "VARCHAR(128) DEFAULT NULL"
+            )
+            _ensure_column(
+                c,
+                "operador_jornada",
+                "retorno_at",
+                "TIMESTAMP NULL DEFAULT NULL",
             )
             # Preparador (registro + itens)
 
@@ -1617,6 +1628,30 @@ def operador_registrar():
                             observacao,
                         ),
                     )
+
+                # Ao registrar uma nova amostragem, considera-se que o operador
+                # retornou de uma pausa (se havia uma aberta).
+                cur.execute(
+                    """
+                    UPDATE operador_jornada
+                       SET retorno_at = CURRENT_TIMESTAMP
+                     WHERE os=%s
+                       AND re_operador=%s
+                       AND retorno_at IS NULL
+                       AND (partnumber IS NULL OR partnumber = %s OR %s IS NULL)
+                       AND (operacao IS NULL OR operacao = %s OR %s IS NULL)
+                     ORDER BY pausa_at DESC
+                     LIMIT 1
+                    """,
+                    (
+                        os_num,
+                        re_op,
+                        part or None,
+                        part or None,
+                        op or None,
+                        op or None,
+                    ),
+                )
             c.commit()
 
         return jsonify(
@@ -1670,20 +1705,44 @@ def operador_fim_jornada():
     re_op = _norm(payload.get("re"))
     part = _norm_part(payload.get("partnumber"))
     op = _norm_op(payload.get("operacao"))
+    motivo = _norm(payload.get("motivo"))
     if not os_num or not re_op:
         return jsonify({"error": "Campos 'os' e 're' são obrigatórios"}), 400
+    if not motivo:
+        return jsonify({"error": "Campo 'motivo' é obrigatório"}), 400
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 cur.execute(
                     "INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,)
                 )
+                # Caso exista uma pausa aberta para este operador, encerra-a
+                # antes de registrar a nova pausa, evitando sobreposição.
                 cur.execute(
                     """
-                    INSERT INTO operador_jornada (os, partnumber, operacao, re_operador)
-                    VALUES (%s, %s, %s, %s)
+                    UPDATE operador_jornada
+                       SET retorno_at = CURRENT_TIMESTAMP
+                     WHERE os=%s
+                       AND re_operador=%s
+                       AND retorno_at IS NULL
+                       AND (partnumber IS NULL OR partnumber = %s OR %s IS NULL)
+                       AND (operacao IS NULL OR operacao = %s OR %s IS NULL)
                     """,
-                    (os_num, part or None, op or None, re_op),
+                    (
+                        os_num,
+                        re_op,
+                        part or None,
+                        part or None,
+                        op or None,
+                        op or None,
+                    ),
+                )
+                cur.execute(
+                    """
+                    INSERT INTO operador_jornada (os, partnumber, operacao, re_operador, motivo)
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    (os_num, part or None, op or None, re_op, motivo or None),
                 )
             c.commit()
         return jsonify({"status": "ok"})
@@ -1829,9 +1888,48 @@ def listar_relatorios_operador():
     os_num = _norm(request.args.get("os"))
     part = _norm_part(request.args.get("partnumber"))
     op = _norm_op(request.args.get("operacao"))
+
+    def _map_amostragem(rows):
+        mapped = []
+        for r in rows:
+            row = dict(r)
+            row.setdefault("retorno_at", None)
+            row.setdefault("motivo", "")
+            row["evento"] = "amostragem"
+            mapped.append(row)
+        return mapped
+
+    def _map_pausas(rows):
+        mapped = []
+        for r in rows:
+            mapped.append(
+                {
+                    "os": r.get("os"),
+                    "partnumber": r.get("partnumber"),
+                    "operacao": r.get("operacao"),
+                    "re_operador": r.get("re_operador"),
+                    "maquina": None,
+                    "idx_medida": None,
+                    "titulo": "Pausa de Jornada",
+                    "instrumento": "",
+                    "faixa_texto": "",
+                    "escolha": "",
+                    "status": "Pausa de jornada",
+                    "observacao": None,
+                    "created_at": r.get("pausa_at"),
+                    "retorno_at": r.get("retorno_at"),
+                    "motivo": r.get("motivo"),
+                    "evento": "pausa_jornada",
+                }
+            )
+        return mapped
+
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
+                registros = []
+                pausa_filters = []
+                pausa_params = []
                 if os_num:
                     cur.execute(
                         """
@@ -1845,6 +1943,9 @@ def listar_relatorios_operador():
                         """,
                         (os_num,),
                     )
+                    registros.extend(_map_amostragem(cur.fetchall()))
+                    pausa_filters.append("os=%s")
+                    pausa_params.append(os_num)
                 elif part and op:
                     cur.execute(
                         """
@@ -1859,6 +1960,15 @@ def listar_relatorios_operador():
                         """,
                         (part, op),
                     )
+                    registros.extend(_map_amostragem(cur.fetchall()))
+                    pausa_filters.append(
+                        "TRIM(LEADING '0' FROM TRIM(partnumber)) = %s"
+                    )
+                    pausa_params.append(part)
+                    pausa_filters.append(
+                        "TRIM(LEADING '0' FROM TRIM(operacao)) = %s"
+                    )
+                    pausa_params.append(op)
                 else:
                     cur.execute(
                         """
@@ -1876,8 +1986,24 @@ def listar_relatorios_operador():
                           LIMIT 200
                         """,
                     )
-                rows = cur.fetchall()
-        return jsonify(rows)
+                    rows = cur.fetchall()
+                    return jsonify(rows)
+
+                if pausa_filters:
+                    cur.execute(
+                        f"""
+                        SELECT os, partnumber, operacao, re_operador,
+                               motivo, pausa_at, retorno_at
+                          FROM operador_jornada
+                         WHERE {' AND '.join(pausa_filters)}
+                         ORDER BY pausa_at
+                        """,
+                        pausa_params,
+                    )
+                    registros.extend(_map_pausas(cur.fetchall()))
+
+        registros.sort(key=lambda r: r.get("created_at") or datetime.min)
+        return jsonify(_serialize(registros))
     except Exception as e:
         return (
             jsonify({"error": f"Falha ao consultar relatórios do operador: {e}"}),
@@ -1896,6 +2022,7 @@ def relatorio_os():
             with c.cursor() as cur:
                 os_data = None
                 amostragem = []
+                jornada = []
                 liberacao = []
                 finalizacao = []
                 if section in ("full", "ordem_servico"):
@@ -1916,6 +2043,17 @@ def relatorio_os():
                         (os_num,),
                     )
                     amostragem = cur.fetchall()
+                    cur.execute(
+                        """
+                        SELECT os, partnumber, operacao, re_operador,
+                               motivo, pausa_at, retorno_at
+                          FROM operador_jornada
+                         WHERE os=%s
+                         ORDER BY pausa_at
+                        """,
+                        (os_num,),
+                    )
+                    jornada = cur.fetchall()
                 if section in ("full", "liberacao"):
                     if _tables_exist(
                             cur,
@@ -1974,6 +2112,7 @@ def relatorio_os():
             {
                 "ordem_servico": _serialize(os_data) if os_data else None,
                 "amostragem": _serialize(amostragem),
+                "jornada": _serialize(jornada),
                 "liberacao": _serialize(liberacao),
                 "finalizacao": _serialize(finalizacao),
             }

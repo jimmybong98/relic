@@ -22,20 +22,83 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   String _modo = 'os';
   Future<List<Map<String, dynamic>>>? _future;
 
-  String _formatDate(dynamic value) {
-    final raw = value?.toString() ?? '';
-    if (raw.isEmpty) return '';
+  DateTime? _parseDateTime(dynamic value) {
+    final raw = value?.toString().trim();
+    if (raw == null || raw.isEmpty) return null;
     DateTime? dt = DateTime.tryParse(raw);
-    if (dt == null) {
+    if (dt != null) return dt.toLocal();
+    if (!raw.contains('T') && raw.contains(' ')) {
+      dt = DateTime.tryParse(raw.replaceFirst(' ', 'T'));
+      if (dt != null) return dt.toLocal();
+    }
+    try {
+      return DateFormat(
+        "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
+        'en_US',
+      ).parseUtc(raw).toLocal();
+    } catch (_) {}
+    for (final pattern in const [
+      'yyyy-MM-dd HH:mm:ss',
+      'yyyy-MM-ddTHH:mm:ss',
+      'dd/MM/yyyy HH:mm:ss',
+      'dd/MM/yyyy HH:mm',
+    ]) {
       try {
-        dt = DateFormat(
-          "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
-          'en_US',
-        ).parseUtc(raw);
+        return DateFormat(pattern).parse(raw).toLocal();
       } catch (_) {}
     }
-    return dt?.toLocal().toString().split('.').first ??
-        raw.replaceAll('T', ' ');
+    return null;
+  }
+
+  String _formatDate(dynamic value) {
+    final dt = _parseDateTime(value);
+    if (dt != null) {
+      return DateFormat('dd/MM/yyyy HH:mm:ss').format(dt);
+    }
+    final raw = value?.toString() ?? '';
+    if (raw.contains('T')) return raw.replaceAll('T', ' ');
+    return raw;
+  }
+
+  int _compareByDate(Map<String, dynamic> a, Map<String, dynamic> b) {
+    final dtA = a['__dt'] as DateTime?;
+    final dtB = b['__dt'] as DateTime?;
+    if (dtA == null && dtB == null) return 0;
+    if (dtA == null) return 1;
+    if (dtB == null) return -1;
+    return dtA.compareTo(dtB);
+  }
+
+  List<Map<String, dynamic>> _withGroupHeaders(
+    List<Map<String, dynamic>> rows,
+  ) {
+    final result = <Map<String, dynamic>>[];
+    DateTime? lastGroup;
+    for (final row in rows) {
+      final dt = row['__dt'] as DateTime?;
+      if (dt != null) {
+        final normalized = DateTime(
+          dt.year,
+          dt.month,
+          dt.day,
+          dt.hour,
+          dt.minute,
+        );
+        if (lastGroup == null || normalized != lastGroup) {
+          final label = DateFormat('dd/MM/yyyy HH:mm').format(dt);
+          result.add({
+            '__isGroup': true,
+            '__dt': normalized,
+            'created_at': label,
+          });
+          lastGroup = normalized;
+        }
+      } else {
+        lastGroup = null;
+      }
+      result.add(row);
+    }
+    return result;
   }
 
   @override
@@ -66,6 +129,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                   're_liberacao': e['re_preparador'],
                   're_finalizacao': '',
                   'created_at': createdAt,
+                  '__dt': _parseDateTime(e['created_at']),
                   'partnumber': e['partnumber'],
                   'maquina': e['maquina'],
                   'faixa_texto': e['faixa_texto'],
@@ -82,6 +146,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                     'os': e['os'],
                     're_liberacao': '',
                     'created_at': '',
+                    '__dt': null,
                     'partnumber': e['partnumber'],
                     'maquina': e['maquina'],
                     'faixa_texto': e['faixa_texto'],
@@ -101,26 +166,49 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                 if (e is Map<String, dynamic>) {
                   final createdAt = _formatDate(e['created_at']);
                   rows.add({
-                    'os': e['os'],
-                    're_operador': e['re_operador'],
+                    '__dt': _parseDateTime(e['created_at']),
+                    'os': e['os']?.toString() ?? '',
+                    're_operador': e['re_operador']?.toString() ?? '',
                     'created_at': createdAt,
-                    'partnumber': e['partnumber'],
-                    'maquina': e['maquina'],
-                    'titulo': e['titulo'],
-                    'instrumento': e['instrumento'],
-                    'faixa_texto': e['faixa_texto'],
-                    'escolha': e['escolha'],
-                    'status': e['status'],
+                    'retorno_at': '',
+                    'partnumber': e['partnumber']?.toString() ?? '',
+                    'maquina': e['maquina']?.toString() ?? '',
+                    'titulo': e['titulo']?.toString() ?? '',
+                    'instrumento': e['instrumento']?.toString() ?? '',
+                    'faixa_texto': e['faixa_texto']?.toString() ?? '',
+                    'escolha': e['escolha']?.toString() ?? '',
+                    'status': e['status']?.toString() ?? '',
+                    'motivo': (e['motivo'] ?? '').toString(),
+                    'evento': (e['evento'] ?? 'amostragem').toString(),
                   });
                 }
               }
             }
+            for (final e in (data['jornada'] as List? ?? [])) {
+              if (e is Map<String, dynamic>) {
+                final inicioRaw = e['pausa_at'] ?? e['created_at'];
+                rows.add({
+                  '__dt': _parseDateTime(inicioRaw),
+                  'os': e['os']?.toString() ?? '',
+                  're_operador': e['re_operador']?.toString() ?? '',
+                  'created_at': _formatDate(inicioRaw),
+                  'retorno_at': _formatDate(e['retorno_at']),
+                  'partnumber': e['partnumber']?.toString() ?? '',
+                  'maquina': '',
+                  'titulo': 'Pausa de Jornada',
+                  'instrumento': '',
+                  'faixa_texto': '',
+                  'escolha': '',
+                  'status': 'Pausa de jornada',
+                  'motivo': (e['motivo'] ?? '').toString(),
+                  'evento': 'pausa_jornada',
+                });
+              }
+            }
           }
         }
-        rows.sort(
-          (a, b) => (a['created_at'] ?? '').compareTo(b['created_at'] ?? ''),
-        );
-        return rows;
+        rows.sort(_compareByDate);
+        return _withGroupHeaders(rows);
       } else {
         final part = _partCtrl.text.trim();
         final op = _opCtrl.text.trim();
@@ -132,16 +220,24 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         final rows = <Map<String, dynamic>>[];
         for (final Map<String, dynamic> e in data) {
           final map = Map<String, dynamic>.from(e);
+          map['__dt'] = _parseDateTime(map['created_at']);
           map['created_at'] = _formatDate(e['created_at']);
+          if (map.containsKey('retorno_at')) {
+            map['retorno_at'] = _formatDate(map['retorno_at']);
+          } else if (_tipo == 'operador') {
+            map['retorno_at'] = '';
+          }
           if (map.containsKey('created_at_final')) {
             map['created_at_final'] = _formatDate(e['created_at_final']);
           }
+          if (_tipo == 'operador') {
+            map['evento'] = map['evento'] ?? 'amostragem';
+            map['motivo'] = map['motivo'] ?? '';
+          }
           rows.add(map);
         }
-        rows.sort(
-          (a, b) => (a['created_at'] ?? '').compareTo(b['created_at'] ?? ''),
-        );
-        return rows;
+        rows.sort(_compareByDate);
+        return _withGroupHeaders(rows);
       }
     }
 
@@ -304,17 +400,23 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                   : const {
                       'os': 'OS',
                       're_operador': 'RE',
-                      'created_at': 'Horário',
+                      'created_at': 'Início',
+                      'retorno_at': 'Retorno',
                       'partnumber': 'Partnumber',
                       'maquina': 'Máquina',
                       'titulo': 'Título',
                       'instrumento': 'Instrumento',
                       'faixa_texto': 'Faixa',
                       'status': 'Status',
+                      'motivo': 'Motivo',
                     };
               final headers = headerMap.keys.toList();
               return LayoutBuilder(
                 builder: (context, constraints) {
+                  final theme = Theme.of(context);
+                  final groupColor = theme.colorScheme.surfaceVariant
+                      .withOpacity(0.25);
+                  final pauseColor = Colors.orange.withOpacity(0.12);
                   return SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: ConstrainedBox(
@@ -334,22 +436,39 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                               ),
                             )
                             .toList(),
-                        rows: dados
-                            .map(
-                              (r) => DataRow(
-                                cells: headers
-                                    .map(
-                                      (h) => DataCell(
-                                        Text(
-                                          '${r[h] ?? ''}',
-                                          style: const TextStyle(fontSize: 12),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
-                            )
-                            .toList(),
+                        rows: dados.map((r) {
+                          final isGroup = r['__isGroup'] == true;
+                          final isPause = r['evento'] == 'pausa_jornada';
+                          return DataRow(
+                            color: MaterialStateProperty.resolveWith<Color?>((
+                              states,
+                            ) {
+                              if (isGroup) return groupColor;
+                              if (isPause) return pauseColor;
+                              return null;
+                            }),
+                            cells: headers.map((h) {
+                              if (isGroup) {
+                                final text = h == 'created_at'
+                                    ? 'Horário: ${r['created_at'] ?? ''}'
+                                    : '';
+                                final style = theme.textTheme.labelLarge
+                                    ?.copyWith(fontWeight: FontWeight.bold);
+                                return DataCell(Text(text, style: style));
+                              }
+                              final value = r[h];
+                              final display = value == null
+                                  ? ''
+                                  : value.toString();
+                              return DataCell(
+                                Text(
+                                  display,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              );
+                            }).toList(),
+                          );
+                        }).toList(),
                       ),
                     ),
                   );
