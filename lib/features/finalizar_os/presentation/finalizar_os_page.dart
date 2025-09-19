@@ -342,8 +342,8 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
 
     return Scaffold(
       appBar: WindowBar(
-        title: 'Finalizar OS',
-        titleSvgAsset: 'assets/icons/FOR008.svg',
+        title: 'Finalização de OS - FOR008',
+        titleSvgAsset: 'assets/icons/stop.svg',
         showMenu: true,
         actions: [
           Padding(

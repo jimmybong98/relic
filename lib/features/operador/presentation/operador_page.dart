@@ -266,7 +266,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
-  Future<void> _fimJornada() async {
+  Future<void> _fimJornada(String motivo) async {
     if (_reCtrl.text.trim().isEmpty || _osCtrl.text.trim().isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -280,6 +280,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       'os': _osCtrl.text.trim(),
       'partnumber': normalizeCode(_partCtrl.text),
       'operacao': normalizeCode(_opCtrl.text),
+      'motivo': motivo, // Adiciona o motivo selecionado
     });
 
     final uri = Uri.parse('$kBaseUrl/operador/fim_jornada');
@@ -291,7 +292,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       if (resp.statusCode == 200) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Jornada pausada.')));
+        ).showSnackBar(SnackBar(content: Text('Jornada pausada. Motivo: $motivo')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falha: ${resp.statusCode} ${resp.body}')),
@@ -302,6 +303,45 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erro: $e')));
+    }
+  }
+
+  Future<void> _showFimJornadaDialog() async {
+    final motivo = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Fim de Jornada'),
+        content: DropdownButtonFormField<String>(
+          value: null,
+          decoration: const InputDecoration(
+            labelText: 'Selecione o motivo',
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'Banheiro', child: Text('Banheiro')),
+            DropdownMenuItem(value: 'Refeição', child: Text('Refeição')),
+            DropdownMenuItem(value: 'Fim do Turno', child: Text('Fim do Turno')),
+            DropdownMenuItem(value: 'Troca de ferramenta', child: Text('Troca de ferramenta')),
+            DropdownMenuItem(value: 'Manutenção', child: Text('Manutenção')),
+            DropdownMenuItem(value: 'Falta de Material', child: Text('Falta de Material')),
+            DropdownMenuItem(value: 'Problema de Qualidade', child: Text('Problema de Qualidade')),
+            DropdownMenuItem(value: 'Outros', child: Text('Outros')),
+          ],
+          onChanged: (value) {
+            Navigator.of(context).pop(value);
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (motivo != null) {
+      await _fimJornada(motivo);
     }
   }
 
@@ -382,8 +422,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
 
     return Scaffold(
       appBar: WindowBar(
-        title: 'Área do Operador',
-        titleSvgAsset: 'assets/icons/Amostragem.svg',
+        title: 'Amostragem - FOR009-14',
+        titleSvgAsset: 'assets/icons/farol.svg',
         showMenu: true,
         actions: [
           Padding(
@@ -615,7 +655,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                 alignment: Alignment.centerRight,
                 child: PopupMenuButton<String>(
                   onSelected: (value) {
-                    if (value == 'fim') _fimJornada();
+                    if (value == 'fim') _showFimJornadaDialog();
                     if (value == 'encerrar') _confirmEncerrarProducao();
                   },
                   itemBuilder: (context) => const [
