@@ -1143,24 +1143,6 @@ def resultado_preparador():
                         409,
                     )
 
-            conflito_os, os_bloqueadora = _outra_os_em_andamento(
-                c, os_num, maquina
-            )
-            if conflito_os and os_bloqueadora:
-                return (
-                    jsonify(
-                        {
-                            "code": "maquina_ocupada",
-                            "error": (
-                                f"Máquina {maquina} já está liberada para a OS "
-                                f"{os_bloqueadora}. Finalize essa OS antes de registrar uma nova."
-                            ),
-                            "os_em_andamento": os_bloqueadora,
-                        }
-                    ),
-                    409,
-                )
-
             ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op, maquina)
             if ok and contexto_tipo != "troca_ferramenta":
                 return (
