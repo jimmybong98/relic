@@ -1022,6 +1022,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     return SingleChildScrollView(
+
+                      primary: false,
                       padding: EdgeInsets.zero,
                       physics: const NeverScrollableScrollPhysics(),
                       child: ConstrainedBox(

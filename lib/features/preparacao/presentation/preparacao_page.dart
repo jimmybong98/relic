@@ -867,6 +867,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     return SingleChildScrollView(
+                      primary: false,
                       padding: EdgeInsets.zero,
                       physics: const NeverScrollableScrollPhysics(),
                       child: ConstrainedBox(
