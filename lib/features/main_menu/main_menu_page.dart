@@ -79,10 +79,9 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       final shared = ref.read(sharedSearchFormProvider);
       if (shared.isActive) {
         showFlowLockedMessage(shared);
-        return;
+      } else {
+        ref.read(sharedSearchFormProvider.notifier).clear();
       }
-
-      ref.read(sharedSearchFormProvider.notifier).clear();
       var auth = ref.read(authServiceProvider);
       if (auth == null) {
         final ok = await Navigator.of(
