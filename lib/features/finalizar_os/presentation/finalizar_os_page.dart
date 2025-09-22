@@ -783,6 +783,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     return SingleChildScrollView(
+                      primary: false,
                       padding: EdgeInsets.zero,
                       physics: const NeverScrollableScrollPhysics(),
                       child: ConstrainedBox(
