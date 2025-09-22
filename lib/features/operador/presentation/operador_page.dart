@@ -69,6 +69,7 @@ class MedidasOperadorController
       periodicidade: old.periodicidade,
       instrumento: old.instrumento,
       tolerancias: old.tolerancias,
+      contagens: old.contagens,
     );
     state = AsyncValue.data(current);
   }
@@ -90,6 +91,50 @@ class MedidasOperadorController
         periodicidade: old.periodicidade,
         instrumento: old.instrumento,
         tolerancias: old.tolerancias,
+        contagens: old.contagens,
+      );
+    }
+    state = AsyncValue.data(current);
+  }
+
+  /// Após um registro bem-sucedido, incrementa as contagens com base nas
+  /// medições selecionadas e reseta os campos para nova entrada.
+  void aplicarSelecoesComoHistorico() {
+    final current = [...(state.value ?? const <MedidaItem>[])];
+    for (var i = 0; i < current.length; i++) {
+      final old = current[i];
+      final counts = Map<String, int>.from(old.contagens);
+      final raw = old.medicao ?? '';
+      final partes = raw
+          .split('|')
+          .map((p) => p.trim())
+          .where((p) => p.isNotEmpty)
+          .toList();
+      if (partes.isEmpty) {
+        // Para medições numéricas simples, `medicao` já é o valor escolhido.
+        final label = raw.trim();
+        if (label.isNotEmpty) {
+          counts[label] = (counts[label] ?? 0) + 1;
+        }
+      } else {
+        for (final parte in partes) {
+          counts[parte] = (counts[parte] ?? 0) + 1;
+        }
+      }
+
+      current[i] = MedidaItem(
+        titulo: old.titulo,
+        faixaTexto: old.faixaTexto,
+        minimo: old.minimo,
+        maximo: old.maximo,
+        unidade: old.unidade,
+        status: StatusMedida.pendente,
+        medicao: null,
+        observacao: old.observacao,
+        periodicidade: old.periodicidade,
+        instrumento: old.instrumento,
+        tolerancias: old.tolerancias,
+        contagens: counts,
       );
     }
     state = AsyncValue.data(current);
@@ -311,7 +356,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           const SnackBar(content: Text('Amostragem registrada com sucesso!')),
         );
         // Limpa seleções, mantém lista
-        ref.read(medidasOperadorControllerProvider.notifier).resetSelecoes();
+        ref
+            .read(medidasOperadorControllerProvider.notifier)
+            .aplicarSelecoesComoHistorico();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

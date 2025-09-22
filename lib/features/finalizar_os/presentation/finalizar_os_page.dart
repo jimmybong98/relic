@@ -67,6 +67,7 @@ class MedidasFinalizadorController
               periodicidade: m.periodicidade,
               instrumento: m.instrumento,
               tolerancias: m.tolerancias,
+              contagens: m.contagens,
             ),
           )
           .toList();
@@ -93,6 +94,7 @@ class MedidasFinalizadorController
       periodicidade: old.periodicidade,
       instrumento: old.instrumento,
       tolerancias: old.tolerancias,
+      contagens: old.contagens,
     );
     state = AsyncValue.data(current);
   }
@@ -113,6 +115,7 @@ class MedidasFinalizadorController
         periodicidade: old.periodicidade,
         instrumento: old.instrumento,
         tolerancias: old.tolerancias,
+        contagens: old.contagens,
       );
     }
     state = AsyncValue.data(current);

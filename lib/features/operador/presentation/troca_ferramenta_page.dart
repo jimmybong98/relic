@@ -142,6 +142,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
         periodicidade: item.periodicidade,
         instrumento: item.instrumento,
         tolerancias: item.tolerancias,
+        contagens: item.contagens,
       );
     }).toList();
 
@@ -167,6 +168,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
       periodicidade: antigo.periodicidade,
       instrumento: antigo.instrumento,
       tolerancias: antigo.tolerancias,
+      contagens: antigo.contagens,
     );
     setState(() {
       _medidasSelecionadas = itens;

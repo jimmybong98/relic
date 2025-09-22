@@ -68,6 +68,7 @@ class MedidasPreparadorController
               periodicidade: m.periodicidade,
               instrumento: m.instrumento,
               tolerancias: m.tolerancias,
+              contagens: m.contagens,
             ),
           )
           .toList();
@@ -94,6 +95,7 @@ class MedidasPreparadorController
       periodicidade: old.periodicidade,
       instrumento: old.instrumento,
       tolerancias: old.tolerancias,
+      contagens: old.contagens,
     );
     state = AsyncValue.data(current);
   }
@@ -114,6 +116,7 @@ class MedidasPreparadorController
         periodicidade: old.periodicidade,
         instrumento: old.instrumento,
         tolerancias: old.tolerancias,
+        contagens: old.contagens,
       );
     }
     state = AsyncValue.data(current);
