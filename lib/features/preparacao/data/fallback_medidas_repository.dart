@@ -16,11 +16,13 @@ class FallbackMedidasRepository implements MedidasRepository {
   Future<List<MedidaItem>> getMedidas({
     required String partnumber,
     required String operacao,
+    String? os,
   }) async {
     final localResult = await local
         .getMedidas(
           partnumber: partnumber,
           operacao: operacao,
+          os: os,
         )
         .timeout(
           const Duration(seconds: 5),
@@ -32,7 +34,7 @@ class FallbackMedidasRepository implements MedidasRepository {
       return localResult;
     }
 
-    return api.getMedidas(partnumber: partnumber, operacao: operacao);
+    return api.getMedidas(partnumber: partnumber, operacao: operacao, os: os);
   }
 
   @override

@@ -13,14 +13,12 @@ import 'package:admin/features/operador/presentation/operador_page.dart';
 import 'package:admin/features/operador/presentation/widgets/measurement_tile.dart';
 import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
+import 'package:admin/utils/api_base_url.dart';
 import 'package:admin/widgets/search_summary_card.dart';
 import 'package:admin/widgets/window_bar.dart';
 import 'package:admin/utils/string_utils.dart';
 import 'package:admin/services/machine_service.dart';
 import 'package:admin/models/machine.dart';
-
-/// Mesmo base URL usado no Operador
-const String kBaseUrl = 'http://192.168.0.241:5005';
 
 class PreparacaoPage extends ConsumerStatefulWidget {
   const PreparacaoPage({super.key});
@@ -58,6 +56,7 @@ class MedidasPreparadorController
       final normalizados = itens
           .map(
             (m) => MedidaItem(
+              indice: m.indice,
               titulo: m.titulo,
               faixaTexto: m.faixaTexto,
               minimo: m.minimo,
@@ -85,6 +84,7 @@ class MedidasPreparadorController
     if (index < 0 || index >= current.length) return;
     final old = current[index];
     current[index] = MedidaItem(
+      indice: old.indice,
       titulo: old.titulo,
       faixaTexto: old.faixaTexto,
       minimo: old.minimo,
@@ -106,6 +106,7 @@ class MedidasPreparadorController
     for (var i = 0; i < current.length; i++) {
       final old = current[i];
       current[i] = MedidaItem(
+        indice: old.indice,
         titulo: old.titulo,
         faixaTexto: old.faixaTexto,
         minimo: old.minimo,
@@ -333,7 +334,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     for (var i = 0; i < medidas.length; i++) {
       final m = medidas[i];
       itens.add({
-        'indice': i,
+        'indice': m.indice ?? i,
         'titulo': m.titulo,
         'faixaTexto': m.faixaTexto,
         'min': m.minimo,
@@ -354,7 +355,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       'itens': itens,
     });
 
-    final uri = Uri.parse('$kBaseUrl/preparador/resultado');
+    final uri = buildApiUri('/preparador/resultado');
 
     setState(() => _registrando = true);
     try {

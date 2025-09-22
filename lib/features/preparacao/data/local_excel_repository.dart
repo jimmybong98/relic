@@ -36,6 +36,7 @@ class LocalExcelRepository implements MedidasRepository {
   Future<List<MedidaItem>> getMedidas({
     required String partnumber,
     required String operacao,
+    String? os,
   }) async {
     // Prioriza JSON embarcado se informado.
     if (assetPath != null) {
@@ -51,6 +52,14 @@ class LocalExcelRepository implements MedidasRepository {
         double? min = _toDouble(map['minimo'] ?? map['min']);
         double? max = _toDouble(map['maximo'] ?? map['max']);
         String? unidade = map['unidade']?.toString();
+        int? indice;
+        final rawIdx =
+            map['indice'] ?? map['idx_medida'] ?? map['idx'] ?? map['index'];
+        if (rawIdx is num) {
+          indice = rawIdx.toInt();
+        } else if (rawIdx != null) {
+          indice = int.tryParse(rawIdx.toString());
+        }
 
         if (faixaTexto.isEmpty && (min != null || max != null)) {
           final minStr = min?.toStringAsFixed(2) ?? '';
@@ -67,6 +76,7 @@ class LocalExcelRepository implements MedidasRepository {
 
         return MedidaItem(
           titulo: (map['titulo'] ?? '').toString(),
+          indice: indice,
           faixaTexto: faixaTexto,
           minimo: min,
           maximo: max,
