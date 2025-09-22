@@ -35,6 +35,7 @@ class MedidasOperadorController
   MedidasOperadorController(this._ref) : super(const AsyncValue.data([]));
 
   Future<void> carregar({
+    required String os,
     required String partnumber,
     required String operacao,
   }) async {
@@ -42,6 +43,7 @@ class MedidasOperadorController
     try {
       final repo = _ref.read(operadorRepositoryProvider);
       final itens = await repo.getMedidas(
+        os: os,
         partnumber: partnumber,
         operacao: operacao,
       );
@@ -874,6 +876,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                     medidasOperadorControllerProvider.notifier,
                                   )
                                   .carregar(
+                                    os: _osCtrl.text.trim(),
                                     partnumber: normalizeCode(_partCtrl.text),
                                     operacao: normalizeCode(_opCtrl.text),
                                   );

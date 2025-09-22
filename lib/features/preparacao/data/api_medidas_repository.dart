@@ -48,12 +48,20 @@ class ApiMedidasRepository implements MedidasRepository {
   Future<List<MedidaItem>> getMedidas({
     required String partnumber,
     required String operacao,
+    String? os,
   }) async {
     // Se seu Flask espera "peca" em vez de "partnumber", troque a chave abaixo.
-    final uri = _buildUri(medidasPath, {
+    final query = <String, String>{
       'partnumber': normalizeCode(partnumber),
       'operacao': normalizeCode(operacao),
-    });
+    };
+
+    final osTrimmed = os?.trim();
+    if (osTrimmed != null && osTrimmed.isNotEmpty) {
+      query['os'] = osTrimmed;
+    }
+
+    final uri = _buildUri(medidasPath, query);
 
     if (kDebugMode) debugPrint('GET $uri');
 

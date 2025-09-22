@@ -36,6 +36,7 @@ class LocalExcelRepository implements MedidasRepository {
   Future<List<MedidaItem>> getMedidas({
     required String partnumber,
     required String operacao,
+    String? os,
   }) async {
     // Prioriza JSON embarcado se informado.
     if (assetPath != null) {
