@@ -13,15 +13,13 @@ import 'package:admin/features/finalizar_os/presentation/finalizar_os_page.dart'
 import 'package:admin/features/operador/presentation/troca_ferramenta_page.dart';
 import 'package:admin/features/operador/presentation/widgets/measurement_tile.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
+import 'package:admin/utils/api_base_url.dart';
 import 'package:admin/widgets/search_summary_card.dart';
 import 'package:admin/widgets/window_bar.dart';
 import 'package:admin/utils/string_utils.dart';
 import 'package:admin/services/machine_service.dart';
 import 'package:admin/models/machine.dart';
 import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
-
-/// >>>>> Ajuste para o endereço/porta do seu Flask <<<<<
-const String kBaseUrl = 'http://192.168.0.241:5005';
 
 final medidasOperadorControllerProvider =
     StateNotifierProvider.autoDispose<
@@ -59,6 +57,7 @@ class MedidasOperadorController
     if (index < 0 || index >= current.length) return;
     final old = current[index];
     current[index] = MedidaItem(
+      indice: old.indice,
       titulo: old.titulo,
       faixaTexto: old.faixaTexto,
       minimo: old.minimo,
@@ -81,6 +80,7 @@ class MedidasOperadorController
     for (var i = 0; i < current.length; i++) {
       final old = current[i];
       current[i] = MedidaItem(
+        indice: old.indice,
         titulo: old.titulo,
         faixaTexto: old.faixaTexto,
         minimo: old.minimo,
@@ -124,6 +124,7 @@ class MedidasOperadorController
       }
 
       current[i] = MedidaItem(
+        indice: old.indice,
         titulo: old.titulo,
         faixaTexto: old.faixaTexto,
         minimo: old.minimo,
@@ -301,7 +302,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       final m = medidas[i];
       final map = m.toMap();
       // índice esperado pelo backend
-      map['indice'] = i;
+      map['indice'] = m.indice ?? map['indice'] ?? i;
       // backend espera 'min'/'max' e não 'minimo'/'maximo'
       map['min'] = m.minimo;
       map['max'] = m.maximo;
@@ -343,7 +344,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       'itens': itens,
     });
 
-    final uri = Uri.parse('$kBaseUrl/operador/registrar');
+    final uri = buildApiUri('/operador/registrar');
 
     setState(() => _registrando = true);
     try {
@@ -397,7 +398,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       'motivo': motivo, // Adiciona o motivo selecionado
     });
 
-    final uri = Uri.parse('$kBaseUrl/operador/fim_jornada');
+    final uri = buildApiUri('/operador/fim_jornada');
     try {
       final resp = await http
           .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
@@ -521,7 +522,6 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       final sucesso = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
           builder: (_) => TrocaFerramentaPage(
-            baseUrl: kBaseUrl,
             re: re,
             os: os,
             partnumber: part,
@@ -550,7 +550,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
 
     final body = jsonEncode({'os': _osCtrl.text.trim()});
-    final uri = Uri.parse('$kBaseUrl/operador/encerrar_producao');
+    final uri = buildApiUri('/operador/encerrar_producao');
     try {
       final resp = await http
           .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
