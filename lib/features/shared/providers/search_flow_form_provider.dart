@@ -1,5 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+String? _normalizeOptional(String? value) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) return null;
+  return trimmed;
+}
+
 class SharedSearchFormState {
   const SharedSearchFormState({
     this.isActive = false,
@@ -36,6 +42,33 @@ class SharedSearchFormState {
       maquina: maquina == _sentinel ? this.maquina : maquina as String?,
     );
   }
+
+  bool matches(SharedSearchFormState other) {
+    return os == other.os &&
+        partNumber == other.partNumber &&
+        operacao == other.operacao &&
+        categoria == other.categoria &&
+        maquina == other.maquina;
+  }
+
+  bool matchesValues({
+    required String os,
+    required String partNumber,
+    required String operacao,
+    String? categoria,
+    String? maquina,
+  }) {
+    return matches(
+      SharedSearchFormState(
+        isActive: true,
+        os: os.trim(),
+        partNumber: partNumber.trim(),
+        operacao: operacao.trim(),
+        categoria: _normalizeOptional(categoria),
+        maquina: _normalizeOptional(maquina),
+      ),
+    );
+  }
 }
 
 class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
@@ -43,27 +76,28 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
 
   bool get _isActive => state.isActive;
 
-  void beginFlow({
+  bool beginFlow({
     required String os,
     required String partNumber,
     required String operacao,
     String? categoria,
     String? maquina,
   }) {
-    String? normalizeOptional(String? value) {
-      final trimmed = value?.trim();
-      if (trimmed == null || trimmed.isEmpty) return null;
-      return trimmed;
-    }
-
-    state = SharedSearchFormState(
+    final candidate = SharedSearchFormState(
       isActive: true,
       os: os.trim(),
       partNumber: partNumber.trim(),
       operacao: operacao.trim(),
-      categoria: normalizeOptional(categoria),
-      maquina: normalizeOptional(maquina),
+      categoria: _normalizeOptional(categoria),
+      maquina: _normalizeOptional(maquina),
     );
+
+    if (_isActive && state.matches(candidate) == false) {
+      return false;
+    }
+
+    state = candidate;
+    return true;
   }
 
   void setOs(String value) {
@@ -74,7 +108,6 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
   }
 
   void setPartNumber(String value) {
-
     if (_isActive == false) return;
     final trimmed = value.trim();
     if (trimmed == state.partNumber) return;
