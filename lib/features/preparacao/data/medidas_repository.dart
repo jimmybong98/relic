@@ -6,6 +6,7 @@ abstract class MedidasRepository {
   Future<List<MedidaItem>> getMedidas({
     required String partnumber,
     required String operacao,
+    String? os,
   });
 
   /// Envia o resultado preenchido pelo preparador.

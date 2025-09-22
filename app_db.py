@@ -708,9 +708,12 @@ def _normalize_title_key(text: str) -> str:
     return collapsed.strip()
 
 
-def _medidas_operador_db(part: str, op: str):
+def _medidas_operador_db(part: str, op: str, os_num: Optional[str] = None):
     part = _norm_part(part)
     op = _norm_op(op)
+    os_norm = _norm(os_num)
+    if not os_norm:
+        os_norm = None
     rows = []
     contagens_rows = []
     with _conn_db(DB_NAME) as c:
@@ -730,8 +733,14 @@ def _medidas_operador_db(part: str, op: str):
             )
             rows = cur.fetchall()
         with c.cursor() as cur:
+            params = [part, op]
+            filtro_os = ""
+            if os_norm:
+                filtro_os = " AND a.os=%s"
+                params.append(os_norm)
+
             cur.execute(
-                """
+                f"""
                 SELECT i.idx_medida,
                        i.titulo,
                        i.escolha,
@@ -740,9 +749,10 @@ def _medidas_operador_db(part: str, op: str):
                   JOIN operador_amostragem a ON a.id = i.amostragem_id
                  WHERE TRIM(LEADING '0' FROM TRIM(a.partnumber))=%s
                    AND TRIM(LEADING '0' FROM TRIM(a.operacao))=%s
+                   {filtro_os}
                  GROUP BY i.idx_medida, i.titulo, i.escolha
                 """,
-                (part, op),
+                params,
             )
             contagens_rows = cur.fetchall()
 
@@ -1095,6 +1105,7 @@ def medidas_preparador():
 def medidas_operador():
     part = _norm_part(request.args.get("partnumber"))
     op = _norm_op(request.args.get("operacao"))
+    os_num = _norm(request.args.get("os"))
     if not part or not op:
         return (
             jsonify({"error": "Parâmetros 'partnumber' e 'operacao' são obrigatórios"}),
@@ -1102,7 +1113,7 @@ def medidas_operador():
         )
 
     try:
-        medidas = _medidas_operador_db(part, op)
+        medidas = _medidas_operador_db(part, op, os_num or None)
         if not medidas:
             return (
                 jsonify(
