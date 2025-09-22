@@ -468,9 +468,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
             children: [
               if (_mostrarResumo) ...[
                 SearchSummaryCard(
-                  reController: _reCtrl,
                   reLabel: 'R.E. do Preparador',
-                  reHint: 'Informe o R.E.',
+                  reValue: _reCtrl.text,
                   items: [
                     SummaryInfo(label: 'O.S.', value: _osCtrl.text),
                     SummaryInfo(label: 'Peça', value: _partCtrl.text),
