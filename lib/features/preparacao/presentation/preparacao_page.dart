@@ -126,6 +126,8 @@ class MedidasPreparadorController
 }
 
 class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
+  static const double _compactFormBreakpoint = 600;
+
   final _formKey = GlobalKey<FormState>();
   final _reCtrl = TextEditingController(); // <<< RE
   final _osCtrl = TextEditingController(); // <<< OS
@@ -588,171 +590,225 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _reCtrl,
-                              textInputAction: TextInputAction.next,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              decoration: const InputDecoration(
-                                labelText:
-                                    'R.E. do Preparador', // ajuste o texto se for Operador
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (v) {
-                                final s = (v ?? '').trim();
-                                if (s.isEmpty) return 'Obrigatório';
-                                if (!RegExp(r'^\d+$').hasMatch(s))
-                                  return 'Apenas números';
-                                return null;
-                              },
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isCompact =
+                              constraints.maxWidth < _compactFormBreakpoint;
+                          final reField = TextFormField(
+                            controller: _reCtrl,
+                            textInputAction: TextInputAction.next,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: const InputDecoration(
+                              labelText:
+                                  'R.E. do Preparador', // ajuste o texto se for Operador
+                              border: OutlineInputBorder(),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          SizedBox(
-                            width: 140, // igual ao campo Operação
-                            child: TextFormField(
-                              controller: _osCtrl,
-                              enabled: !flowLocked,
-                              textInputAction: TextInputAction.next,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              decoration: const InputDecoration(
-                                labelText: 'O.S.',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (v) {
-                                final s = (v ?? '').trim();
-                                if (s.isEmpty) return 'Obrigatório';
-                                if (!RegExp(r'^\d+$').hasMatch(s))
-                                  return 'Apenas números';
-                                return null;
-                              },
+                            validator: (v) {
+                              final s = (v ?? '').trim();
+                              if (s.isEmpty) return 'Obrigatório';
+                              if (!RegExp(r'^\d+$').hasMatch(s)) {
+                                return 'Apenas números';
+                              }
+                              return null;
+                            },
+                          );
+                          final osField = TextFormField(
+                            controller: _osCtrl,
+                            enabled: !flowLocked,
+                            textInputAction: TextInputAction.next,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'O.S.',
+                              border: OutlineInputBorder(),
                             ),
-                          ),
-                        ],
+                            validator: (v) {
+                              final s = (v ?? '').trim();
+                              if (s.isEmpty) return 'Obrigatório';
+                              if (!RegExp(r'^\d+$').hasMatch(s)) {
+                                return 'Apenas números';
+                              }
+                              return null;
+                            },
+                          );
+
+                          if (isCompact) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                reField,
+                                const SizedBox(height: 12),
+                                osField,
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Expanded(child: reField),
+                              const SizedBox(width: 12),
+                              SizedBox(
+                                width: 140, // igual ao campo Operação
+                                child: osField,
+                              ),
+                            ],
+                          );
+                        },
                       ),
 
                       const SizedBox(height: 12),
 
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              value: categoriaValue,
-                              decoration: const InputDecoration(
-                                labelText: 'Categoria',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: _categorias
-                                  .map(
-                                    (c) => DropdownMenuItem(
-                                      value: c,
-                                      child: Text(c),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: flowLocked
-                                  ? null
-                                  : (v) {
-                                      ref
-                                          .read(
-                                            sharedSearchFormProvider.notifier,
-                                          )
-                                          .setCategoria(v);
-                                      setState(() {
-                                        _categoriaSel = v;
-                                        _maquinaSel = null;
-                                      });
-                                    },
-                              validator: (v) => (v == null || v.isEmpty)
-                                  ? 'Obrigatório'
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              value: maquinaValue,
-                              decoration: const InputDecoration(
-                                labelText: 'Código da máquina',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: maquinasDisponiveis
-                                  .map(
-                                    (m) => DropdownMenuItem(
-                                      value: m.codigo,
-                                      child: Text(m.codigo),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: flowLocked
-                                  ? null
-                                  : (v) {
-                                      ref
-                                          .read(
-                                            sharedSearchFormProvider.notifier,
-                                          )
-                                          .setMaquina(v);
-                                      setState(() => _maquinaSel = v);
-                                    },
-                              validator: (v) => (v == null || v.isEmpty)
-                                  ? 'Obrigatório'
-                                  : null,
-                            ),
-                          ),
-                        ],
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isCompact =
+                              constraints.maxWidth < _compactFormBreakpoint;
+                          final categoriaDropdown =
+                              DropdownButtonFormField<String>(
+                                value: categoriaValue,
+                                decoration: const InputDecoration(
+                                  labelText: 'Categoria',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: _categorias
+                                    .map(
+                                      (c) => DropdownMenuItem(
+                                        value: c,
+                                        child: Text(c),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: flowLocked
+                                    ? null
+                                    : (v) {
+                                        ref
+                                            .read(
+                                              sharedSearchFormProvider.notifier,
+                                            )
+                                            .setCategoria(v);
+                                        setState(() {
+                                          _categoriaSel = v;
+                                          _maquinaSel = null;
+                                        });
+                                      },
+                                validator: (v) => (v == null || v.isEmpty)
+                                    ? 'Obrigatório'
+                                    : null,
+                              );
+                          final maquinaDropdown =
+                              DropdownButtonFormField<String>(
+                                value: maquinaValue,
+                                decoration: const InputDecoration(
+                                  labelText: 'Código da máquina',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: maquinasDisponiveis
+                                    .map(
+                                      (m) => DropdownMenuItem(
+                                        value: m.codigo,
+                                        child: Text(m.codigo),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: flowLocked
+                                    ? null
+                                    : (v) {
+                                        ref
+                                            .read(
+                                              sharedSearchFormProvider.notifier,
+                                            )
+                                            .setMaquina(v);
+                                        setState(() => _maquinaSel = v);
+                                      },
+                                validator: (v) => (v == null || v.isEmpty)
+                                    ? 'Obrigatório'
+                                    : null,
+                              );
+
+                          if (isCompact) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                categoriaDropdown,
+                                const SizedBox(height: 12),
+                                maquinaDropdown,
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Expanded(child: categoriaDropdown),
+                              const SizedBox(width: 12),
+                              Expanded(child: maquinaDropdown),
+                            ],
+                          );
+                        },
                       ),
 
                       const SizedBox(height: 12),
 
                       // ---------- PartNumber + Operação (Operação só números) ----------
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _partCtrl,
-                              enabled: !flowLocked,
-                              textInputAction: TextInputAction.next,
-                              decoration: const InputDecoration(
-                                labelText: 'Código da peça (PartNumber)',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (v) => (v == null || v.trim().isEmpty)
-                                  ? 'Obrigatório'
-                                  : null,
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isCompact =
+                              constraints.maxWidth < _compactFormBreakpoint;
+                          final partField = TextFormField(
+                            controller: _partCtrl,
+                            enabled: !flowLocked,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Código da peça (PartNumber)',
+                              border: OutlineInputBorder(),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          SizedBox(
-                            width: 140,
-                            child: TextFormField(
-                              controller: _opCtrl,
-                              enabled: !flowLocked,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Obrigatório'
+                                : null,
+                          );
+                          final operacaoField = TextFormField(
+                            controller: _opCtrl,
+                            enabled: !flowLocked,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Operação',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              final s = (v ?? '').trim();
+                              if (s.isEmpty) return 'Obrigatório';
+                              if (!RegExp(r'^\d+$').hasMatch(s)) {
+                                return 'Apenas números';
+                              }
+                              return null;
+                            },
+                          );
+
+                          if (isCompact) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                partField,
+                                const SizedBox(height: 12),
+                                operacaoField,
                               ],
-                              decoration: const InputDecoration(
-                                labelText: 'Operação',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (v) {
-                                final s = (v ?? '').trim();
-                                if (s.isEmpty) return 'Obrigatório';
-                                if (!RegExp(r'^\d+$').hasMatch(s))
-                                  return 'Apenas números';
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Expanded(child: partField),
+                              const SizedBox(width: 12),
+                              SizedBox(width: 140, child: operacaoField),
+                            ],
+                          );
+                        },
                       ),
 
                       const SizedBox(height: 12),
