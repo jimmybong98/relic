@@ -131,6 +131,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
     final selecionadas = ordenadas.map((idx) {
       final item = _todas[idx];
       return MedidaItem(
+        indice: item.indice,
         titulo: item.titulo,
         faixaTexto: item.faixaTexto,
         minimo: item.minimo,
@@ -157,6 +158,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
     if (index < 0 || index >= itens.length) return;
     final antigo = itens[index];
     itens[index] = MedidaItem(
+      indice: antigo.indice,
       titulo: antigo.titulo,
       faixaTexto: antigo.faixaTexto,
       minimo: antigo.minimo,
@@ -252,7 +254,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
     for (var i = 0; i < _medidasSelecionadas.length; i++) {
       final m = _medidasSelecionadas[i];
       itens.add({
-        'indice': i,
+        'indice': m.indice ?? i,
         'titulo': m.titulo,
         'faixaTexto': m.faixaTexto,
         'min': m.minimo,

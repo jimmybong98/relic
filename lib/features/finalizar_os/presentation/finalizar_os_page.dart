@@ -57,6 +57,7 @@ class MedidasFinalizadorController
       final normalizados = itens
           .map(
             (m) => MedidaItem(
+              indice: m.indice,
               titulo: m.titulo,
               faixaTexto: m.faixaTexto,
               minimo: m.minimo,
@@ -84,6 +85,7 @@ class MedidasFinalizadorController
     if (index < 0 || index >= current.length) return;
     final old = current[index];
     current[index] = MedidaItem(
+      indice: old.indice,
       titulo: old.titulo,
       faixaTexto: old.faixaTexto,
       minimo: old.minimo,
@@ -105,6 +107,7 @@ class MedidasFinalizadorController
     for (var i = 0; i < current.length; i++) {
       final old = current[i];
       current[i] = MedidaItem(
+        indice: old.indice,
         titulo: old.titulo,
         faixaTexto: old.faixaTexto,
         minimo: old.minimo,
@@ -318,7 +321,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     for (var i = 0; i < medidas.length; i++) {
       final m = medidas[i];
       itens.add({
-        'indice': i,
+        'indice': m.indice ?? i,
         'titulo': m.titulo,
         'faixaTexto': m.faixaTexto,
         'min': m.minimo,
