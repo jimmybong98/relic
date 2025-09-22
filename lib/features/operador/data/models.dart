@@ -63,6 +63,7 @@ String statusToString(StatusMedida s) {
 class MedidaItem {
   // Básicos
   final String titulo;
+  final int? indice;
 
   /// Texto amigável da faixa (ex.: "10,00 ~ 12,00 mm", "≥ 15,30 mm", "≤ 3,2 µm")
   final String faixaTexto;
@@ -91,6 +92,7 @@ class MedidaItem {
 
   MedidaItem({
     required this.titulo,
+    this.indice,
     this.faixaTexto = '',
     this.minimo,
     this.maximo,
@@ -308,8 +310,18 @@ class MedidaItem {
       });
     }
 
+    int? idx;
+    final rawIdx =
+        map['indice'] ?? map['idx_medida'] ?? map['idx'] ?? map['index'];
+    if (rawIdx is num) {
+      idx = rawIdx.toInt();
+    } else if (rawIdx != null) {
+      idx = int.tryParse(rawIdx.toString());
+    }
+
     return MedidaItem(
       titulo: titulo,
+      indice: idx,
       faixaTexto: faixaOut,
       minimo: minimo,
       maximo: maximo,
@@ -326,6 +338,7 @@ class MedidaItem {
 
   Map<String, dynamic> toMap() => {
     'titulo': titulo,
+    'indice': indice,
     'faixaTexto': faixaTexto,
     'minimo': minimo,
     'maximo': maximo,
