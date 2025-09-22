@@ -3,19 +3,6 @@ import 'package:hive/hive.dart';
 
 const sharedSearchFlowBoxName = 'shared_search_flow';
 const _sharedSearchFlowStateKey = 'state';
-
-String? _normalizeOptional(String? value) {
-  final trimmed = value?.trim();
-  if (trimmed == null || trimmed.isEmpty) return null;
-  return trimmed;
-}
-
-String? _normalizeOptional(String? value) {
-  final trimmed = value?.trim();
-  if (trimmed == null || trimmed.isEmpty) return null;
-  return trimmed;
-}
-
 class SharedSearchFormState {
   const SharedSearchFormState({
     this.isActive = false,
@@ -34,7 +21,11 @@ class SharedSearchFormState {
   final String? maquina;
 
   static const _sentinel = Object();
-
+  static String? _normalizeOptional(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return trimmed;
+  }
   factory SharedSearchFormState.fromMap(Map<dynamic, dynamic> map) {
     String _readString(dynamic value) => (value ?? '').toString().trim();
     String? _readOptional(dynamic value) {
@@ -165,8 +156,8 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
       os: os.trim(),
       partNumber: partNumber.trim(),
       operacao: operacao.trim(),
-      categoria: _normalizeOptional(categoria),
-      maquina: _normalizeOptional(maquina),
+      categoria: SharedSearchFormState._normalizeOptional(categoria),
+      maquina: SharedSearchFormState._normalizeOptional(maquina),
     );
 
     if (_isActive && state.matches(candidate) == false) {
