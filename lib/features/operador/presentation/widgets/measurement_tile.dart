@@ -109,6 +109,8 @@ class _MeasurementTileState extends State<MeasurementTile> {
           'visual',
           'rug',
           'paralelismo',
+          'anel de rosca',
+          'anel rosca',
           'anel de rosca passa',
           'cqf',
           'simetria',
@@ -119,6 +121,8 @@ class _MeasurementTileState extends State<MeasurementTile> {
           'rug',
           'rugosimetro',
           'paralelismo',
+          'anel de rosca',
+          'anel rosca',
           'anel de rosca passa',
           'cqf',
           'simetria',
@@ -132,16 +136,21 @@ class _MeasurementTileState extends State<MeasurementTile> {
         _containsAny(inst, ['tamp', 'tampao', 'tampão', 'tampa']);
   }
 
-  bool _stringHasRoscaPattern(String? value) {
-    if (value == null || value.trim().isEmpty) return false;
-    final normalized = _nfd(value).toLowerCase();
-    if (normalized.contains('rosca')) return true;
-    final upper = value.toUpperCase();
-    return RegExp(r'\bM\s*\d').hasMatch(upper);
+  bool _stringLooksLikeRoscaGauge(String? value) {
+    final normalized = _nfd(_norm(value).toLowerCase());
+    if (normalized.isEmpty || !normalized.contains('rosca')) return false;
+
+    if (RegExp(r'\bmicro[\s-]*metros?\b').hasMatch(normalized)) return false;
+    if (RegExp(r'\banel\s*de\s*rosca\b').hasMatch(normalized)) return true;
+
+    return RegExp(r'\b(anel|cal|calib\w*|calibre\w*|galg\w*)\b')
+        .hasMatch(normalized);
   }
 
   bool _isRosca(MedidaItem item) {
-    return _stringHasRoscaPattern(item.titulo);
+    if (_stringLooksLikeRoscaGauge(item.instrumento)) return true;
+    if (_norm(item.instrumento).isNotEmpty) return false;
+    return _stringLooksLikeRoscaGauge(item.titulo);
   }
 
   Set<String> _partsFromMedicao(String? medicao) => (medicao ?? '')
