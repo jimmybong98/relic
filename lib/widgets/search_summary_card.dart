@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
 /// Representation of a summary item shown in the [SearchSummaryCard].
 class SummaryInfo {
   const SummaryInfo({required this.label, required this.value});
@@ -14,17 +12,15 @@ class SummaryInfo {
 class SearchSummaryCard extends StatelessWidget {
   const SearchSummaryCard({
     super.key,
-    required this.reController,
     required this.reLabel,
+    required this.reValue,
     required this.items,
-    this.reHint,
     this.itemWidth = 160,
   });
 
-  final TextEditingController reController;
   final String reLabel;
+  final String reValue;
   final List<SummaryInfo> items;
-  final String? reHint;
   final double itemWidth;
 
   @override
@@ -47,15 +43,9 @@ class SearchSummaryCard extends StatelessWidget {
                 children: [
                   Text(reLabel, style: theme.textTheme.labelSmall),
                   const SizedBox(height: 4),
-                  TextField(
-                    controller: reController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(
-                      hintText: reHint ?? 'Informe o R.E.',
-                      border: const OutlineInputBorder(),
-                      isDense: true,
-                    ),
+                  Text(
+                    reValue.trim().isEmpty ? '-' : reValue,
+                    style: theme.textTheme.titleMedium,
                   ),
                 ],
               ),
