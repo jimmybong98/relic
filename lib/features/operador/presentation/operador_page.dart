@@ -13,6 +13,7 @@ import 'package:admin/features/finalizar_os/presentation/finalizar_os_page.dart'
 import 'package:admin/features/operador/presentation/troca_ferramenta_page.dart';
 import 'package:admin/features/operador/presentation/widgets/measurement_tile.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
+import 'package:admin/widgets/search_summary_card.dart';
 import 'package:admin/widgets/window_bar.dart';
 import 'package:admin/utils/string_utils.dart';
 import 'package:admin/services/machine_service.dart';
@@ -161,6 +162,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
   String? _maquinaSel;
 
   bool _registrando = false;
+  bool _mostrarResumo = false;
 
   late final VoidCallback _osSyncListener;
   late final VoidCallback _partSyncListener;
@@ -673,188 +675,222 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _reCtrl,
-                            textInputAction: TextInputAction.next,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            decoration: const InputDecoration(
-                              labelText:
-                                  'R.E. do Preparador', // ajuste o texto se for Operador
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) {
-                              final s = (v ?? '').trim();
-                              if (s.isEmpty) return 'Obrigatório';
-                              if (!RegExp(r'^\d+$').hasMatch(s))
-                                return 'Apenas números';
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        SizedBox(
-                          width: 140, // igual ao campo Operação
-                          child: TextFormField(
-                            controller: _osCtrl,
-                            textInputAction: TextInputAction.next,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            decoration: const InputDecoration(
-                              labelText: 'O.S.',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) {
-                              final s = (v ?? '').trim();
-                              if (s.isEmpty) return 'Obrigatório';
-                              if (!RegExp(r'^\d+$').hasMatch(s))
-                                return 'Apenas números';
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: categoriaValue,
-                            decoration: const InputDecoration(
-                              labelText: 'Categoria',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: _categorias
-                                .map(
-                                  (c) => DropdownMenuItem(
-                                    value: c,
-                                    child: Text(c),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) {
-                              ref
-                                  .read(sharedSearchFormProvider.notifier)
-                                  .setCategoria(v);
-                              setState(() {
-                                _categoriaSel = v;
-                                _maquinaSel = null;
-                              });
-                            },
-                            validator: (v) =>
-                                (v == null || v.isEmpty) ? 'Obrigatório' : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: maquinaValue,
-                            decoration: const InputDecoration(
-                              labelText: 'Código da máquina',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: maquinasDisponiveis
-                                .map(
-                                  (m) => DropdownMenuItem(
-                                    value: m.codigo,
-                                    child: Text(m.codigo),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) {
-                              ref
-                                  .read(sharedSearchFormProvider.notifier)
-                                  .setMaquina(v);
-                              setState(() => _maquinaSel = v);
-                            },
-                            validator: (v) =>
-                                (v == null || v.isEmpty) ? 'Obrigatório' : null,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // ---------- PartNumber + Operação (Operação só números) ----------
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _partCtrl,
-                            textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              labelText: 'Código da peça (PartNumber)',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Obrigatório'
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        SizedBox(
-                          width: 140,
-                          child: TextFormField(
-                            controller: _opCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            decoration: const InputDecoration(
-                              labelText: 'Operação',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) {
-                              final s = (v ?? '').trim();
-                              if (s.isEmpty) return 'Obrigatório';
-                              if (!RegExp(r'^\d+$').hasMatch(s))
-                                return 'Apenas números';
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () async {
-                          if (_formKey.currentState!.validate()) {
-                            FocusScope.of(context).unfocus();
-                            await ref
-                                .read(
-                                  medidasOperadorControllerProvider.notifier,
-                                )
-                                .carregar(
-                                  partnumber: normalizeCode(_partCtrl.text),
-                                  operacao: normalizeCode(_opCtrl.text),
-                                );
-                          }
-                        },
-                        icon: const Icon(Icons.search),
-                        label: const Text('Carregar medidas'),
-                      ),
-                    ),
+              if (_mostrarResumo) ...[
+                SearchSummaryCard(
+                  reController: _reCtrl,
+                  reLabel: 'R.E. do Preparador',
+                  reHint: 'Informe o R.E.',
+                  items: [
+                    SummaryInfo(label: 'O.S.', value: _osCtrl.text),
+                    SummaryInfo(label: 'Peça', value: _partCtrl.text),
+                    SummaryInfo(label: 'Operação', value: _opCtrl.text),
+                    if ((maquinaValue ?? '').isNotEmpty)
+                      SummaryInfo(label: 'Máquina', value: maquinaValue!),
+                    if ((categoriaValue ?? '').isNotEmpty)
+                      SummaryInfo(label: 'Categoria', value: categoriaValue!),
                   ],
                 ),
-              ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      FocusScope.of(context).unfocus();
+                      setState(() => _mostrarResumo = false);
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Alterar dados da busca'),
+                  ),
+                ),
+              ] else ...[
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _reCtrl,
+                              textInputAction: TextInputAction.next,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              decoration: const InputDecoration(
+                                labelText:
+                                    'R.E. do Preparador', // ajuste o texto se for Operador
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) {
+                                final s = (v ?? '').trim();
+                                if (s.isEmpty) return 'Obrigatório';
+                                if (!RegExp(r'^\d+$').hasMatch(s))
+                                  return 'Apenas números';
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            width: 140, // igual ao campo Operação
+                            child: TextFormField(
+                              controller: _osCtrl,
+                              textInputAction: TextInputAction.next,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              decoration: const InputDecoration(
+                                labelText: 'O.S.',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) {
+                                final s = (v ?? '').trim();
+                                if (s.isEmpty) return 'Obrigatório';
+                                if (!RegExp(r'^\d+$').hasMatch(s))
+                                  return 'Apenas números';
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: categoriaValue,
+                              decoration: const InputDecoration(
+                                labelText: 'Categoria',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: _categorias
+                                  .map(
+                                    (c) => DropdownMenuItem(
+                                      value: c,
+                                      child: Text(c),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) {
+                                ref
+                                    .read(sharedSearchFormProvider.notifier)
+                                    .setCategoria(v);
+                                setState(() {
+                                  _categoriaSel = v;
+                                  _maquinaSel = null;
+                                });
+                              },
+                              validator: (v) => (v == null || v.isEmpty)
+                                  ? 'Obrigatório'
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: maquinaValue,
+                              decoration: const InputDecoration(
+                                labelText: 'Código da máquina',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: maquinasDisponiveis
+                                  .map(
+                                    (m) => DropdownMenuItem(
+                                      value: m.codigo,
+                                      child: Text(m.codigo),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) {
+                                ref
+                                    .read(sharedSearchFormProvider.notifier)
+                                    .setMaquina(v);
+                                setState(() => _maquinaSel = v);
+                              },
+                              validator: (v) => (v == null || v.isEmpty)
+                                  ? 'Obrigatório'
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // ---------- PartNumber + Operação (Operação só números) ----------
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _partCtrl,
+                              textInputAction: TextInputAction.next,
+                              decoration: const InputDecoration(
+                                labelText: 'Código da peça (PartNumber)',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Obrigatório'
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            width: 140,
+                            child: TextFormField(
+                              controller: _opCtrl,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              decoration: const InputDecoration(
+                                labelText: 'Operação',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) {
+                                final s = (v ?? '').trim();
+                                if (s.isEmpty) return 'Obrigatório';
+                                if (!RegExp(r'^\d+$').hasMatch(s))
+                                  return 'Apenas números';
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () async {
+                            if (_formKey.currentState!.validate()) {
+                              FocusScope.of(context).unfocus();
+                              await ref
+                                  .read(
+                                    medidasOperadorControllerProvider.notifier,
+                                  )
+                                  .carregar(
+                                    partnumber: normalizeCode(_partCtrl.text),
+                                    operacao: normalizeCode(_opCtrl.text),
+                                  );
+                              if (mounted) {
+                                setState(() => _mostrarResumo = true);
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.search),
+                          label: const Text('Carregar medidas'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               Expanded(
                 child: medidasAsync.when(
