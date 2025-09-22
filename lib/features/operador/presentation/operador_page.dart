@@ -671,6 +671,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     final medidas = medidasAsync.value ?? [];
     final flowState = ref.watch(sharedSearchFormProvider);
     final flowLocked = flowState.isActive;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final actionBottomPadding = bottomInset > 0 ? bottomInset + 16.0 : 16.0;
     final reOk = _reCtrl.text.trim().isNotEmpty;
     final osOk = _osCtrl.text.trim().isNotEmpty;
     final categoriaValue =
@@ -1017,47 +1019,71 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
               ..._buildMedidasSlivers(medidasAsync),
               SliverFillRemaining(
                 hasScrollBody: false,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: PopupMenuButton<String>(
-                        onSelected: (value) {
-                          if (value == 'fim') _showFimJornadaDialog();
-                          if (value == 'encerrar') _confirmEncerrarProducao();
-                        },
-                        itemBuilder: (context) => const [
-                          PopupMenuItem(
-                            value: 'fim',
-                            child: Text('Fim de Jornada'),
-                          ),
-                          PopupMenuItem(
-                            value: 'encerrar',
-                            child: Text('Encerrar produção'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: podeRegistrar ? _registrarAmostragem : null,
-                        icon: _registrando
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      padding: EdgeInsets.zero,
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: AnimatedPadding(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          padding: EdgeInsets.only(bottom: actionBottomPadding),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: PopupMenuButton<String>(
+                                  onSelected: (value) {
+                                    if (value == 'fim') {
+                                      _showFimJornadaDialog();
+                                    }
+                                    if (value == 'encerrar') {
+                                      _confirmEncerrarProducao();
+                                    }
+                                  },
+                                  itemBuilder: (context) => const [
+                                    PopupMenuItem(
+                                      value: 'fim',
+                                      child: Text('Fim de Jornada'),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'encerrar',
+                                      child: Text('Encerrar produção'),
+                                    ),
+                                  ],
                                 ),
-                              )
-                            : const Icon(Icons.save_outlined),
-                        label: const Text('Registrar amostragem'),
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  onPressed: podeRegistrar
+                                      ? _registrarAmostragem
+                                      : null,
+                                  icon: _registrando
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.save_outlined),
+                                  label: const Text('Registrar amostragem'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ],
