@@ -85,6 +85,7 @@ class MedidaItem {
 
   /// Rótulos de tolerância (até 4) vindos do backend do Operador (AE/AF/AG/AH...).
   final List<String> tolerancias;
+  final Map<String, int> contagens;
 
   MedidaItem({
     required this.titulo,
@@ -98,7 +99,8 @@ class MedidaItem {
     this.periodicidade,
     this.instrumento,
     this.tolerancias = const [],
-  });
+    Map<String, int>? contagens,
+  }) : contagens = Map.unmodifiable(contagens ?? const {});
 
   /// Avalia um valor numérico contra os limites.
   /// - Se só houver `minimo`, reprova **abaixo** do mínimo.
@@ -284,6 +286,26 @@ class MedidaItem {
         ? (map['tolerancias'] as List).map((e) => e.toString()).toList()
         : const <String>[];
 
+    final rawCounts = map['contagens'];
+    final counts = <String, int>{};
+    if (rawCounts is Map) {
+      rawCounts.forEach((key, value) {
+        if (key == null) return;
+        final label = key.toString();
+        if (label.isEmpty) return;
+        int? parsed;
+        final v = value;
+        if (v is num) {
+          parsed = v.toInt();
+        } else {
+          parsed = int.tryParse(v.toString());
+        }
+        if (parsed != null && parsed >= 0) {
+          counts[label] = parsed;
+        }
+      });
+    }
+
     return MedidaItem(
       titulo: titulo,
       faixaTexto: faixaOut,
@@ -296,6 +318,7 @@ class MedidaItem {
       periodicidade: map['periodicidade']?.toString(),
       instrumento: map['instrumento']?.toString(),
       tolerancias: tol,
+      contagens: counts,
     );
   }
 
@@ -311,6 +334,7 @@ class MedidaItem {
     'periodicidade': periodicidade,
     'instrumento': instrumento,
     'tolerancias': tolerancias,
+    'contagens': contagens,
   };
 }
 
