@@ -7,10 +7,10 @@ import 'package:http/http.dart' as http;
 
 import 'package:admin/features/operador/presentation/widgets/measurement_tile.dart';
 import 'package:admin/features/preparacao/data/models.dart';
+import 'package:admin/utils/api_base_url.dart';
 import 'package:admin/utils/string_utils.dart';
 
 class TrocaFerramentaPage extends StatefulWidget {
-  final String baseUrl;
   final String re;
   final String os;
   final String partnumber;
@@ -19,7 +19,6 @@ class TrocaFerramentaPage extends StatefulWidget {
 
   const TrocaFerramentaPage({
     super.key,
-    required this.baseUrl,
     required this.re,
     required this.os,
     required this.partnumber,
@@ -60,12 +59,10 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
       _erro = null;
     });
 
-    final uri = Uri.parse('${widget.baseUrl}/preparador/medidas').replace(
-      queryParameters: {
-        'partnumber': normalizeCode(widget.partnumber),
-        'operacao': normalizeCode(widget.operacao),
-      },
-    );
+    final uri = buildApiUri('/preparador/medidas', {
+      'partnumber': normalizeCode(widget.partnumber),
+      'operacao': normalizeCode(widget.operacao),
+    });
 
     try {
       final resp = await http.get(uri).timeout(const Duration(seconds: 20));
@@ -269,7 +266,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
       });
     }
 
-    final uri = Uri.parse('${widget.baseUrl}/preparador/resultado');
+    final uri = buildApiUri('/preparador/resultado');
     final body = jsonEncode({
       're': reAtual,
       'os': widget.os,
