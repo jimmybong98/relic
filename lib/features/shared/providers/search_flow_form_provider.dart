@@ -10,6 +10,12 @@ String? _normalizeOptional(String? value) {
   return trimmed;
 }
 
+String? _normalizeOptional(String? value) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) return null;
+  return trimmed;
+}
+
 class SharedSearchFormState {
   const SharedSearchFormState({
     this.isActive = false,
@@ -166,7 +172,6 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
     if (_isActive && state.matches(candidate) == false) {
       return false;
     }
-
     _updateState(candidate);
     return true;
   }

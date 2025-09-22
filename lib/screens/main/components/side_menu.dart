@@ -30,7 +30,6 @@ class SideMenu extends ConsumerWidget {
         page is OperadorPage ||
         page is FinalizarOsPage;
   }
-
   String _flowLockedMessage(SharedSearchFormState shared) {
     final osAtual = shared.os.trim();
     return osAtual.isEmpty
