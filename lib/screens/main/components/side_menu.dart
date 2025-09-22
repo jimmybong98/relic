@@ -30,6 +30,7 @@ class SideMenu extends ConsumerWidget {
         page is OperadorPage ||
         page is FinalizarOsPage;
   }
+
   String _flowLockedMessage(SharedSearchFormState shared) {
     final osAtual = shared.os.trim();
     return osAtual.isEmpty
@@ -46,13 +47,20 @@ class SideMenu extends ConsumerWidget {
     ).showSnackBar(SnackBar(content: Text(_flowLockedMessage(shared))));
   }
 
-  void _navigate(BuildContext context, WidgetRef ref, Widget page) {
+  void _navigate(
+    BuildContext context,
+    WidgetRef ref,
+    Widget page, {
+    bool allowDuringActiveFlow = false,
+  }) {
     final navigator = Navigator.of(context, rootNavigator: true);
     final shared = ref.read(sharedSearchFormProvider);
     final hasActiveFlow = shared.isActive;
     final flowPage = _isFlowPage(page);
+    final shouldIgnoreLock =
+        allowDuringActiveFlow && hasActiveFlow && !flowPage;
 
-    if (hasActiveFlow && !flowPage) {
+    if (hasActiveFlow && !flowPage && !shouldIgnoreLock) {
       navigator.pop();
       _showFlowLockedMessage(context, shared);
       return;
@@ -60,7 +68,7 @@ class SideMenu extends ConsumerWidget {
 
     navigator.pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!hasActiveFlow || !flowPage) {
+      if (!hasActiveFlow || (!flowPage && !shouldIgnoreLock)) {
         ref.read(sharedSearchFormProvider.notifier).clear();
       }
       navigator.push(MaterialPageRoute(builder: (_) => page));
@@ -220,7 +228,12 @@ class SideMenu extends ConsumerWidget {
                 );
                 return;
               }
-              _navigate(context, ref, MainScreen());
+              _navigate(
+                context,
+                ref,
+                MainScreen(),
+                allowDuringActiveFlow: true,
+              );
             },
           ),
         ]);
