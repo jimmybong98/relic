@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 /// Representation of a summary item shown in the [SearchSummaryCard].
 class SummaryInfo {
   const SummaryInfo({required this.label, required this.value});
