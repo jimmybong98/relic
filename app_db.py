@@ -9,6 +9,7 @@ import re
 import json
 import io
 import math
+import unicodedata
 from decimal import Decimal
 from datetime import date, datetime
 
@@ -695,6 +696,18 @@ def _medidas_preparador_db(part: str, op: str):
     return medidas
 
 
+def _normalize_title_key(text: str) -> str:
+    t = _norm(text).lower()
+    if not t:
+        return ""
+    norm = unicodedata.normalize("NFD", t)
+    without_marks = "".join(
+        ch for ch in norm if unicodedata.category(ch) != "Mn"
+    )
+    collapsed = re.sub(r"\s+", " ", without_marks)
+    return collapsed.strip()
+
+
 def _medidas_operador_db(part: str, op: str):
     part = _norm_part(part)
     op = _norm_op(op)
@@ -720,30 +733,36 @@ def _medidas_operador_db(part: str, op: str):
             cur.execute(
                 """
                 SELECT i.idx_medida,
+                       i.titulo,
                        i.escolha,
                        COUNT(*) AS qtd
                   FROM operador_amostragem_item i
                   JOIN operador_amostragem a ON a.id = i.amostragem_id
                  WHERE TRIM(LEADING '0' FROM TRIM(a.partnumber))=%s
                    AND TRIM(LEADING '0' FROM TRIM(a.operacao))=%s
-                 GROUP BY i.idx_medida, i.escolha
+                 GROUP BY i.idx_medida, i.titulo, i.escolha
                 """,
                 (part, op),
             )
             contagens_rows = cur.fetchall()
 
     contagens_por_indice = defaultdict(lambda: defaultdict(int))
+    contagens_por_titulo = defaultdict(lambda: defaultdict(int))
     for cnt in contagens_rows:
         idx = cnt.get("idx_medida")
         escolha = (cnt.get("escolha") or "").strip()
+        titulo_key = _normalize_title_key(cnt.get("titulo"))
         qtd = int(cnt.get("qtd") or 0)
-        if idx is None or not escolha or qtd <= 0:
+        if not escolha or qtd <= 0:
             continue
         partes = [p.strip() for p in escolha.split("|") if p.strip()]
         if not partes:
             partes = [escolha]
         for parte in partes:
-            contagens_por_indice[idx][parte] += qtd
+            if idx is not None:
+                contagens_por_indice[idx][parte] += qtd
+            if titulo_key:
+                contagens_por_titulo[titulo_key][parte] += qtd
 
     medidas = []
     for row in rows:
@@ -774,7 +793,10 @@ def _medidas_operador_db(part: str, op: str):
             row.get("reprovada_acima"),
         ]
         tolerancias = [t for t in tolerancias if t is not None]
-        raw_counts = contagens_por_indice.get(idx) or {}
+        raw_counts = contagens_por_indice.get(idx)
+        if not raw_counts:
+            raw_counts = contagens_por_titulo.get(_normalize_title_key(titulo))
+        raw_counts = {k: int(v) for k, v in (raw_counts or {}).items()}
         medidas.append(
             {
                 "indice": idx,
@@ -1689,6 +1711,27 @@ def operador_registrar():
                 if not cur.fetchone():
                     return jsonify({"error": "máquina não cadastrada"}), 400
 
+            titulo_idx_map = {}
+            with c.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT idx_medida, titulo
+                      FROM for09_norm
+                     WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=%s
+                       AND TRIM(LEADING '0' FROM TRIM(operacao))=%s
+                    """,
+                    (part, op),
+                )
+                for row in cur.fetchall():
+                    idx_row = row.get("idx_medida")
+                    titulo_row = _normalize_title_key(row.get("titulo"))
+                    if idx_row is None or not titulo_row:
+                        continue
+                    try:
+                        titulo_idx_map[titulo_row] = int(idx_row)
+                    except (TypeError, ValueError):
+                        continue
+
             # BLOQUEIO: exige liberação
             ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op, maquina)
             if not ok:
@@ -1723,8 +1766,28 @@ def operador_registrar():
 
                 # itens
                 for it in itens:
-                    idx = int(it.get("indice", 0))
+                    raw_idx = it.get("indice")
+                    idx = None
+                    if isinstance(raw_idx, (int, float)):
+                        idx = int(raw_idx)
+                    elif raw_idx is not None:
+                        try:
+                            idx = int(str(raw_idx).strip())
+                        except Exception:
+                            idx = None
+
+                    if idx is not None and idx < 0:
+                        idx = None
+
                     titulo = _norm(it.get("titulo"))
+                    titulo_key = _normalize_title_key(titulo)
+                    if (idx is None or idx == 0) and titulo_key:
+                        guessed = titulo_idx_map.get(titulo_key)
+                        if guessed is not None:
+                            idx = guessed
+                    if idx is None:
+                        idx = i
+
                     instrumento = _norm(it.get("instrumento"))
                     faixa_texto = _norm(it.get("faixaTexto"))
                     minimo = it.get("min")
