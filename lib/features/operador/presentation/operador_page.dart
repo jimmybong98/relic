@@ -59,6 +59,7 @@ class MedidasOperadorController
     if (index < 0 || index >= current.length) return;
     final old = current[index];
     current[index] = MedidaItem(
+      indice: old.indice,
       titulo: old.titulo,
       faixaTexto: old.faixaTexto,
       minimo: old.minimo,
@@ -81,6 +82,7 @@ class MedidasOperadorController
     for (var i = 0; i < current.length; i++) {
       final old = current[i];
       current[i] = MedidaItem(
+        indice: old.indice,
         titulo: old.titulo,
         faixaTexto: old.faixaTexto,
         minimo: old.minimo,
@@ -124,6 +126,7 @@ class MedidasOperadorController
       }
 
       current[i] = MedidaItem(
+        indice: old.indice,
         titulo: old.titulo,
         faixaTexto: old.faixaTexto,
         minimo: old.minimo,
@@ -301,7 +304,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       final m = medidas[i];
       final map = m.toMap();
       // índice esperado pelo backend
-      map['indice'] = i;
+      map['indice'] = m.indice ?? map['indice'] ?? i;
       // backend espera 'min'/'max' e não 'minimo'/'maximo'
       map['min'] = m.minimo;
       map['max'] = m.maximo;

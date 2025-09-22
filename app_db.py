@@ -679,8 +679,11 @@ def _medidas_preparador_db(part: str, op: str):
                 mn = 0.0
             elif mn is None and mx is not None:
                 mn = 0.0
+        idx = row.get("idx_medida")
         medidas.append(
             {
+                "indice": idx,
+                "idx_medida": idx,
                 "titulo": titulo,
                 "faixaTexto": faixa,
                 "min": mn,
@@ -774,6 +777,8 @@ def _medidas_operador_db(part: str, op: str):
         raw_counts = contagens_por_indice.get(idx) or {}
         medidas.append(
             {
+                "indice": idx,
+                "idx_medida": idx,
                 "titulo": titulo,
                 "faixaTexto": faixa,
                 "min": mn,
