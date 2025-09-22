@@ -109,6 +109,8 @@ class _MeasurementTileState extends State<MeasurementTile> {
           'visual',
           'rug',
           'paralelismo',
+          'anel de rosca',
+          'anel rosca',
           'anel de rosca passa',
           'cqf',
           'simetria',
@@ -119,6 +121,8 @@ class _MeasurementTileState extends State<MeasurementTile> {
           'rug',
           'rugosimetro',
           'paralelismo',
+          'anel de rosca',
+          'anel rosca',
           'anel de rosca passa',
           'cqf',
           'simetria',
@@ -141,7 +145,8 @@ class _MeasurementTileState extends State<MeasurementTile> {
   }
 
   bool _isRosca(MedidaItem item) {
-    return _stringHasRoscaPattern(item.titulo);
+    return _stringHasRoscaPattern(item.titulo) ||
+        _stringHasRoscaPattern(item.instrumento);
   }
 
   Set<String> _partsFromMedicao(String? medicao) => (medicao ?? '')
