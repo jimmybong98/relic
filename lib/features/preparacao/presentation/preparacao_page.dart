@@ -224,15 +224,53 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     }
   }
 
-  Future<void> _abrirPaginaOperador() async {
-    final notifier = ref.read(sharedSearchFormProvider.notifier);
-    notifier.beginFlow(
+  bool _flowMatchesCurrentForm(SharedSearchFormState shared) {
+    if (!shared.isActive) return true;
+    return shared.matchesValues(
       os: _osCtrl.text,
       partNumber: _partCtrl.text,
       operacao: _opCtrl.text,
       categoria: _categoriaSel,
       maquina: _maquinaSel,
     );
+  }
+
+  void _showFlowBlockedSnackBar(SharedSearchFormState shared) {
+    if (!mounted) return;
+    final osAtual = shared.os.trim();
+    final mensagem = osAtual.isEmpty
+        ? 'Finalize a O.S. em andamento antes de iniciar outra.'
+        : 'Finalize a O.S. $osAtual antes de iniciar outra.';
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(mensagem)));
+  }
+
+  bool _ensureFlowConsistency() {
+    final shared = ref.read(sharedSearchFormProvider);
+    if (_flowMatchesCurrentForm(shared)) {
+      return true;
+    }
+    _showFlowBlockedSnackBar(shared);
+    return false;
+  }
+
+  Future<void> _abrirPaginaOperador() async {
+    if (!_ensureFlowConsistency()) return;
+
+    final notifier = ref.read(sharedSearchFormProvider.notifier);
+    final iniciouFluxo = notifier.beginFlow(
+      os: _osCtrl.text,
+      partNumber: _partCtrl.text,
+      operacao: _opCtrl.text,
+      categoria: _categoriaSel,
+      maquina: _maquinaSel,
+    );
+
+    if (!iniciouFluxo) {
+      _showFlowBlockedSnackBar(ref.read(sharedSearchFormProvider));
+      return;
+    }
 
     if (mounted) {
       FocusScope.of(context).unfocus();
@@ -293,6 +331,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       );
       return;
     }
+
+    if (!_ensureFlowConsistency()) return;
 
     // Todas respondidas? (para Preparador, cada item precisa de medição)
     final faltando = <int>[];
@@ -416,6 +456,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   Widget build(BuildContext context) {
     final medidasAsync = ref.watch(medidasPreparadorControllerProvider);
     final medidas = medidasAsync.value ?? [];
+    final flowState = ref.watch(sharedSearchFormProvider);
+    final flowLocked = flowState.isActive;
 
     // Pode registrar quando: RE e OS preenchidos + todas as medições preenchidas
     final reOk = _reCtrl.text.trim().isNotEmpty;
@@ -433,6 +475,15 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
         ? _maquinaSel
         : null;
     final maquinaOk = (maquinaValue ?? '').isNotEmpty;
+    final formMatchesFlow =
+        !flowLocked ||
+        flowState.matchesValues(
+          os: _osCtrl.text,
+          partNumber: _partCtrl.text,
+          operacao: _opCtrl.text,
+          categoria: categoriaValue,
+          maquina: maquinaValue,
+        );
     final todasOk =
         medidas.isNotEmpty &&
         medidas.every(
@@ -440,7 +491,13 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
               (m.medicao ?? '').isNotEmpty && m.status != StatusMedida.pendente,
         );
     final podeRegistrar =
-        reOk && osOk && maquinaOk && todasOk && !_registrando && !_osLiberada;
+        formMatchesFlow &&
+        reOk &&
+        osOk &&
+        maquinaOk &&
+        todasOk &&
+        !_registrando &&
+        !_osLiberada;
 
     return Scaffold(
       appBar: WindowBar(
@@ -467,6 +524,37 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
+              if (flowLocked)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.lock,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          flowState.os.trim().isEmpty
+                              ? 'Existe um fluxo de O.S. em andamento. Finalize a O.S. atual para iniciar outra.'
+                              : 'Fluxo ativo para a O.S. ${flowState.os}. Finalize a O.S. atual para iniciar outra.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               if (_mostrarResumo) ...[
                 SearchSummaryCard(
                   reLabel: 'R.E. do Preparador',
@@ -485,10 +573,12 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
-                    onPressed: () {
-                      FocusScope.of(context).unfocus();
-                      setState(() => _mostrarResumo = false);
-                    },
+                    onPressed: flowLocked
+                        ? null
+                        : () {
+                            FocusScope.of(context).unfocus();
+                            setState(() => _mostrarResumo = false);
+                          },
                     icon: const Icon(Icons.edit_outlined),
                     label: const Text('Alterar dados da busca'),
                   ),
@@ -527,6 +617,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             width: 140, // igual ao campo Operação
                             child: TextFormField(
                               controller: _osCtrl,
+                              enabled: !flowLocked,
                               textInputAction: TextInputAction.next,
                               keyboardType: TextInputType.number,
                               inputFormatters: [
@@ -567,15 +658,19 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     ),
                                   )
                                   .toList(),
-                              onChanged: (v) {
-                                ref
-                                    .read(sharedSearchFormProvider.notifier)
-                                    .setCategoria(v);
-                                setState(() {
-                                  _categoriaSel = v;
-                                  _maquinaSel = null;
-                                });
-                              },
+                              onChanged: flowLocked
+                                  ? null
+                                  : (v) {
+                                      ref
+                                          .read(
+                                            sharedSearchFormProvider.notifier,
+                                          )
+                                          .setCategoria(v);
+                                      setState(() {
+                                        _categoriaSel = v;
+                                        _maquinaSel = null;
+                                      });
+                                    },
                               validator: (v) => (v == null || v.isEmpty)
                                   ? 'Obrigatório'
                                   : null,
@@ -597,12 +692,16 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     ),
                                   )
                                   .toList(),
-                              onChanged: (v) {
-                                ref
-                                    .read(sharedSearchFormProvider.notifier)
-                                    .setMaquina(v);
-                                setState(() => _maquinaSel = v);
-                              },
+                              onChanged: flowLocked
+                                  ? null
+                                  : (v) {
+                                      ref
+                                          .read(
+                                            sharedSearchFormProvider.notifier,
+                                          )
+                                          .setMaquina(v);
+                                      setState(() => _maquinaSel = v);
+                                    },
                               validator: (v) => (v == null || v.isEmpty)
                                   ? 'Obrigatório'
                                   : null,
@@ -619,6 +718,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                           Expanded(
                             child: TextFormField(
                               controller: _partCtrl,
+                              enabled: !flowLocked,
                               textInputAction: TextInputAction.next,
                               decoration: const InputDecoration(
                                 labelText: 'Código da peça (PartNumber)',
@@ -634,6 +734,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             width: 140,
                             child: TextFormField(
                               controller: _opCtrl,
+                              enabled: !flowLocked,
                               keyboardType: TextInputType.number,
                               inputFormatters: [
                                 FilteringTextInputFormatter.digitsOnly,
@@ -660,6 +761,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                         child: FilledButton.icon(
                           onPressed: () async {
                             if (_formKey.currentState!.validate()) {
+                              if (!_ensureFlowConsistency()) return;
                               FocusScope.of(context).unfocus();
                               await ref
                                   .read(
