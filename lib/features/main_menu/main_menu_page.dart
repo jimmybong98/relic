@@ -57,12 +57,32 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
 
   @override
   Widget build(BuildContext context) {
-    void open(BuildContext context, Widget page) {
-      ref.read(sharedSearchFormProvider.notifier).clear();
+    void showFlowLockedMessage(SharedSearchFormState shared) {
+      final osAtual = shared.os.trim();
+      final mensagem = osAtual.isEmpty
+          ? 'Finalize a O.S. em andamento antes de iniciar outra.'
+          : 'Finalize a O.S. $osAtual antes de iniciar outra.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(mensagem)));
+    }
+
+    void openFlowPage(Widget page) {
+      final shared = ref.read(sharedSearchFormProvider);
+      if (!shared.isActive) {
+        ref.read(sharedSearchFormProvider.notifier).clear();
+      }
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
     }
 
     Future<void> openAdmin() async {
+      final shared = ref.read(sharedSearchFormProvider);
+      if (shared.isActive) {
+        showFlowLockedMessage(shared);
+        return;
+      }
+
+      ref.read(sharedSearchFormProvider.notifier).clear();
       var auth = ref.read(authServiceProvider);
       if (auth == null) {
         final ok = await Navigator.of(
@@ -77,7 +97,9 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
         );
         return;
       }
-      open(context, MainScreen());
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => MainScreen()));
     }
 
     final logo = _logos[_logoIndex];
@@ -103,17 +125,16 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                       children: [
                         _MenuButton(
                           image: 'assets/icons/FOR007.svg',
-                          onPressed: () =>
-                              open(context, const PreparacaoPage()),
+                          onPressed: () => openFlowPage(const PreparacaoPage()),
                         ),
                         _MenuButton(
                           image: 'assets/icons/Amostragem.svg',
-                          onPressed: () => open(context, const OperadorPage()),
+                          onPressed: () => openFlowPage(const OperadorPage()),
                         ),
                         _MenuButton(
                           image: 'assets/icons/FOR008.svg',
                           onPressed: () =>
-                              open(context, const FinalizarOsPage()),
+                              openFlowPage(const FinalizarOsPage()),
                         ),
                         _MenuButton(
                           image: 'assets/icons/Dashboard.svg',

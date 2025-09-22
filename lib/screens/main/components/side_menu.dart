@@ -30,18 +30,20 @@ class SideMenu extends ConsumerWidget {
         page is OperadorPage ||
         page is FinalizarOsPage;
   }
+  String _flowLockedMessage(SharedSearchFormState shared) {
+    final osAtual = shared.os.trim();
+    return osAtual.isEmpty
+        ? 'Finalize a O.S. em andamento antes de iniciar outra.'
+        : 'Finalize a O.S. $osAtual antes de iniciar outra.';
+  }
 
   void _showFlowLockedMessage(
     BuildContext context,
     SharedSearchFormState shared,
   ) {
-    final osAtual = shared.os.trim();
-    final mensagem = osAtual.isEmpty
-        ? 'Finalize a O.S. em andamento antes de iniciar outra.'
-        : 'Finalize a O.S. $osAtual antes de iniciar outra.';
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(mensagem)));
+    ).showSnackBar(SnackBar(content: Text(_flowLockedMessage(shared))));
   }
 
   void _navigate(BuildContext context, WidgetRef ref, Widget page) {
@@ -68,16 +70,17 @@ class SideMenu extends ConsumerWidget {
   void _goHome(BuildContext context, WidgetRef ref) {
     final navigator = Navigator.of(context, rootNavigator: true);
     final shared = ref.read(sharedSearchFormProvider);
-    if (shared.isActive) {
-      navigator.pop();
-      _showFlowLockedMessage(context, shared);
-      return;
-    }
-
+    final messenger = ScaffoldMessenger.of(context);
+    final message = shared.isActive ? _flowLockedMessage(shared) : null;
     navigator.pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(sharedSearchFormProvider.notifier).clear();
+      if (!shared.isActive) {
+        ref.read(sharedSearchFormProvider.notifier).clear();
+      }
       navigator.popUntil((route) => route.isFirst);
+      if (message != null) {
+        messenger.showSnackBar(SnackBar(content: Text(message)));
+      }
     });
   }
 
