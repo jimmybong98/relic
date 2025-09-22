@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from pathlib import Path
 from typing import Optional, Tuple
+from collections import defaultdict
 import os
 import re
 import json
@@ -695,6 +696,7 @@ def _medidas_operador_db(part: str, op: str):
     part = _norm_part(part)
     op = _norm_op(op)
     rows = []
+    contagens_rows = []
     with _conn_db(DB_NAME) as c:
         with c.cursor() as cur:
             cur.execute(
@@ -711,8 +713,38 @@ def _medidas_operador_db(part: str, op: str):
                 (part, op),
             )
             rows = cur.fetchall()
+        with c.cursor() as cur:
+            cur.execute(
+                """
+                SELECT i.idx_medida,
+                       i.escolha,
+                       COUNT(*) AS qtd
+                  FROM operador_amostragem_item i
+                  JOIN operador_amostragem a ON a.id = i.amostragem_id
+                 WHERE TRIM(LEADING '0' FROM TRIM(a.partnumber))=%s
+                   AND TRIM(LEADING '0' FROM TRIM(a.operacao))=%s
+                 GROUP BY i.idx_medida, i.escolha
+                """,
+                (part, op),
+            )
+            contagens_rows = cur.fetchall()
+
+    contagens_por_indice = defaultdict(lambda: defaultdict(int))
+    for cnt in contagens_rows:
+        idx = cnt.get("idx_medida")
+        escolha = (cnt.get("escolha") or "").strip()
+        qtd = int(cnt.get("qtd") or 0)
+        if idx is None or not escolha or qtd <= 0:
+            continue
+        partes = [p.strip() for p in escolha.split("|") if p.strip()]
+        if not partes:
+            partes = [escolha]
+        for parte in partes:
+            contagens_por_indice[idx][parte] += qtd
+
     medidas = []
     for row in rows:
+        idx = row.get("idx_medida")
         titulo = row.get("titulo") or ""
         faixa = row.get("faixa_texto") or ""
         mn = row.get("minimo")
@@ -739,6 +771,7 @@ def _medidas_operador_db(part: str, op: str):
             row.get("reprovada_acima"),
         ]
         tolerancias = [t for t in tolerancias if t is not None]
+        raw_counts = contagens_por_indice.get(idx) or {}
         medidas.append(
             {
                 "titulo": titulo,
@@ -749,6 +782,7 @@ def _medidas_operador_db(part: str, op: str):
                 "periodicidade": row.get("periodicidade") or "",
                 "instrumento": row.get("instrumento") or "",
                 "tolerancias": tolerancias,
+                "contagens": {k: int(v) for k, v in raw_counts.items()},
             }
         )
     return medidas

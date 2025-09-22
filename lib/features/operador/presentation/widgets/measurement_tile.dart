@@ -143,8 +143,9 @@ class _MeasurementTileState extends State<MeasurementTile> {
     if (RegExp(r'\bmicro[\s-]*metros?\b').hasMatch(normalized)) return false;
     if (RegExp(r'\banel\s*de\s*rosca\b').hasMatch(normalized)) return true;
 
-    return RegExp(r'\b(anel|cal|calib\w*|calibre\w*|galg\w*)\b')
-        .hasMatch(normalized);
+    return RegExp(
+      r'\b(anel|cal|calib\w*|calibre\w*|galg\w*)\b',
+    ).hasMatch(normalized);
   }
 
   bool _isRosca(MedidaItem item) {
@@ -195,6 +196,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
     bool selected = false,
     Color? fg,
     VoidCallback? onTap,
+    int? count,
   }) {
     final baseFg = fg ?? _fgOn(bg);
     final effectiveBg = selected ? border : bg;
@@ -202,6 +204,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
     final effectiveFg = selected
         ? (fg != null ? Colors.white : _fgOn(effectiveBg))
         : baseFg;
+    final displayCount = count;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
@@ -221,8 +224,20 @@ class _MeasurementTileState extends State<MeasurementTile> {
                 ]
               : null,
         ),
-        child: Text(
-          text,
+        child: Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: text),
+              if (displayCount != null)
+                TextSpan(
+                  text: ' ($displayCount)',
+                  style: TextStyle(
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color: effectiveFg.withOpacity(0.85),
+                  ),
+                ),
+            ],
+          ),
           style: TextStyle(
             fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
             color: effectiveFg,
@@ -230,6 +245,18 @@ class _MeasurementTileState extends State<MeasurementTile> {
         ),
       ),
     );
+  }
+
+  int _countFor(String label) {
+    final counts = widget.item.contagens;
+    final direct = counts[label];
+    if (direct != null) return direct;
+    final trimmed = label.trim();
+    if (trimmed != label) {
+      final trimmedCount = counts[trimmed];
+      if (trimmedCount != null) return trimmedCount;
+    }
+    return 0;
   }
 
   String _subtitleFor(MedidaItem item) {
@@ -382,6 +409,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     border: Colors.green.shade600,
                     fg: Colors.green.shade900,
                     selected: roscaSelection == 'aprovado',
+                    count: _countFor('Aprovado'),
                     onTap: () {
                       FocusScope.of(context).unfocus();
                       setState(() {
@@ -395,6 +423,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     bg: Colors.red.shade100,
                     border: Colors.red.shade400,
                     selected: roscaSelection == 'reprovado',
+                    count: _countFor('Reprovado'),
                     onTap: () {
                       FocusScope.of(context).unfocus();
                       setState(() {
@@ -477,6 +506,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     border: Colors.green.shade600,
                     fg: Colors.green.shade900,
                     selected: item.medicao == 'Aprovado',
+                    count: _countFor('Aprovado'),
                     onTap: () => widget.onSelect(StatusMedida.ok, 'Aprovado'),
                   ),
                   _pill(
@@ -484,6 +514,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     bg: Colors.red.shade100,
                     border: Colors.red.shade400,
                     selected: item.medicao == 'Reprovado',
+                    count: _countFor('Reprovado'),
                     onTap: () => widget.onSelect(
                       StatusMedida.reprovadaAcima,
                       'Reprovado',
@@ -505,6 +536,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                         border: Colors.green.shade600,
                         fg: Colors.green.shade900,
                         selected: parts.contains('Lado passa — Aprovado'),
+                        count: _countFor('Lado passa — Aprovado'),
                         onTap: () {
                           final p = _partsFromMedicao(item.medicao);
                           p.removeWhere((e) => e.startsWith('Lado passa'));
@@ -517,6 +549,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                         bg: Colors.red.shade100,
                         border: Colors.red.shade400,
                         selected: parts.contains('Lado passa — Reprovado'),
+                        count: _countFor('Lado passa — Reprovado'),
                         onTap: () {
                           final p = _partsFromMedicao(item.medicao);
                           p.removeWhere((e) => e.startsWith('Lado passa'));
@@ -530,6 +563,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                         border: Colors.green.shade600,
                         fg: Colors.green.shade900,
                         selected: parts.contains('Lado não passa — Aprovado'),
+                        count: _countFor('Lado não passa — Aprovado'),
                         onTap: () {
                           final p = _partsFromMedicao(item.medicao);
                           p.removeWhere((e) => e.startsWith('Lado não passa'));
@@ -542,6 +576,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                         bg: Colors.red.shade100,
                         border: Colors.red.shade400,
                         selected: parts.contains('Lado não passa — Reprovado'),
+                        count: _countFor('Lado não passa — Reprovado'),
                         onTap: () {
                           final p = _partsFromMedicao(item.medicao);
                           p.removeWhere((e) => e.startsWith('Lado não passa'));
@@ -601,6 +636,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                         bg: bg,
                         border: bd,
                         selected: selected,
+                        count: _countFor(label),
                         onTap: () => widget.onSelect(st, label),
                       ),
                     );
@@ -614,6 +650,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                       border: Colors.green.shade600,
                       fg: Colors.green.shade900,
                       selected: item.medicao == 'OK',
+                      count: _countFor('OK'),
                       onTap: () => widget.onSelect(StatusMedida.ok, 'OK'),
                     ),
                   );
