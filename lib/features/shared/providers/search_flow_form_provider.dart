@@ -1,4 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
+
+const sharedSearchFlowBoxName = 'shared_search_flow';
+const _sharedSearchFlowStateKey = 'state';
+
+String? _normalizeOptional(String? value) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) return null;
+  return trimmed;
+}
 
 class SharedSearchFormState {
   const SharedSearchFormState({
@@ -19,6 +29,34 @@ class SharedSearchFormState {
 
   static const _sentinel = Object();
 
+  factory SharedSearchFormState.fromMap(Map<dynamic, dynamic> map) {
+    String _readString(dynamic value) => (value ?? '').toString().trim();
+    String? _readOptional(dynamic value) {
+      if (value == null) return null;
+      return _normalizeOptional(value.toString());
+    }
+
+    return SharedSearchFormState(
+      isActive: map['isActive'] == true,
+      os: _readString(map['os']),
+      partNumber: _readString(map['partNumber']),
+      operacao: _readString(map['operacao']),
+      categoria: _readOptional(map['categoria']),
+      maquina: _readOptional(map['maquina']),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'isActive': isActive,
+      'os': os,
+      'partNumber': partNumber,
+      'operacao': operacao,
+      'categoria': categoria,
+      'maquina': maquina,
+    };
+  }
+
   SharedSearchFormState copyWith({
     bool? isActive,
     String? os,
@@ -36,80 +74,160 @@ class SharedSearchFormState {
       maquina: maquina == _sentinel ? this.maquina : maquina as String?,
     );
   }
-}
 
-class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
-  SharedSearchFormController() : super(const SharedSearchFormState());
+  bool matches(SharedSearchFormState other) {
+    return os == other.os &&
+        partNumber == other.partNumber &&
+        operacao == other.operacao &&
+        categoria == other.categoria &&
+        maquina == other.maquina;
+  }
 
-  bool get _isActive => state.isActive;
+  bool equals(SharedSearchFormState other) {
+    return isActive == other.isActive && matches(other);
+  }
 
-  void beginFlow({
+  bool matchesValues({
     required String os,
     required String partNumber,
     required String operacao,
     String? categoria,
     String? maquina,
   }) {
-    String? normalizeOptional(String? value) {
-      final trimmed = value?.trim();
-      if (trimmed == null || trimmed.isEmpty) return null;
-      return trimmed;
+    return matches(
+      SharedSearchFormState(
+        isActive: true,
+        os: os.trim(),
+        partNumber: partNumber.trim(),
+        operacao: operacao.trim(),
+        categoria: _normalizeOptional(categoria),
+        maquina: _normalizeOptional(maquina),
+      ),
+    );
+  }
+}
+
+SharedSearchFormState _restoreInitialState(Box<Map> box) {
+  if (!box.isOpen) return const SharedSearchFormState();
+  final raw = box.get(_sharedSearchFlowStateKey);
+  if (raw is Map) {
+    try {
+      return SharedSearchFormState.fromMap(raw);
+    } catch (_) {
+      return const SharedSearchFormState();
+    }
+  }
+  return const SharedSearchFormState();
+}
+
+class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
+  SharedSearchFormController(this._box) : super(_restoreInitialState(_box));
+
+  final Box<Map> _box;
+
+  bool get _isActive => state.isActive;
+
+  void _persist(SharedSearchFormState value) {
+    if (!_box.isOpen) return;
+    if (!value.isActive) {
+      if (_box.containsKey(_sharedSearchFlowStateKey)) {
+        _box.delete(_sharedSearchFlowStateKey);
+      }
+      return;
     }
 
-    state = SharedSearchFormState(
+    _box.put(_sharedSearchFlowStateKey, value.toMap());
+  }
+
+  void _updateState(SharedSearchFormState newState) {
+    if (state.equals(newState)) {
+      return;
+    }
+    state = newState;
+    _persist(newState);
+  }
+
+  bool beginFlow({
+    required String os,
+    required String partNumber,
+    required String operacao,
+    String? categoria,
+    String? maquina,
+  }) {
+    final candidate = SharedSearchFormState(
       isActive: true,
       os: os.trim(),
       partNumber: partNumber.trim(),
       operacao: operacao.trim(),
-      categoria: normalizeOptional(categoria),
-      maquina: normalizeOptional(maquina),
+      categoria: _normalizeOptional(categoria),
+      maquina: _normalizeOptional(maquina),
     );
+
+    if (_isActive && state.matches(candidate) == false) {
+      return false;
+    }
+
+    _updateState(candidate);
+    return true;
   }
 
   void setOs(String value) {
     if (_isActive == false) return;
     final trimmed = value.trim();
     if (trimmed == state.os) return;
-    state = state.copyWith(os: trimmed);
+    _updateState(state.copyWith(os: trimmed));
   }
 
   void setPartNumber(String value) {
-
     if (_isActive == false) return;
     final trimmed = value.trim();
     if (trimmed == state.partNumber) return;
-    state = state.copyWith(partNumber: trimmed);
+    _updateState(state.copyWith(partNumber: trimmed));
   }
 
   void setOperacao(String value) {
     if (_isActive == false) return;
     final trimmed = value.trim();
     if (trimmed == state.operacao) return;
-    state = state.copyWith(operacao: trimmed);
+    _updateState(state.copyWith(operacao: trimmed));
   }
 
   void setCategoria(String? categoria) {
     if (_isActive == false) return;
 
     if (categoria == state.categoria) return;
-    state = state.copyWith(
-      categoria: categoria,
-      maquina: categoria == state.categoria ? state.maquina : null,
+    _updateState(
+      state.copyWith(
+        categoria: categoria,
+        maquina: categoria == state.categoria ? state.maquina : null,
+      ),
     );
   }
 
   void setMaquina(String? maquina) {
     if (_isActive == false) return;
     if (maquina == state.maquina) return;
-    state = state.copyWith(maquina: maquina);
+    _updateState(state.copyWith(maquina: maquina));
   }
 
   void clear() {
-    state = const SharedSearchFormState();
+    if (!state.isActive && state.os.isEmpty && state.partNumber.isEmpty) {
+      if (_box.isOpen && _box.containsKey(_sharedSearchFlowStateKey)) {
+        _box.delete(_sharedSearchFlowStateKey);
+      }
+      state = const SharedSearchFormState();
+      return;
+    }
+    _updateState(const SharedSearchFormState());
   }
+}
+
+SharedSearchFormController _createSharedSearchFormController(Ref ref) {
+  final box = Hive.box<Map>(sharedSearchFlowBoxName);
+  return SharedSearchFormController(box);
 }
 
 final sharedSearchFormProvider =
     StateNotifierProvider<SharedSearchFormController, SharedSearchFormState>(
-      (ref) => SharedSearchFormController(),
+      _createSharedSearchFormController,
     );

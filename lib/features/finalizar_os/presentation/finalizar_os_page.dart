@@ -231,6 +231,37 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     );
   }
 
+  bool _flowMatchesCurrentForm(SharedSearchFormState shared) {
+    if (!shared.isActive) return true;
+    return shared.matchesValues(
+      os: _osCtrl.text,
+      partNumber: _partCtrl.text,
+      operacao: _opCtrl.text,
+      categoria: _categoriaSel,
+      maquina: _maquinaSel,
+    );
+  }
+
+  void _showFlowBlockedSnackBar(SharedSearchFormState shared) {
+    if (!mounted) return;
+    final osAtual = shared.os.trim();
+    final mensagem = osAtual.isEmpty
+        ? 'Finalize a O.S. em andamento antes de iniciar outra.'
+        : 'Finalize a O.S. $osAtual antes de iniciar outra.';
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(mensagem)));
+  }
+
+  bool _ensureFlowConsistency() {
+    final shared = ref.read(sharedSearchFormProvider);
+    if (_flowMatchesCurrentForm(shared)) {
+      return true;
+    }
+    _showFlowBlockedSnackBar(shared);
+    return false;
+  }
+
   @override
   void dispose() {
     _osCtrl.removeListener(_resetFinalizada);
@@ -297,6 +328,8 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
       );
       return;
     }
+
+    if (!_ensureFlowConsistency()) return;
 
     // Verifica se há alguma medida reprovada
     final reprovadas = medidas
@@ -397,6 +430,8 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
   Widget build(BuildContext context) {
     final medidasAsync = ref.watch(medidasFinalizadorControllerProvider);
     final medidas = medidasAsync.value ?? [];
+    final flowState = ref.watch(sharedSearchFormProvider);
+    final flowLocked = flowState.isActive;
 
     // Pode registrar quando: RE e OS preenchidos + todas as medições preenchidas
     final reOk = _reCtrl.text.trim().isNotEmpty;
@@ -414,6 +449,15 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
         ? _maquinaSel
         : null;
     final maquinaOk = (maquinaValue ?? '').isNotEmpty;
+    final formMatchesFlow =
+        !flowLocked ||
+        flowState.matchesValues(
+          os: _osCtrl.text,
+          partNumber: _partCtrl.text,
+          operacao: _opCtrl.text,
+          categoria: categoriaValue,
+          maquina: maquinaValue,
+        );
     final todasOk =
         medidas.isNotEmpty &&
         medidas.every(
@@ -421,7 +465,13 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
               (m.medicao ?? '').isNotEmpty && m.status != StatusMedida.pendente,
         );
     final podeRegistrar =
-        reOk && osOk && maquinaOk && todasOk && !_registrando && !_osFinalizada;
+        formMatchesFlow &&
+        reOk &&
+        osOk &&
+        maquinaOk &&
+        todasOk &&
+        !_registrando &&
+        !_osFinalizada;
 
     return Scaffold(
       appBar: WindowBar(
@@ -448,6 +498,37 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
+              if (flowLocked)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.lock,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          flowState.os.trim().isEmpty
+                              ? 'Existe um fluxo de O.S. em andamento. Finalize a O.S. atual para iniciar outra.'
+                              : 'Fluxo ativo para a O.S. ${flowState.os}. Finalize a O.S. atual para iniciar outra.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               if (_mostrarResumo) ...[
                 SearchSummaryCard(
                   reLabel: 'R.E. do Preparador',
@@ -466,10 +547,12 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
-                    onPressed: () {
-                      FocusScope.of(context).unfocus();
-                      setState(() => _mostrarResumo = false);
-                    },
+                    onPressed: flowLocked
+                        ? null
+                        : () {
+                            FocusScope.of(context).unfocus();
+                            setState(() => _mostrarResumo = false);
+                          },
                     icon: const Icon(Icons.edit_outlined),
                     label: const Text('Alterar dados da busca'),
                   ),
@@ -508,6 +591,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                             width: 140, // igual ao campo Operação
                             child: TextFormField(
                               controller: _osCtrl,
+                              enabled: !flowLocked,
                               textInputAction: TextInputAction.next,
                               keyboardType: TextInputType.number,
                               inputFormatters: [
@@ -548,15 +632,19 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     ),
                                   )
                                   .toList(),
-                              onChanged: (v) {
-                                ref
-                                    .read(sharedSearchFormProvider.notifier)
-                                    .setCategoria(v);
-                                setState(() {
-                                  _categoriaSel = v;
-                                  _maquinaSel = null;
-                                });
-                              },
+                              onChanged: flowLocked
+                                  ? null
+                                  : (v) {
+                                      ref
+                                          .read(
+                                            sharedSearchFormProvider.notifier,
+                                          )
+                                          .setCategoria(v);
+                                      setState(() {
+                                        _categoriaSel = v;
+                                        _maquinaSel = null;
+                                      });
+                                    },
                               validator: (v) => (v == null || v.isEmpty)
                                   ? 'Obrigatório'
                                   : null,
@@ -578,12 +666,16 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     ),
                                   )
                                   .toList(),
-                              onChanged: (v) {
-                                ref
-                                    .read(sharedSearchFormProvider.notifier)
-                                    .setMaquina(v);
-                                setState(() => _maquinaSel = v);
-                              },
+                              onChanged: flowLocked
+                                  ? null
+                                  : (v) {
+                                      ref
+                                          .read(
+                                            sharedSearchFormProvider.notifier,
+                                          )
+                                          .setMaquina(v);
+                                      setState(() => _maquinaSel = v);
+                                    },
                               validator: (v) => (v == null || v.isEmpty)
                                   ? 'Obrigatório'
                                   : null,
@@ -600,6 +692,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                           Expanded(
                             child: TextFormField(
                               controller: _partCtrl,
+                              enabled: !flowLocked,
                               textInputAction: TextInputAction.next,
                               decoration: const InputDecoration(
                                 labelText: 'Código da peça (PartNumber)',
@@ -615,6 +708,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                             width: 140,
                             child: TextFormField(
                               controller: _opCtrl,
+                              enabled: !flowLocked,
                               keyboardType: TextInputType.number,
                               inputFormatters: [
                                 FilteringTextInputFormatter.digitsOnly,
@@ -641,6 +735,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                         child: FilledButton.icon(
                           onPressed: () async {
                             if (_formKey.currentState!.validate()) {
+                              if (!_ensureFlowConsistency()) return;
                               FocusScope.of(context).unfocus();
                               await ref
                                   .read(
