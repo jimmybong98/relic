@@ -582,12 +582,10 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton.icon(
-                          onPressed: flowLocked
-                              ? null
-                              : () {
-                                  FocusScope.of(context).unfocus();
-                                  setState(() => _mostrarResumo = false);
-                                },
+                          onPressed: () {
+                            FocusScope.of(context).unfocus();
+                            setState(() => _mostrarResumo = false);
+                          },
                           icon: const Icon(Icons.edit_outlined),
                           label: const Text('Alterar dados da busca'),
                         ),
