@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:admin/features/preparacao/data/models.dart';
 import 'package:admin/features/preparacao/data/repository_provider.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
+import 'package:admin/utils/api_base_url.dart';
 import 'package:admin/widgets/search_summary_card.dart';
 import 'package:admin/widgets/window_bar.dart';
 import 'package:admin/utils/string_utils.dart';
@@ -17,9 +18,6 @@ import 'package:admin/services/machine_service.dart';
 import 'package:admin/models/machine.dart';
 import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
 import 'package:admin/features/operador/presentation/widgets/measurement_tile.dart';
-
-/// Mesmo base URL usado no Operador
-const String kBaseUrl = 'http://192.168.0.241:5005';
 
 class FinalizarOsPage extends ConsumerStatefulWidget {
   const FinalizarOsPage({super.key});
@@ -342,7 +340,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
       'itens': itens,
     });
 
-    final uri = Uri.parse('$kBaseUrl/preparador/finalizar_os');
+    final uri = buildApiUri('/preparador/finalizar_os');
 
     setState(() => _registrando = true);
     try {
