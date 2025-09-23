@@ -321,16 +321,34 @@ class MedidaItem {
         matches[i].end,
         matches[i + 1].start,
       );
-      if (betweenRaw.trim().isEmpty) continue;
+      final valueA = _parseAngleToken(rawA);
+      if (valueA == null) continue;
+
+      final trimmedBetween = betweenRaw.trim();
+      if (trimmedBetween.isEmpty) {
+        final trimmedRawB = rawB.trimLeft();
+        final leadingConnectorMatch =
+            RegExp(r'^[-–—~]').matchAsPrefix(trimmedRawB);
+        if (leadingConnectorMatch != null) {
+          final sanitizedB = trimmedRawB
+              .substring(leadingConnectorMatch.end)
+              .trimLeft();
+          final valueB = _parseAngleToken(sanitizedB);
+          if (valueB != null) {
+            final range = [valueA, valueB]..sort();
+            return (min: range.first, max: range.last);
+          }
+        }
+        continue;
+      }
 
       final connectorNormalized = _normalizeLower(betweenRaw);
       final connectorCompact = connectorNormalized.replaceAll(
         RegExp(r'\s+'),
         '',
       );
-      final valueA = _parseAngleToken(rawA);
       final valueB = _parseAngleToken(rawB);
-      if (valueA == null || valueB == null) continue;
+      if (valueB == null) continue;
 
       if (_isPlusMinusConnector(betweenRaw, connectorCompact)) {
         final range = [valueA - valueB, valueA + valueB]..sort();
