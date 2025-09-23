@@ -68,6 +68,8 @@ class MedidasFinalizadorController
               instrumento: m.instrumento,
               tolerancias: m.tolerancias,
               contagens: m.contagens,
+              anguloMinimo: m.anguloMinimo,
+              anguloMaximo: m.anguloMaximo,
             ),
           )
           .toList();
@@ -96,6 +98,8 @@ class MedidasFinalizadorController
       instrumento: old.instrumento,
       tolerancias: old.tolerancias,
       contagens: old.contagens,
+      anguloMinimo: old.anguloMinimo,
+      anguloMaximo: old.anguloMaximo,
     );
     state = AsyncValue.data(current);
   }
@@ -118,6 +122,8 @@ class MedidasFinalizadorController
         instrumento: old.instrumento,
         tolerancias: old.tolerancias,
         contagens: old.contagens,
+        anguloMinimo: old.anguloMinimo,
+        anguloMaximo: old.anguloMaximo,
       );
     }
     state = AsyncValue.data(current);
