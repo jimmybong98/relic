@@ -22,6 +22,8 @@ class MeasurementTile extends StatefulWidget {
 
 class _MeasurementTileState extends State<MeasurementTile> {
   TextEditingController? _manualCtrl;
+  TextEditingController? _chanfroAngCtrl;
+  TextEditingController? _chanfroMedCtrl;
   String? _roscaSelection;
 
   @override
@@ -29,27 +31,44 @@ class _MeasurementTileState extends State<MeasurementTile> {
     super.initState();
     _roscaSelection = widget.item.medicao;
     if (widget.manualEntry) {
-      _manualCtrl = TextEditingController(text: widget.item.medicao ?? '');
+      if (_isChanfro(widget.item)) {
+        _ensureChanfroControllers();
+        _syncChanfroControllers(widget.item.medicao);
+      } else {
+        _manualCtrl = TextEditingController(text: widget.item.medicao ?? '');
+      }
     }
   }
 
   @override
   void didUpdateWidget(covariant MeasurementTile oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final wasChanfro = _isChanfro(oldWidget.item);
+    final isChanfro = _isChanfro(widget.item);
+
     if (widget.manualEntry) {
-      _manualCtrl ??= TextEditingController();
-      final newText = widget.item.medicao ?? '';
-      if (oldWidget.item.medicao != widget.item.medicao &&
-          _manualCtrl!.text != newText) {
-        _manualCtrl!.value = TextEditingValue(
-          text: newText,
-          selection: TextSelection.collapsed(offset: newText.length),
-          composing: TextRange.empty,
-        );
+      if (isChanfro) {
+        _disposeManualController();
+        _ensureChanfroControllers();
+        if (!wasChanfro || oldWidget.item.medicao != widget.item.medicao) {
+          _syncChanfroControllers(widget.item.medicao);
+        }
+      } else {
+        _disposeChanfroControllers();
+        _manualCtrl ??= TextEditingController();
+        final newText = widget.item.medicao ?? '';
+        if (oldWidget.item.medicao != widget.item.medicao &&
+            _manualCtrl!.text != newText) {
+          _manualCtrl!.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: newText.length),
+            composing: TextRange.empty,
+          );
+        }
       }
-    } else if (_manualCtrl != null) {
-      _manualCtrl!.dispose();
-      _manualCtrl = null;
+    } else {
+      _disposeManualController();
+      _disposeChanfroControllers();
     }
 
     if (oldWidget.item.medicao != widget.item.medicao) {
@@ -59,8 +78,45 @@ class _MeasurementTileState extends State<MeasurementTile> {
 
   @override
   void dispose() {
-    _manualCtrl?.dispose();
+    _disposeManualController();
+    _disposeChanfroControllers();
     super.dispose();
+  }
+
+  void _disposeManualController() {
+    _manualCtrl?.dispose();
+    _manualCtrl = null;
+  }
+
+  void _ensureChanfroControllers() {
+    _chanfroAngCtrl ??= TextEditingController();
+    _chanfroMedCtrl ??= TextEditingController();
+  }
+
+  void _disposeChanfroControllers() {
+    _chanfroAngCtrl?.dispose();
+    _chanfroAngCtrl = null;
+    _chanfroMedCtrl?.dispose();
+    _chanfroMedCtrl = null;
+  }
+
+  void _syncChanfroControllers(String? medicao) {
+    _ensureChanfroControllers();
+    final parts = (medicao ?? '').split('|');
+    final ang = parts.isNotEmpty ? parts[0].trim() : '';
+    final medida = parts.length > 1 ? parts[1].trim() : '';
+    _setControllerText(_chanfroAngCtrl!, ang);
+    _setControllerText(_chanfroMedCtrl!, medida);
+  }
+
+  void _setControllerText(TextEditingController controller, String value) {
+    if (controller.text != value) {
+      controller.value = TextEditingValue(
+        text: value,
+        selection: TextSelection.collapsed(offset: value.length),
+        composing: TextRange.empty,
+      );
+    }
   }
 
   String _norm(String? s) => (s ?? '').trim();
@@ -152,6 +208,17 @@ class _MeasurementTileState extends State<MeasurementTile> {
     if (_stringLooksLikeRoscaGauge(item.instrumento)) return true;
     if (_norm(item.instrumento).isNotEmpty) return false;
     return _stringLooksLikeRoscaGauge(item.titulo);
+  }
+
+  bool _isChanfro(MedidaItem item) {
+    final t = _norm(item.titulo);
+    final faixa = _norm(item.faixaTexto);
+    final inst = _norm(item.instrumento);
+    final obs = _norm(item.observacao);
+    return _containsAny(t, ['chanfro']) ||
+        _containsAny(faixa, ['chanfro']) ||
+        _containsAny(inst, ['chanfro']) ||
+        _containsAny(obs, ['chanfro']);
   }
 
   Set<String> _partsFromMedicao(String? medicao) => (medicao ?? '')
@@ -328,29 +395,76 @@ class _MeasurementTileState extends State<MeasurementTile> {
     }
   }
 
+  String _chanfroHelper({
+    required StatusMedida status,
+    required bool hasAngle,
+    required bool hasMedida,
+    required bool medidaValida,
+  }) {
+    if (!hasAngle || !hasMedida) {
+      return 'Informe ângulo e medida para classificar';
+    }
+    if (!medidaValida) {
+      return 'Medida inválida';
+    }
+    return _statusHelper(status);
+  }
+
   Widget _buildManualEntry(BuildContext context) {
     final item = widget.item;
-    final isRosca = _isRosca(item);
-    final ctrl = _manualCtrl ??= TextEditingController(
-      text: item.medicao ?? '',
-    );
+    final isChanfro = _isChanfro(item);
+    final isRosca = !isChanfro && _isRosca(item);
+    TextEditingController? ctrl;
+    if (!isChanfro) {
+      ctrl = _manualCtrl ??= TextEditingController(text: item.medicao ?? '');
+    } else {
+      _ensureChanfroControllers();
+    }
+
     final roscaSelection = (_roscaSelection ?? item.medicao ?? '')
         .trim()
         .toLowerCase();
-    final valor = isRosca ? null : _parseManualValue(ctrl.text);
-    final status = isRosca
-        ? (roscaSelection == 'aprovado'
-              ? StatusMedida.ok
-              : roscaSelection == 'reprovado'
-              ? StatusMedida.reprovadaAcima
-              : StatusMedida.pendente)
-        : item.avaliarStatus(valor);
+    final angleText = isChanfro ? _chanfroAngCtrl!.text.trim() : '';
+    final medidaText = isChanfro ? _chanfroMedCtrl!.text.trim() : ctrl!.text;
+    final valor = isRosca
+        ? null
+        : isChanfro
+        ? _parseManualValue(medidaText)
+        : _parseManualValue(ctrl!.text);
+
+    StatusMedida status;
+    if (isRosca) {
+      status = roscaSelection == 'aprovado'
+          ? StatusMedida.ok
+          : roscaSelection == 'reprovado'
+          ? StatusMedida.reprovadaAcima
+          : StatusMedida.pendente;
+    } else if (isChanfro) {
+      final hasAngle = angleText.isNotEmpty;
+      final hasMedida = medidaText.trim().isNotEmpty;
+      final medidaValida = valor != null;
+      status = (!hasAngle || !hasMedida || !medidaValida)
+          ? StatusMedida.pendente
+          : item.avaliarStatus(valor);
+    } else {
+      status = item.avaliarStatus(valor);
+    }
+
     final theme = Theme.of(context);
     final subtitulo = _subtitleFor(item);
     final unidadeLabel = (item.unidade ?? '').isNotEmpty
         ? ' (${item.unidade})'
         : '';
-    final helper = isRosca ? _roscaHelper(status) : _statusHelper(status);
+    final helper = isRosca
+        ? _roscaHelper(status)
+        : isChanfro
+        ? _chanfroHelper(
+            status: status,
+            hasAngle: angleText.isNotEmpty,
+            hasMedida: medidaText.trim().isNotEmpty,
+            medidaValida: valor != null,
+          )
+        : _statusHelper(status);
     final helperColor = _statusColor(status);
 
     return Card(
@@ -436,6 +550,31 @@ class _MeasurementTileState extends State<MeasurementTile> {
               ),
               const SizedBox(height: 6),
               Text(helper, style: TextStyle(color: helperColor)),
+            ] else if (isChanfro) ...[
+              TextField(
+                controller: _chanfroAngCtrl,
+                keyboardType: TextInputType.text,
+                decoration: const InputDecoration(
+                  labelText: 'Ângulo (°)',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (_) => _handleChanfroChanged(),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _chanfroMedCtrl,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: false,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Medida$unidadeLabel',
+                  border: const OutlineInputBorder(),
+                  helperText: helper,
+                  helperStyle: TextStyle(color: helperColor),
+                ),
+                onChanged: (_) => _handleChanfroChanged(),
+              ),
             ] else ...[
               TextField(
                 controller: ctrl,
@@ -461,6 +600,25 @@ class _MeasurementTileState extends State<MeasurementTile> {
         ),
       ),
     );
+  }
+
+  void _handleChanfroChanged() {
+    final angle = _chanfroAngCtrl?.text ?? '';
+    final medida = _chanfroMedCtrl?.text ?? '';
+    final angleNormalized = angle.trim();
+    final medidaNormalized = medida.trim();
+    final valor = _parseManualValue(medidaNormalized);
+    final hasAngle = angleNormalized.isNotEmpty;
+    final hasMedida = medidaNormalized.isNotEmpty;
+    final medidaValida = valor != null;
+    final novoStatus = (!hasAngle || !hasMedida || !medidaValida)
+        ? StatusMedida.pendente
+        : widget.item.avaliarStatus(valor);
+    final combined = (hasAngle || hasMedida)
+        ? '${angleNormalized} | ${medidaNormalized}'
+        : '';
+    widget.onSelect(novoStatus, combined);
+    setState(() {});
   }
 
   Widget _buildAutomaticEntry(BuildContext context) {
