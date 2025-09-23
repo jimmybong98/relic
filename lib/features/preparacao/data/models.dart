@@ -361,14 +361,8 @@ class MedidaItem {
       "-?\\d+(?:[.,]\\d+)?(?:\\s*[°º])?(?:\\s*\\d+[\\u2019\\u2032'’′])?(?:\\s*\\d+(?:[\\u0022\\u2033\\u201d\"″]))?(?:\\s*graus?)?",
       caseSensitive: false,
     );
-
-    final tokens = <({
-      String raw,
-      int start,
-      int end,
-      bool hasMarker,
-      double value,
-    })>[];
+    final tokens =
+        <({String raw, int start, int end, bool hasMarker, double value})>[];
 
     bool hasAngleMarker(String raw) {
       return RegExp("[°º'\"’′″]|grau", caseSensitive: false).hasMatch(raw);
@@ -401,13 +395,19 @@ class MedidaItem {
       final lower = trimmed.toLowerCase();
       if (_isRangeConnector(between, lower, compact)) return true;
       if (trimmed.isEmpty && (firstHasMarker || secondHasMarker)) return true;
-      if ((compact == 'x' || compact == '×') && firstHasMarker && secondHasMarker) {
+      if ((compact == 'x' || compact == '×') &&
+          firstHasMarker &&
+          secondHasMarker) {
         return true;
       }
-      if ((lower == 'e' || lower == 'ou') && firstHasMarker && secondHasMarker) {
+      if ((lower == 'e' || lower == 'ou') &&
+          firstHasMarker &&
+          secondHasMarker) {
         return true;
       }
-      if ((compact == '/' || compact == '\\') && firstHasMarker && secondHasMarker) {
+      if ((compact == '/' || compact == '\\') &&
+          firstHasMarker &&
+          secondHasMarker) {
         return true;
       }
       if (trimmed == ',' && firstHasMarker && secondHasMarker) return true;
@@ -503,16 +503,100 @@ class MedidaItem {
     final observacao = rawObservacao?.toString();
     final periodicidade = rawPeriodicidade?.toString();
     final instrumento = rawInstrumento?.toString();
+    double? anguloMinDeduced;
+    double? anguloMaxDeduced;
 
-    ({double? min, double? max})? anguloRange;
-    for (final fonte in [faixa, titulo, observacao, instrumento]) {
-      final texto = (fonte ?? '').toString();
-      if (texto.trim().isEmpty) continue;
-      final parsed = parseAngleRangeFromText(texto);
-      if (parsed != null) {
-        anguloRange = parsed;
-        break;
+    void mergeAngleRange(({double? min, double? max})? candidate) {
+      if (candidate == null) return;
+      final candMin = candidate.min;
+      final candMax = candidate.max;
+      if (candMin != null) {
+        if (anguloMinDeduced == null || candMin < anguloMinDeduced!) {
+          anguloMinDeduced = candMin;
+        }
       }
+      if (candMax != null) {
+        if (anguloMaxDeduced == null || candMax > anguloMaxDeduced!) {
+          anguloMaxDeduced = candMax;
+        }
+      }
+    }
+
+    double? parseAngleValue(dynamic raw) {
+      if (raw == null) return null;
+      if (raw is num) return raw.toDouble();
+      final text = raw.toString().trim();
+      if (text.isEmpty) return null;
+      final tokenValue = _parseAngleToken(text);
+      if (tokenValue != null) return tokenValue;
+      return _toDouble(text);
+    }
+
+    ({double? min, double? max})? parseAnglePayload(dynamic raw) {
+      if (raw == null) return null;
+      if (raw is num) {
+        final v = raw.toDouble();
+        return (min: v, max: v);
+      }
+      final text = raw.toString().trim();
+      if (text.isEmpty) return null;
+      final parsed = parseAngleRangeFromText(text);
+      if (parsed != null) return parsed;
+      final single = parseAngleValue(text);
+      if (single != null) return (min: single, max: single);
+      return null;
+    }
+
+    bool textMentionsAngle(String text) {
+      final lower = _normalizeLower(text);
+      return text.contains('°') ||
+          text.contains('º') ||
+          lower.contains('grau') ||
+          lower.contains('angulo');
+    }
+
+    map.forEach((key, value) {
+      final normalizedKey = key.toString().toLowerCase();
+      if (!normalizedKey.contains('angulo')) return;
+      if (normalizedKey.contains('min')) {
+        final parsed = parseAngleValue(value);
+        if (parsed != null &&
+            (anguloMinDeduced == null || parsed < anguloMinDeduced!)) {
+          anguloMinDeduced = parsed;
+        }
+        return;
+      }
+      if (normalizedKey.contains('max')) {
+        final parsed = parseAngleValue(value);
+        if (parsed != null &&
+            (anguloMaxDeduced == null || parsed > anguloMaxDeduced!)) {
+          anguloMaxDeduced = parsed;
+        }
+        return;
+      }
+      mergeAngleRange(parseAnglePayload(value));
+    });
+
+    for (final fonte in [faixa, titulo, observacao, instrumento]) {
+      final texto = (fonte ?? '').toString().trim();
+      if (texto.isEmpty) continue;
+      if (!textMentionsAngle(texto)) continue;
+      mergeAngleRange(parseAnglePayload(texto));
+    }
+
+    for (final label in tol) {
+      final texto = label.trim();
+      if (texto.isEmpty) continue;
+      if (!textMentionsAngle(texto)) continue;
+      mergeAngleRange(parseAnglePayload(texto));
+    }
+
+    if (anguloMinDeduced != null &&
+        anguloMaxDeduced != null &&
+        anguloMinDeduced! > anguloMaxDeduced!) {
+      final tmp = anguloMinDeduced;
+      anguloMinDeduced = anguloMaxDeduced;
+      anguloMaxDeduced = tmp;
     }
 
     final rawCounts = map['contagens'];
@@ -558,8 +642,8 @@ class MedidaItem {
       instrumento: instrumento,
       tolerancias: tol,
       contagens: counts,
-      anguloMinimo: anguloRange?.min,
-      anguloMaximo: anguloRange?.max,
+      anguloMinimo: anguloMinDeduced,
+      anguloMaximo: anguloMaxDeduced,
     );
   }
 
