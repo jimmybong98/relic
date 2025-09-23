@@ -161,7 +161,6 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           otherRows.add(item);
         }
       }
-
       result
         ..addAll(pauseRows)
         ..addAll(otherRows);
@@ -218,7 +217,6 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       _hiddenColumns[_tipo]!.remove(columnKey);
     });
   }
-
   void _reorderVisibleColumn(String columnKey, int dropIndex) {
     final headerMap = _headerConfigs[_tipo] ?? const {};
     _ensureColumnState(headerMap);
