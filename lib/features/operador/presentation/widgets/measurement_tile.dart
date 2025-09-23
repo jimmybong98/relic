@@ -663,7 +663,9 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     bg: Colors.green.shade200,
                     border: Colors.green.shade600,
                     fg: Colors.green.shade900,
-                    selected: item.medicao == 'Aprovado',
+                    selected:
+                        item.medicao == 'Aprovado' &&
+                        item.status == StatusMedida.ok,
                     count: _countFor('Aprovado'),
                     onTap: () => widget.onSelect(StatusMedida.ok, 'Aprovado'),
                   ),
@@ -671,7 +673,9 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     text: 'Reprovado',
                     bg: Colors.red.shade100,
                     border: Colors.red.shade400,
-                    selected: item.medicao == 'Reprovado',
+                    selected:
+                        item.medicao == 'Reprovado' &&
+                        item.status == StatusMedida.reprovadaAcima,
                     count: _countFor('Reprovado'),
                     onTap: () => widget.onSelect(
                       StatusMedida.reprovadaAcima,
@@ -786,7 +790,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     final label = d != null
                         ? d.toStringAsFixed(2)
                         : raw.toString();
-                    final selected = item.medicao == label;
+                    final selected = item.medicao == label && item.status == st;
 
                     chips.add(
                       _pill(
@@ -807,7 +811,9 @@ class _MeasurementTileState extends State<MeasurementTile> {
                       bg: Colors.green.shade200,
                       border: Colors.green.shade600,
                       fg: Colors.green.shade900,
-                      selected: item.medicao == 'OK',
+                      selected:
+                          item.medicao == 'OK' &&
+                          item.status == StatusMedida.ok,
                       count: _countFor('OK'),
                       onTap: () => widget.onSelect(StatusMedida.ok, 'OK'),
                     ),
