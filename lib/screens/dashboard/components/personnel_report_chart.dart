@@ -21,6 +21,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   String _tipo = 'operador';
   String _modo = 'os';
   Future<List<Map<String, dynamic>>>? _future;
+  final Map<String, Set<String>> _collapsedColumns = {
+    'operador': <String>{},
+    'preparador': <String>{},
+  };
 
   DateTime? _parseDateTime(dynamic value) {
     final raw = value?.toString().trim();
@@ -139,6 +143,62 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     _partCtrl.dispose();
     _opCtrl.dispose();
     super.dispose();
+  }
+
+  void _toggleColumn(String columnKey) {
+    final collapsed = _collapsedColumns[_tipo];
+    if (collapsed == null) return;
+    setState(() {
+      if (!collapsed.add(columnKey)) {
+        collapsed.remove(columnKey);
+      }
+    });
+  }
+
+  bool _isColumnCollapsed(String columnKey) {
+    final collapsed = _collapsedColumns[_tipo];
+    if (collapsed == null) return false;
+    return collapsed.contains(columnKey);
+  }
+
+  Widget _buildHeaderLabel(String columnKey, String label) {
+    final collapsed = _isColumnCollapsed(columnKey);
+    final icon = collapsed
+        ? Icons.visibility_outlined
+        : Icons.visibility_off_outlined;
+    final textStyle = const TextStyle(fontSize: 12);
+    return Tooltip(
+      message: collapsed ? 'Mostrar coluna' : 'Ocultar coluna',
+      child: InkWell(
+        onTap: () => _toggleColumn(columnKey),
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          child: collapsed
+              ? SizedBox(width: 20, child: Icon(icon, size: 16))
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: textStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(icon, size: 14),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCellContent(String columnKey, Widget child) {
+    if (_isColumnCollapsed(columnKey)) {
+      return const SizedBox.shrink();
+    }
+    return child;
   }
 
   void _buscar() {
@@ -515,10 +575,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                         columns: headers
                             .map(
                               (h) => DataColumn(
-                                label: Text(
-                                  headerMap[h] ?? h,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
+                                label: _buildHeaderLabel(h, headerMap[h] ?? h),
                               ),
                             )
                             .toList(),
@@ -540,16 +597,24 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                                     : '';
                                 final style = theme.textTheme.labelLarge
                                     ?.copyWith(fontWeight: FontWeight.bold);
-                                return DataCell(Text(text, style: style));
+                                return DataCell(
+                                  _buildCellContent(
+                                    h,
+                                    Text(text, style: style),
+                                  ),
+                                );
                               }
                               final value = r[h];
                               final display = value == null
                                   ? ''
                                   : value.toString();
                               return DataCell(
-                                Text(
-                                  display,
-                                  style: const TextStyle(fontSize: 12),
+                                _buildCellContent(
+                                  h,
+                                  Text(
+                                    display,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
                                 ),
                               );
                             }).toList(),
