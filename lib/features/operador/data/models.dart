@@ -274,14 +274,23 @@ class MedidaItem {
   }
 
   static bool _isPlusMinusConnector(String raw, String compact) {
-    if (raw.contains('±') || compact.contains('±')) return true;
-    final lower = compact.toLowerCase();
-    if (lower.contains('+/-') ||
-        lower.contains('+/−') ||
-        lower.contains('-/+')) {
+    final lowerRaw = raw.toLowerCase();
+    final lowerCompact = compact.toLowerCase();
+    if (lowerRaw.contains('±') || lowerCompact.contains('±')) return true;
+    if (lowerRaw.contains('mais ou menos') ||
+        lowerRaw.contains('maisoumenos') ||
+        lowerRaw.contains('maisomenos')) {
       return true;
     }
-    if (lower == '+-' || lower == '-+' || lower == '+−' || lower == '−+') {
+    if (lowerCompact.contains('+/-') ||
+        lowerCompact.contains('+/−') ||
+        lowerCompact.contains('-/+')) {
+      return true;
+    }
+    if (lowerCompact == '+-' ||
+        lowerCompact == '-+' ||
+        lowerCompact == '+−' ||
+        lowerCompact == '−+') {
       return true;
     }
     return false;
@@ -327,64 +336,105 @@ class MedidaItem {
 
   static ({double? min, double? max})? parseAngleRangeFromText(String texto) {
     if (texto.trim().isEmpty) return null;
-    final normalized = texto.replaceAll(',', '.');
-    final pattern = RegExp(
-      "-?\\d+(?:[.,]\\d+)?\\s*[°º](?:\\s*\\d+[\\u2019\\u2032']?)?(?:\\s*\\d+(?:[\\u0022\\u2033\\u201d]))?",
+    String normalizeConnectors(String input) {
+      var out = input.replaceAll(',', '.');
+      out = out.replaceAll('º', '°');
+      out = out.replaceAll('×', 'x');
+      out = out.replaceAll(RegExp(r'(\d)°\.(\d+)'), r'$1.$2°');
+      out = out.replaceAll(RegExp(r'([°º])\s*[xX]\s*(?=\d)'), r'$1 - ');
+      out = out.replaceAll(RegExp(r'([°º])\s+(?=\d)'), r'$1 - ');
+      out = out.replaceAll(RegExp(r'([°º])(?=\d)'), r'$1 - ');
+      out = out.replaceAll(RegExp(r'\+-'), '±');
+      out = out.replaceAll(RegExp(r'\+\s*-'), '±');
+      out = out.replaceAll(RegExp(r'-\s*\+'), '±');
+      out = out.replaceAll(RegExp(r'\+/-'), '±');
+      out = out.replaceAll(RegExp(r'-/\+'), '±');
+      out = out.replaceAll(
+        RegExp(r'mais\s+ou\s+menos', caseSensitive: false),
+        '±',
+      );
+      out = out.replaceAll('±', ' ± ');
+      out = out.replaceAll(RegExp(r'\s+'), ' ');
+      return out.trim();
+    }
+
+    final normalized = normalizeConnectors(texto);
+    final tokenPattern = RegExp(
+      "-?\\d+(?:[.,]\\d+)?(?:\\s*[°º])?(?:\\s*\\d+[\\u2019\\u2032'’′])?(?:\\s*\\d+(?:[\\u0022\\u2033\\u201d\"″]))?(?:\\s*graus?)?",
+      caseSensitive: false,
     );
-    final matches = pattern.allMatches(normalized).toList();
-    if (matches.length < 2) return null;
 
-    for (var i = 0; i < matches.length - 1; i++) {
-      final rawA = normalized.substring(matches[i].start, matches[i].end);
-      final rawB = normalized.substring(
-        matches[i + 1].start,
-        matches[i + 1].end,
-      );
-      final betweenRaw = normalized.substring(
-        matches[i].end,
-        matches[i + 1].start,
-      );
-      final valueA = _parseAngleToken(rawA);
-      if (valueA == null) continue;
+    final tokens = <({
+      String raw,
+      int start,
+      int end,
+      bool hasMarker,
+      double value,
+    })>[];
 
-      final trimmedBetween = betweenRaw.trim();
-      if (trimmedBetween.isEmpty) {
-        final trimmedRawB = rawB.trimLeft();
-        final leadingConnectorMatch = RegExp(
-          r'^[-–—~]',
-        ).matchAsPrefix(trimmedRawB);
-        if (leadingConnectorMatch != null) {
-          final sanitizedB = trimmedRawB
-              .substring(leadingConnectorMatch.end)
-              .trimLeft();
-          final valueB = _parseAngleToken(sanitizedB);
-          if (valueB != null) {
-            final range = [valueA, valueB]..sort();
-            return (min: range.first, max: range.last);
-          }
-        }
-        continue;
+    bool hasAngleMarker(String raw) {
+      return RegExp("[°º'\"’′″]|grau", caseSensitive: false).hasMatch(raw);
+    }
+
+    for (final match in tokenPattern.allMatches(normalized)) {
+      final raw = match.group(0)?.trim();
+      if (raw == null || raw.isEmpty) continue;
+      if (!RegExp(r'\d').hasMatch(raw)) continue;
+      final value = _parseAngleToken(raw);
+      if (value == null) continue;
+      tokens.add((
+        raw: raw,
+        start: match.start,
+        end: match.end,
+        hasMarker: hasAngleMarker(raw),
+        value: value,
+      ));
+    }
+
+    if (tokens.length < 2) return null;
+
+    bool allowsRange(
+      String between,
+      String compact,
+      bool firstHasMarker,
+      bool secondHasMarker,
+    ) {
+      final trimmed = between.trim();
+      final lower = trimmed.toLowerCase();
+      if (_isRangeConnector(between, lower, compact)) return true;
+      if (trimmed.isEmpty && (firstHasMarker || secondHasMarker)) return true;
+      if ((compact == 'x' || compact == '×') && firstHasMarker && secondHasMarker) {
+        return true;
       }
+      if ((lower == 'e' || lower == 'ou') && firstHasMarker && secondHasMarker) {
+        return true;
+      }
+      if ((compact == '/' || compact == '\\') && firstHasMarker && secondHasMarker) {
+        return true;
+      }
+      if (trimmed == ',' && firstHasMarker && secondHasMarker) return true;
+      if (RegExp(r'^[()\[\]\-–—~]*$', caseSensitive: false).hasMatch(trimmed) &&
+          (firstHasMarker || secondHasMarker)) {
+        return true;
+      }
+      return false;
+    }
 
-      final connectorNormalized = _normalizeLower(betweenRaw);
-      final connectorCompact = connectorNormalized.replaceAll(
-        RegExp(r'\s+'),
-        '',
-      );
-      final valueB = _parseAngleToken(rawB);
-      if (valueB == null) continue;
+    for (var i = 0; i < tokens.length - 1; i++) {
+      final current = tokens[i];
+      final next = tokens[i + 1];
+      final between = normalized.substring(current.end, next.start);
+      final compact = between.replaceAll(RegExp(r'\s+'), '');
 
-      if (_isPlusMinusConnector(betweenRaw, connectorCompact)) {
-        final range = [valueA - valueB, valueA + valueB]..sort();
+      if (_isPlusMinusConnector(between, compact)) {
+        final tolerance = next.value;
+        final range = [current.value - tolerance, current.value + tolerance]
+          ..sort();
         return (min: range.first, max: range.last);
       }
 
-      if (_isRangeConnector(
-        betweenRaw,
-        connectorNormalized,
-        connectorCompact,
-      )) {
-        final range = [valueA, valueB]..sort();
+      if (allowsRange(between, compact, current.hasMarker, next.hasMarker)) {
+        final range = [current.value, next.value]..sort();
         return (min: range.first, max: range.last);
       }
     }
