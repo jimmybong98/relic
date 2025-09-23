@@ -102,11 +102,52 @@ class _MeasurementTileState extends State<MeasurementTile> {
 
   void _syncChanfroControllers(String? medicao) {
     _ensureChanfroControllers();
-    final parts = (medicao ?? '').split('|');
-    final ang = parts.isNotEmpty ? parts[0].trim() : '';
-    final medida = parts.length > 1 ? parts[1].trim() : '';
-    _setControllerText(_chanfroAngCtrl!, ang);
+    final rawParts = (medicao ?? '')
+        .split('|')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    String medida = '';
+    String angulo = '';
+
+    if (rawParts.isEmpty) {
+      medida = '';
+      angulo = '';
+    } else if (rawParts.length == 1) {
+      final parte = rawParts.first;
+      final faixa = _resolveItemAngleRange(widget.item);
+      if (_looksLikeAngleToken(parte) ||
+          _valueMatchesAngleRange(parte, faixa)) {
+        angulo = parte;
+      } else {
+        medida = parte;
+      }
+    } else {
+      final faixa = _resolveItemAngleRange(widget.item);
+      final primeiro = rawParts[0];
+      final segundo = rawParts[1];
+      final primeiroEhAngulo =
+          _looksLikeAngleToken(primeiro) ||
+          _valueMatchesAngleRange(primeiro, faixa);
+      final segundoEhAngulo =
+          _looksLikeAngleToken(segundo) ||
+          _valueMatchesAngleRange(segundo, faixa);
+
+      if (!primeiroEhAngulo && segundoEhAngulo) {
+        medida = primeiro;
+        angulo = segundo;
+      } else if (primeiroEhAngulo && !segundoEhAngulo) {
+        medida = segundo;
+        angulo = primeiro;
+      } else {
+        medida = primeiro;
+        angulo = segundo;
+      }
+    }
+
     _setControllerText(_chanfroMedCtrl!, medida);
+    _setControllerText(_chanfroAngCtrl!, _stripAngleDecorations(angulo));
   }
 
   void _setControllerText(TextEditingController controller, String value) {
@@ -117,6 +158,58 @@ class _MeasurementTileState extends State<MeasurementTile> {
         composing: TextRange.empty,
       );
     }
+  }
+
+  ({double? min, double? max})? _resolveItemAngleRange(MedidaItem item) {
+    if (item.anguloMinimo != null || item.anguloMaximo != null) {
+      return (min: item.anguloMinimo, max: item.anguloMaximo);
+    }
+
+    final fontes = <String>[item.faixaTexto, item.titulo];
+    if (item.observacao != null) fontes.add(item.observacao!);
+    if (item.instrumento != null) fontes.add(item.instrumento!);
+
+    for (final fonte in fontes) {
+      final texto = fonte.trim();
+      if (texto.isEmpty) continue;
+      final parsed = MedidaItem.parseAngleRangeFromText(texto);
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
+  bool _looksLikeAngleToken(String token) {
+    final lower = token.trim().toLowerCase();
+    if (lower.isEmpty) return false;
+    if (RegExp(r'[°º]').hasMatch(lower)) return true;
+    if (lower.contains('grau')) return true;
+    return false;
+  }
+
+  bool _valueMatchesAngleRange(
+    String token,
+    ({double? min, double? max})? range,
+  ) {
+    if (range == null) return false;
+    final value = _parseAngleInput(token);
+    if (value == null) return false;
+    final min = range.min;
+    final max = range.max;
+    if (min != null && value < min) return false;
+    if (max != null && value > max) return false;
+    return true;
+  }
+
+  String _stripAngleDecorations(String text) {
+    return text.replaceAll(RegExp(r'[°º]'), '').trim();
+  }
+
+  String _formatAngleForStorage(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return '';
+    final sanitized = trimmed.replaceAll(RegExp(r'[°º]'), '').trim();
+    if (sanitized.isEmpty) return '';
+    return '$sanitizedº';
   }
 
   String _norm(String? s) => (s ?? '').trim();
@@ -750,10 +843,13 @@ class _MeasurementTileState extends State<MeasurementTile> {
             : StatusMedida.ok;
       }
     }
-    final combined = (hasAngle || hasMedida)
-        ? '${angleNormalized} | ${medidaNormalized}'
-        : '';
-    widget.onSelect(novoStatus, combined);
+    final formattedAngle = _formatAngleForStorage(angleNormalized);
+    final combinedParts = <String>[];
+    if (hasMedida) combinedParts.add(medidaNormalized);
+    if (formattedAngle.isNotEmpty) combinedParts.add(formattedAngle);
+    final combined = combinedParts.join(' | ');
+
+    widget.onSelect(novoStatus, combined.isEmpty ? null : combined);
     setState(() {});
   }
 
