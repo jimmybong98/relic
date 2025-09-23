@@ -3,6 +3,30 @@ import 'package:hive/hive.dart';
 
 const sharedSearchFlowBoxName = 'shared_search_flow';
 const _sharedSearchFlowStateKey = 'state';
+
+enum SearchFlowProcess { amostragem, finalizacao }
+
+extension SearchFlowProcessDisplay on SearchFlowProcess {
+  String get displayName {
+    switch (this) {
+      case SearchFlowProcess.amostragem:
+        return 'Amostragem';
+      case SearchFlowProcess.finalizacao:
+        return 'Finalização de O.S.';
+    }
+  }
+}
+
+SearchFlowProcess? _parseProcess(dynamic raw) {
+  if (raw is! String) return null;
+  for (final process in SearchFlowProcess.values) {
+    if (process.name == raw) {
+      return process;
+    }
+  }
+  return null;
+}
+
 class SharedSearchFormState {
   const SharedSearchFormState({
     this.isActive = false,
@@ -11,6 +35,7 @@ class SharedSearchFormState {
     this.operacao = '',
     this.categoria,
     this.maquina,
+    this.process,
   });
 
   final bool isActive;
@@ -19,6 +44,7 @@ class SharedSearchFormState {
   final String operacao;
   final String? categoria;
   final String? maquina;
+  final SearchFlowProcess? process;
 
   static const _sentinel = Object();
   static String? _normalizeOptional(String? value) {
@@ -40,6 +66,7 @@ class SharedSearchFormState {
       operacao: _readString(map['operacao']),
       categoria: _readOptional(map['categoria']),
       maquina: _readOptional(map['maquina']),
+      process: _parseProcess(map['process']),
     );
   }
 
@@ -51,6 +78,7 @@ class SharedSearchFormState {
       'operacao': operacao,
       'categoria': categoria,
       'maquina': maquina,
+      'process': process?.name,
     };
   }
 
@@ -61,6 +89,7 @@ class SharedSearchFormState {
     String? operacao,
     Object? categoria = _sentinel,
     Object? maquina = _sentinel,
+    Object? process = _sentinel,
   }) {
     return SharedSearchFormState(
       isActive: isActive ?? this.isActive,
@@ -69,6 +98,9 @@ class SharedSearchFormState {
       operacao: operacao ?? this.operacao,
       categoria: categoria == _sentinel ? this.categoria : categoria as String?,
       maquina: maquina == _sentinel ? this.maquina : maquina as String?,
+      process: process == _sentinel
+          ? this.process
+          : process as SearchFlowProcess?,
     );
   }
 
@@ -81,7 +113,9 @@ class SharedSearchFormState {
   }
 
   bool equals(SharedSearchFormState other) {
-    return isActive == other.isActive && matches(other);
+    return isActive == other.isActive &&
+        matches(other) &&
+        process == other.process;
   }
 
   bool matchesValues({
@@ -102,6 +136,13 @@ class SharedSearchFormState {
       ),
     );
   }
+}
+
+extension SharedSearchFormStateDisplay on SharedSearchFormState {
+  SearchFlowProcess get effectiveProcess =>
+      process ?? SearchFlowProcess.amostragem;
+
+  String get processDisplayName => effectiveProcess.displayName;
 }
 
 SharedSearchFormState _restoreInitialState(Box<Map> box) {
@@ -150,6 +191,7 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
     required String operacao,
     String? categoria,
     String? maquina,
+    SearchFlowProcess process = SearchFlowProcess.amostragem,
   }) {
     final candidate = SharedSearchFormState(
       isActive: true,
@@ -158,6 +200,7 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
       operacao: operacao.trim(),
       categoria: SharedSearchFormState._normalizeOptional(categoria),
       maquina: SharedSearchFormState._normalizeOptional(maquina),
+      process: process,
     );
 
     if (_isActive && state.matches(candidate) == false) {
