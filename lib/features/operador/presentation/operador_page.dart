@@ -862,7 +862,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                         ),
                       ),
                     if (_mostrarResumo) ...[
-                      SearchSummaryCard(
+                      SearchSummarySection(
                         reLabel: 'R.E. do Preparador',
                         reValue: _reCtrl.text,
                         items: [
@@ -877,18 +877,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                               value: categoriaValue!,
                             ),
                         ],
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () {
-                            FocusScope.of(context).unfocus();
-                            setState(() => _mostrarResumo = false);
-                          },
-                          icon: const Icon(Icons.edit_outlined),
-                          label: const Text('Alterar dados da busca'),
-                        ),
+                        onEdit: () {
+                          FocusScope.of(context).unfocus();
+                          setState(() => _mostrarResumo = false);
+                        },
                       ),
                     ] else ...[
                       Form(
