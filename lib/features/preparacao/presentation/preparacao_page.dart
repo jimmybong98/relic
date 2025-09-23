@@ -267,6 +267,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       operacao: _opCtrl.text,
       categoria: _categoriaSel,
       maquina: _maquinaSel,
+      process: SearchFlowProcess.amostragem,
     );
 
     if (!iniciouFluxo) {
@@ -460,6 +461,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     final medidas = medidasAsync.value ?? [];
     final flowState = ref.watch(sharedSearchFormProvider);
     final flowLocked = flowState.isActive;
+    final flowProcessName = flowState.processDisplayName;
+    final flowOs = flowState.os.trim();
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final actionBottomPadding = bottomInset > 0 ? bottomInset + 16.0 : 16.0;
 
@@ -554,9 +557,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                flowState.os.trim().isEmpty
-                                    ? 'Existe um fluxo de O.S. em andamento. Finalize a O.S. atual para iniciar outra.'
-                                    : 'Fluxo ativo para a O.S. ${flowState.os}. Finalize a O.S. atual para iniciar outra.',
+                                flowOs.isEmpty
+                                    ? 'Existe um fluxo de $flowProcessName em andamento. Finalize a O.S. atual para iniciar outra.'
+                                    : 'Fluxo de $flowProcessName ativo para a O.S. $flowOs. Finalize a O.S. atual para iniciar outra.',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ),
