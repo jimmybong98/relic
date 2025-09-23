@@ -334,7 +334,6 @@ class MedidaItem {
 
   static ({double? min, double? max})? parseAngleRangeFromText(String texto) {
     if (texto.trim().isEmpty) return null;
-
     String normalizeConnectors(String input) {
       var out = input.replaceAll(',', '.');
       out = out.replaceAll('º', '°');
@@ -362,7 +361,6 @@ class MedidaItem {
       "-?\\d+(?:[.,]\\d+)?(?:\\s*[°º])?(?:\\s*\\d+[\\u2019\\u2032'’′])?(?:\\s*\\d+(?:[\\u0022\\u2033\\u201d\"″]))?(?:\\s*graus?)?",
       caseSensitive: false,
     );
-
     final tokens =
         <({String raw, int start, int end, bool hasMarker, double value})>[];
 
@@ -505,7 +503,6 @@ class MedidaItem {
     final observacao = rawObservacao?.toString();
     final periodicidade = rawPeriodicidade?.toString();
     final instrumento = rawInstrumento?.toString();
-
     double? anguloMinDeduced;
     double? anguloMaxDeduced;
 
