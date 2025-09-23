@@ -219,10 +219,13 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     });
   }
 
-  void _reorderColumns(int oldIndex, int newIndex) {
+  void _reorderVisibleColumn(String columnKey, int targetIndex) {
     final headerMap = _headerConfigs[_tipo] ?? const {};
     _ensureColumnState(headerMap);
     final hidden = _hiddenColumns[_tipo]!;
+    if (hidden.contains(columnKey)) {
+      return;
+    }
     final order = _columnOrders[_tipo]!;
     final visible = [
       for (final key in order)
@@ -231,28 +234,127 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     if (visible.length < 2) {
       return;
     }
-    if (newIndex > visible.length) {
-      newIndex = visible.length;
+    final oldIndex = visible.indexOf(columnKey);
+    if (oldIndex == -1) {
+      return;
     }
-    if (newIndex > oldIndex) {
-      newIndex -= 1;
+    if (targetIndex < 0 || targetIndex > visible.length) {
+      return;
+    }
+    var adjustedIndex = targetIndex;
+    if (adjustedIndex > oldIndex) {
+      adjustedIndex -= 1;
+    }
+    if (adjustedIndex == oldIndex) {
+      return;
     }
     final moved = visible.removeAt(oldIndex);
-    visible.insert(newIndex, moved);
-    final newOrder = <String>[];
-    var visibleIndex = 0;
-    for (final key in order) {
-      if (hidden.contains(key)) {
-        newOrder.add(key);
-      } else {
-        newOrder.add(visible[visibleIndex++]);
-      }
-    }
+    visible.insert(adjustedIndex, moved);
+    final hiddenOrder = [
+      for (final key in order)
+        if (hidden.contains(key)) key,
+    ];
     setState(() {
       order
         ..clear()
-        ..addAll(newOrder);
+        ..addAll(visible)
+        ..addAll(hiddenOrder);
     });
+  }
+
+  Widget _buildColumnChip(
+    BuildContext context,
+    String columnKey,
+    String label, {
+    bool enableTooltip = true,
+    bool enableDelete = true,
+  }) {
+    final chip = Chip(
+      avatar: const Icon(Icons.drag_indicator, size: 18),
+      label: Text(label, overflow: TextOverflow.ellipsis),
+      deleteIcon: enableDelete
+          ? const Icon(Icons.visibility_off_outlined, size: 18)
+          : null,
+      onDeleted: enableDelete ? () => _hideColumn(columnKey) : null,
+      deleteButtonTooltipMessage: enableDelete ? 'Ocultar coluna' : null,
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+    if (!enableTooltip) {
+      return chip;
+    }
+    return Tooltip(message: 'Arraste para reordenar', child: chip);
+  }
+
+  Widget _buildReorderableChip(
+    BuildContext context,
+    Map<String, String> headerMap,
+    String columnKey,
+  ) {
+    final label = headerMap[columnKey] ?? columnKey;
+    return LongPressDraggable<String>(
+      data: columnKey,
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      feedback: Material(
+        elevation: 6,
+        color: Colors.transparent,
+        child: _buildColumnChip(
+          context,
+          columnKey,
+          label,
+          enableTooltip: false,
+          enableDelete: false,
+        ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.5,
+        child: IgnorePointer(
+          child: _buildColumnChip(
+            context,
+            columnKey,
+            label,
+            enableTooltip: false,
+          ),
+        ),
+      ),
+      child: _buildColumnChip(context, columnKey, label),
+    );
+  }
+
+  Widget _buildDropTarget(
+    BuildContext context,
+    int targetIndex,
+    int totalVisible,
+  ) {
+    final theme = Theme.of(context);
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (details) => true,
+      onAcceptWithDetails: (details) {
+        _reorderVisibleColumn(details.data, targetIndex);
+      },
+      builder: (context, candidate, rejected) {
+        final isActive = candidate.isNotEmpty;
+        final leftMargin = targetIndex == 0 ? 0.0 : 4.0;
+        final rightMargin = targetIndex == totalVisible ? 0.0 : 4.0;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 12,
+          height: 40,
+          margin: EdgeInsets.only(
+            left: leftMargin,
+            right: rightMargin,
+            top: 4,
+            bottom: 4,
+          ),
+          decoration: BoxDecoration(
+            color: isActive
+                ? theme.colorScheme.primary.withValues(alpha: 0.35)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildHeaderLabel(
@@ -320,41 +422,35 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         ],
         Text('Colunas visíveis', style: theme.textTheme.labelMedium),
         const SizedBox(height: 8),
-        SizedBox(
-          height: 56,
-          child: ReorderableListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            itemCount: visibleColumns.length,
-            onReorder: _reorderColumns,
-            buildDefaultDragHandles: false,
-            itemBuilder: (context, index) {
-              final key = visibleColumns[index];
-              final label = headerMap[key] ?? key;
-              return ReorderableDragStartListener(
-                key: ValueKey('visible_$key'),
-                index: index,
-                child: Padding(
+        Builder(
+          builder: (context) {
+            final totalVisible = visibleColumns.length;
+            final reorderChildren = <Widget>[];
+            for (var index = 0; index < totalVisible; index++) {
+              reorderChildren.add(
+                _buildDropTarget(context, index, totalVisible),
+              );
+              final columnKey = visibleColumns[index];
+              reorderChildren.add(
+                Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Tooltip(
-                    message: 'Arraste para reordenar',
-                    child: Chip(
-                      avatar: const Icon(Icons.drag_indicator, size: 18),
-                      label: Text(label, overflow: TextOverflow.ellipsis),
-                      deleteIcon: const Icon(
-                        Icons.visibility_off_outlined,
-                        size: 18,
-                      ),
-                      onDeleted: () => _hideColumn(key),
-                      deleteButtonTooltipMessage: 'Ocultar coluna',
-                      visualDensity: VisualDensity.compact,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
+                  child: KeyedSubtree(
+                    key: ValueKey('visible_$columnKey'),
+                    child: _buildReorderableChip(context, headerMap, columnKey),
                   ),
                 ),
               );
-            },
-          ),
+            }
+            reorderChildren.add(
+              _buildDropTarget(context, totalVisible, totalVisible),
+            );
+            return Wrap(
+              spacing: 0,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: reorderChildren,
+            );
+          },
         ),
         const SizedBox(height: 4),
         Text(
