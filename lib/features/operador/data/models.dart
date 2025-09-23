@@ -336,7 +336,6 @@ class MedidaItem {
 
   static ({double? min, double? max})? parseAngleRangeFromText(String texto) {
     if (texto.trim().isEmpty) return null;
-
     String normalizeConnectors(String input) {
       var out = input.replaceAll(',', '.');
       out = out.replaceAll('º', '°');
