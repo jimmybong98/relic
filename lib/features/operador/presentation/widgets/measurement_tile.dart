@@ -320,10 +320,36 @@ class _MeasurementTileState extends State<MeasurementTile> {
     final faixa = _norm(item.faixaTexto);
     final inst = _norm(item.instrumento);
     final obs = _norm(item.observacao);
-    return _containsAny(t, ['chanfro']) ||
+
+    const cantoTokens = ['cantos vivos', 'canto vivo'];
+
+    final mentionsChanfro =
+        _containsAny(t, ['chanfro']) ||
         _containsAny(faixa, ['chanfro']) ||
         _containsAny(inst, ['chanfro']) ||
         _containsAny(obs, ['chanfro']);
+    if (mentionsChanfro) return true;
+
+    final mentionsCantosVivos =
+        _containsAny(t, cantoTokens) ||
+        _containsAny(faixa, cantoTokens) ||
+        _containsAny(inst, cantoTokens) ||
+        _containsAny(obs, cantoTokens);
+    if (!mentionsCantosVivos) return false;
+
+    final context = _nfd('$t $faixa $inst $obs'.toLowerCase());
+    if (RegExp(r'\b(isent[oa]s?|livres?|sem|rebarb\w*)\b').hasMatch(context)) {
+      return false;
+    }
+
+    final angleRange = _resolveItemAngleRange(item);
+    final hasAngleRange =
+        angleRange != null &&
+        (angleRange.min != null || angleRange.max != null);
+    if (!hasAngleRange) return false;
+
+    final hasMedida = item.minimo != null || item.maximo != null;
+    return hasMedida;
   }
 
   bool _isRepetirTresPontos(MedidaItem item) {
