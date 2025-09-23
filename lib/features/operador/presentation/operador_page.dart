@@ -416,16 +416,16 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
-  Future<void> _fimJornada(String motivo) async {
+  Future<bool> _fimJornada(String motivo) async {
     if (_reCtrl.text.trim().isEmpty || _osCtrl.text.trim().isEmpty) {
-      if (!mounted) return;
+      if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Preencha RE e O.S. para finalizar.')),
       );
-      return;
+      return false;
     }
 
-    if (!_ensureFlowConsistency()) return;
+    if (!_ensureFlowConsistency()) return false;
 
     final body = jsonEncode({
       're': _reCtrl.text.trim(),
@@ -440,15 +440,73 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       final resp = await http
           .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
           .timeout(const Duration(seconds: 20));
-      if (!mounted) return;
+      if (!mounted) return false;
       if (resp.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Jornada pausada. Motivo: $motivo')),
         );
+        return true;
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falha: ${resp.statusCode} ${resp.body}')),
         );
+      }
+    } catch (e) {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro: $e')));
+    }
+    return false;
+  }
+
+  Future<void> _trocarOs() async {
+    if (_reCtrl.text.trim().isEmpty || _osCtrl.text.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preencha RE e O.S. para trocar.')),
+      );
+      return;
+    }
+
+    if (!_ensureFlowConsistency()) return;
+
+    final body = jsonEncode({
+      're': _reCtrl.text.trim(),
+      'os': _osCtrl.text.trim(),
+      'partnumber': normalizeCode(_partCtrl.text),
+      'operacao': normalizeCode(_opCtrl.text),
+      'motivo': 'Troca de OS',
+    });
+
+    final uri = buildApiUri('/operador/troca_os');
+    try {
+      final resp = await http
+          .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(const Duration(seconds: 20));
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        ref.read(sharedSearchFormProvider.notifier).clear();
+        FocusScope.of(context).unfocus();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'O.S. pausada para troca. Solicite nova liberação antes de retomar.',
+            ),
+          ),
+        );
+      } else {
+        String mensagem = 'Falha: ${resp.statusCode} ${resp.body}';
+        try {
+          final data = jsonDecode(resp.body);
+          if (data is Map && data['error'] is String) {
+            final texto = (data['error'] as String).trim();
+            if (texto.isNotEmpty) mensagem = texto;
+          }
+        } catch (_) {}
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(mensagem)));
       }
     } catch (e) {
       if (!mounted) return;
@@ -633,6 +691,32 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     );
     if (confirma == true) {
       await _encerrarProducao();
+    }
+  }
+
+  Future<void> _confirmTrocaOs() async {
+    final confirma = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Troca de O.S.'),
+        content: const Text(
+          'Deseja pausar a O.S. atual e liberar o fluxo para iniciar outra? '
+          'Será necessária nova liberação para retomar a produção desta O.S.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+    if (confirma == true) {
+      await _trocarOs();
     }
   }
 
@@ -1038,8 +1122,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                             onSelected: (value) {
                               if (value == 'fim') {
                                 _showFimJornadaDialog();
-                              }
-                              if (value == 'encerrar') {
+                              } else if (value == 'troca') {
+                                _confirmTrocaOs();
+                              } else if (value == 'encerrar') {
                                 _confirmEncerrarProducao();
                               }
                             },
@@ -1047,6 +1132,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                               PopupMenuItem(
                                 value: 'fim',
                                 child: Text('Fim de Jornada'),
+                              ),
+                              PopupMenuItem(
+                                value: 'troca',
+                                child: Text('Troca de O.S.'),
                               ),
                               PopupMenuItem(
                                 value: 'encerrar',
@@ -1059,8 +1148,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton.icon(
-                            onPressed:
-                                podeRegistrar ? _registrarAmostragem : null,
+                            onPressed: podeRegistrar
+                                ? _registrarAmostragem
+                                : null,
                             icon: _registrando
                                 ? const SizedBox(
                                     width: 18,
