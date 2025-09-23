@@ -25,12 +25,11 @@ class LocalExcelRepository implements MedidasRepository {
   /// Você pode instanciar de duas formas:
   /// - LocalExcelRepository(assetPath: 'assets/medidas.json')
   /// - LocalExcelRepository(planilhaPath: '/caminho/arquivo.xlsx', aba: 'CADASTRO')
-  LocalExcelRepository({
-    this.assetPath,
-    this.planilhaPath,
-    this.aba,
-  }) : assert(assetPath != null || planilhaPath != null,
-  'Informe assetPath OU planilhaPath');
+  LocalExcelRepository({this.assetPath, this.planilhaPath, this.aba})
+    : assert(
+        assetPath != null || planilhaPath != null,
+        'Informe assetPath OU planilhaPath',
+      );
 
   @override
   Future<List<MedidaItem>> getMedidas({
@@ -48,6 +47,7 @@ class LocalExcelRepository implements MedidasRepository {
       return data.map<MedidaItem>((e) {
         final map = (e as Map).cast<String, dynamic>();
 
+        final titulo = (map['titulo'] ?? '').toString();
         String faixaTexto = (map['faixaTexto'] ?? '').toString();
         double? min = _toDouble(map['minimo'] ?? map['min']);
         double? max = _toDouble(map['maximo'] ?? map['max']);
@@ -74,8 +74,19 @@ class LocalExcelRepository implements MedidasRepository {
           }
         }
 
+        ({double? min, double? max})? anguloRange;
+        for (final fonte in [faixaTexto, titulo]) {
+          final texto = (fonte).toString();
+          if (texto.trim().isEmpty) continue;
+          final parsed = MedidaItem.parseAngleRangeFromText(texto);
+          if (parsed != null) {
+            anguloRange = parsed;
+            break;
+          }
+        }
+
         return MedidaItem(
-          titulo: (map['titulo'] ?? '').toString(),
+          titulo: titulo,
           indice: indice,
           faixaTexto: faixaTexto,
           minimo: min,
@@ -86,6 +97,8 @@ class LocalExcelRepository implements MedidasRepository {
           observacao: map['observacao']?.toString(),
           periodicidade: map['periodicidade']?.toString(),
           instrumento: map['instrumento']?.toString(),
+          anguloMinimo: anguloRange?.min,
+          anguloMaximo: anguloRange?.max,
         );
       }).toList();
     }
@@ -95,7 +108,8 @@ class LocalExcelRepository implements MedidasRepository {
     if (kDebugMode) {
       // Só pra dar um toque no console durante dev.
       print(
-          'LocalExcelRepository: leitura de planilha não implementada ainda. caminho=$planilhaPath aba=$aba');
+        'LocalExcelRepository: leitura de planilha não implementada ainda. caminho=$planilhaPath aba=$aba',
+      );
     }
     return <MedidaItem>[];
   }
