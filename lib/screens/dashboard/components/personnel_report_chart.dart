@@ -218,8 +218,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       _hiddenColumns[_tipo]!.remove(columnKey);
     });
   }
-
-  void _reorderVisibleColumn(String columnKey, int targetIndex) {
+  void _reorderVisibleColumn(String columnKey, int dropIndex) {
     final headerMap = _headerConfigs[_tipo] ?? const {};
     _ensureColumnState(headerMap);
     final hidden = _hiddenColumns[_tipo]!;
@@ -238,18 +237,19 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     if (oldIndex == -1) {
       return;
     }
-    if (targetIndex < 0 || targetIndex > visible.length) {
+    if (dropIndex < 0 || dropIndex > visible.length) {
       return;
     }
-    var adjustedIndex = targetIndex;
+    var adjustedIndex = dropIndex;
+    if (adjustedIndex == oldIndex || adjustedIndex == oldIndex + 1) {
+      return;
+    }
+    final working = List<String>.from(visible);
+    final moved = working.removeAt(oldIndex);
     if (adjustedIndex > oldIndex) {
       adjustedIndex -= 1;
     }
-    if (adjustedIndex == oldIndex) {
-      return;
-    }
-    final moved = visible.removeAt(oldIndex);
-    visible.insert(adjustedIndex, moved);
+    working.insert(adjustedIndex, moved);
     final hiddenOrder = [
       for (final key in order)
         if (hidden.contains(key)) key,
@@ -257,7 +257,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     setState(() {
       order
         ..clear()
-        ..addAll(visible)
+        ..addAll(working)
         ..addAll(hiddenOrder);
     });
   }
@@ -266,24 +266,29 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     BuildContext context,
     String columnKey,
     String label, {
+    VoidCallback? onPressed,
     bool enableTooltip = true,
-    bool enableDelete = true,
+    bool showDelete = true,
   }) {
-    final chip = Chip(
+    final chip = InputChip(
       avatar: const Icon(Icons.drag_indicator, size: 18),
       label: Text(label, overflow: TextOverflow.ellipsis),
-      deleteIcon: enableDelete
-          ? const Icon(Icons.visibility_off_outlined, size: 18)
-          : null,
-      onDeleted: enableDelete ? () => _hideColumn(columnKey) : null,
-      deleteButtonTooltipMessage: enableDelete ? 'Ocultar coluna' : null,
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      onPressed: onPressed,
+      onDeleted: showDelete ? onPressed : null,
+      deleteIcon: showDelete
+          ? const Icon(Icons.visibility_off_outlined, size: 18)
+          : null,
+      deleteButtonTooltipMessage: showDelete ? 'Ocultar coluna' : null,
     );
     if (!enableTooltip) {
       return chip;
     }
-    return Tooltip(message: 'Arraste para reordenar', child: chip);
+    final message = showDelete
+        ? 'Toque para ocultar ou arraste para reordenar'
+        : 'Arraste para reordenar';
+    return Tooltip(message: message, child: chip);
   }
 
   Widget _buildReorderableChip(
@@ -303,7 +308,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           columnKey,
           label,
           enableTooltip: false,
-          enableDelete: false,
+          showDelete: false,
         ),
       ),
       childWhenDragging: Opacity(
@@ -317,40 +322,51 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           ),
         ),
       ),
-      child: _buildColumnChip(context, columnKey, label),
+      child: _buildColumnChip(
+        context,
+        columnKey,
+        label,
+        onPressed: () => _hideColumn(columnKey),
+      ),
     );
   }
 
-  Widget _buildDropTarget(
-    BuildContext context,
-    int targetIndex,
-    int totalVisible,
-  ) {
+  Widget _buildInsertionTarget(BuildContext context, int index) {
     final theme = Theme.of(context);
     return DragTarget<String>(
-      onWillAcceptWithDetails: (details) => true,
+      onWillAcceptWithDetails: (details) {
+        final order = _columnOrders[_tipo];
+        if (order == null || !order.contains(details.data)) {
+          return false;
+        }
+        final hidden = _hiddenColumns[_tipo];
+        if (hidden != null && hidden.contains(details.data)) {
+          return false;
+        }
+        return true;
+      },
       onAcceptWithDetails: (details) {
-        _reorderVisibleColumn(details.data, targetIndex);
+        _reorderVisibleColumn(details.data, index);
       },
       builder: (context, candidate, rejected) {
         final isActive = candidate.isNotEmpty;
-        final leftMargin = targetIndex == 0 ? 0.0 : 4.0;
-        final rightMargin = targetIndex == totalVisible ? 0.0 : 4.0;
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: 12,
-          height: 40,
-          margin: EdgeInsets.only(
-            left: leftMargin,
-            right: rightMargin,
-            top: 4,
-            bottom: 4,
-          ),
+          duration: const Duration(milliseconds: 120),
+          width: 14,
+          height: 42,
+          margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
           decoration: BoxDecoration(
             color: isActive
-                ? theme.colorScheme.primary.withValues(alpha: 0.35)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
+                ? theme.colorScheme.primary.withValues(alpha: 0.18)
+                : theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.08,
+                  ),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isActive
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.outline.withValues(alpha: 0.35),
+            ),
           ),
         );
       },
@@ -362,28 +378,30 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     String label,
     VoidCallback onHide,
   ) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 12),
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
+    return Tooltip(
+      message: 'Toque para ocultar',
+      child: InkWell(
+        onTap: onHide,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.visibility_off_outlined, size: 16),
+            ],
           ),
         ),
-        Tooltip(
-          message: 'Ocultar coluna',
-          child: IconButton(
-            icon: const Icon(Icons.visibility_off_outlined, size: 16),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            splashRadius: 18,
-            onPressed: onHide,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -418,48 +436,50 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
               );
             }).toList(),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
         ],
         Text('Colunas visíveis', style: theme.textTheme.labelMedium),
         const SizedBox(height: 8),
-        Builder(
-          builder: (context) {
-            final totalVisible = visibleColumns.length;
-            final reorderChildren = <Widget>[];
-            for (var index = 0; index < totalVisible; index++) {
-              reorderChildren.add(
-                _buildDropTarget(context, index, totalVisible),
-              );
-              final columnKey = visibleColumns[index];
-              reorderChildren.add(
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: KeyedSubtree(
-                    key: ValueKey('visible_$columnKey'),
-                    child: _buildReorderableChip(context, headerMap, columnKey),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            for (var i = 0; i < visibleColumns.length; i++)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildInsertionTarget(context, i),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: KeyedSubtree(
+                      key: ValueKey('visible_${visibleColumns[i]}'),
+                      child: _buildReorderableChip(
+                        context,
+                        headerMap,
+                        visibleColumns[i],
+                      ),
+                    ),
                   ),
-                ),
-              );
-            }
-            reorderChildren.add(
-              _buildDropTarget(context, totalVisible, totalVisible),
-            );
-            return Wrap(
-              spacing: 0,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: reorderChildren,
-            );
-          },
+                ],
+              ),
+            if (visibleColumns.isNotEmpty)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildInsertionTarget(context, visibleColumns.length),
+                ],
+              ),
+          ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(
-          'Arraste para mudar a ordem ou oculte colunas pelo ícone de olho.',
+          'Toque para ocultar e arraste os chips, soltando nas áreas destacadas para reordenar.',
+
           style: theme.textTheme.bodySmall,
         ),
       ],
     );
-
   }
 
   void _buscar() {
