@@ -567,7 +567,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                         ),
                       ),
                     if (_mostrarResumo) ...[
-                      SearchSummaryCard(
+                      SearchSummarySection(
                         reLabel: 'R.E. do Preparador',
                         reValue: _reCtrl.text,
                         items: [
@@ -582,18 +582,10 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                               value: categoriaValue!,
                             ),
                         ],
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () {
-                            FocusScope.of(context).unfocus();
-                            setState(() => _mostrarResumo = false);
-                          },
-                          icon: const Icon(Icons.edit_outlined),
-                          label: const Text('Alterar dados da busca'),
-                        ),
+                        onEdit: () {
+                          FocusScope.of(context).unfocus();
+                          setState(() => _mostrarResumo = false);
+                        },
                       ),
                     ] else ...[
                       Form(
@@ -880,8 +872,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton.icon(
-                            onPressed:
-                                podeRegistrar ? _registrarResultado : null,
+                            onPressed: podeRegistrar
+                                ? _registrarResultado
+                                : null,
                             icon: _registrando
                                 ? const SizedBox(
                                     width: 18,
