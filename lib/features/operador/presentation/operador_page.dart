@@ -72,6 +72,8 @@ class MedidasOperadorController
       instrumento: old.instrumento,
       tolerancias: old.tolerancias,
       contagens: old.contagens,
+      anguloMinimo: old.anguloMinimo,
+      anguloMaximo: old.anguloMaximo,
     );
     state = AsyncValue.data(current);
   }
@@ -95,6 +97,8 @@ class MedidasOperadorController
         instrumento: old.instrumento,
         tolerancias: old.tolerancias,
         contagens: old.contagens,
+        anguloMinimo: old.anguloMinimo,
+        anguloMaximo: old.anguloMaximo,
       );
     }
     state = AsyncValue.data(current);
@@ -139,6 +143,8 @@ class MedidasOperadorController
         instrumento: old.instrumento,
         tolerancias: old.tolerancias,
         contagens: counts,
+        anguloMinimo: old.anguloMinimo,
+        anguloMaximo: old.anguloMaximo,
       );
     }
     state = AsyncValue.data(current);

@@ -102,11 +102,52 @@ class _MeasurementTileState extends State<MeasurementTile> {
 
   void _syncChanfroControllers(String? medicao) {
     _ensureChanfroControllers();
-    final parts = (medicao ?? '').split('|');
-    final ang = parts.isNotEmpty ? parts[0].trim() : '';
-    final medida = parts.length > 1 ? parts[1].trim() : '';
-    _setControllerText(_chanfroAngCtrl!, ang);
+    final rawParts = (medicao ?? '')
+        .split('|')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    String medida = '';
+    String angulo = '';
+
+    if (rawParts.isEmpty) {
+      medida = '';
+      angulo = '';
+    } else if (rawParts.length == 1) {
+      final parte = rawParts.first;
+      final faixa = _resolveItemAngleRange(widget.item);
+      if (_looksLikeAngleToken(parte) ||
+          _valueMatchesAngleRange(parte, faixa)) {
+        angulo = parte;
+      } else {
+        medida = parte;
+      }
+    } else {
+      final faixa = _resolveItemAngleRange(widget.item);
+      final primeiro = rawParts[0];
+      final segundo = rawParts[1];
+      final primeiroEhAngulo =
+          _looksLikeAngleToken(primeiro) ||
+          _valueMatchesAngleRange(primeiro, faixa);
+      final segundoEhAngulo =
+          _looksLikeAngleToken(segundo) ||
+          _valueMatchesAngleRange(segundo, faixa);
+
+      if (!primeiroEhAngulo && segundoEhAngulo) {
+        medida = primeiro;
+        angulo = segundo;
+      } else if (primeiroEhAngulo && !segundoEhAngulo) {
+        medida = segundo;
+        angulo = primeiro;
+      } else {
+        medida = primeiro;
+        angulo = segundo;
+      }
+    }
+
     _setControllerText(_chanfroMedCtrl!, medida);
+    _setControllerText(_chanfroAngCtrl!, _stripAngleDecorations(angulo));
   }
 
   void _setControllerText(TextEditingController controller, String value) {
@@ -117,6 +158,58 @@ class _MeasurementTileState extends State<MeasurementTile> {
         composing: TextRange.empty,
       );
     }
+  }
+
+  ({double? min, double? max})? _resolveItemAngleRange(MedidaItem item) {
+    if (item.anguloMinimo != null || item.anguloMaximo != null) {
+      return (min: item.anguloMinimo, max: item.anguloMaximo);
+    }
+
+    final fontes = <String>[item.faixaTexto, item.titulo];
+    if (item.observacao != null) fontes.add(item.observacao!);
+    if (item.instrumento != null) fontes.add(item.instrumento!);
+
+    for (final fonte in fontes) {
+      final texto = fonte.trim();
+      if (texto.isEmpty) continue;
+      final parsed = MedidaItem.parseAngleRangeFromText(texto);
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
+  bool _looksLikeAngleToken(String token) {
+    final lower = token.trim().toLowerCase();
+    if (lower.isEmpty) return false;
+    if (RegExp(r'[°º]').hasMatch(lower)) return true;
+    if (lower.contains('grau')) return true;
+    return false;
+  }
+
+  bool _valueMatchesAngleRange(
+    String token,
+    ({double? min, double? max})? range,
+  ) {
+    if (range == null) return false;
+    final value = _parseAngleInput(token);
+    if (value == null) return false;
+    final min = range.min;
+    final max = range.max;
+    if (min != null && value < min) return false;
+    if (max != null && value > max) return false;
+    return true;
+  }
+
+  String _stripAngleDecorations(String text) {
+    return text.replaceAll(RegExp(r'[°º]'), '').trim();
+  }
+
+  String _formatAngleForStorage(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return '';
+    final sanitized = trimmed.replaceAll(RegExp(r'[°º]'), '').trim();
+    if (sanitized.isEmpty) return '';
+    return '$sanitizedº';
   }
 
   String _norm(String? s) => (s ?? '').trim();
@@ -219,6 +312,13 @@ class _MeasurementTileState extends State<MeasurementTile> {
         _containsAny(faixa, ['chanfro']) ||
         _containsAny(inst, ['chanfro']) ||
         _containsAny(obs, ['chanfro']);
+  }
+
+  bool _isRepetirTresPontos(MedidaItem item) {
+    final t = _norm(item.titulo);
+    final faixa = _norm(item.faixaTexto);
+    return _containsAny(t, ['repetir 3 pontos de medicao']) ||
+        _containsAny(faixa, ['repetir 3 pontos de medicao']);
   }
 
   Set<String> _partsFromMedicao(String? medicao) => (medicao ?? '')
@@ -349,6 +449,12 @@ class _MeasurementTileState extends State<MeasurementTile> {
     return double.tryParse(normalized);
   }
 
+  double? _parseAngleInput(String txt) {
+    final sanitized = txt.replaceAll(RegExp("[°º'’′\"″”]"), '').trim();
+    if (sanitized.isEmpty) return null;
+    return _parseManualValue(sanitized);
+  }
+
   Color _statusColor(StatusMedida st) {
     switch (st) {
       case StatusMedida.ok:
@@ -395,17 +501,56 @@ class _MeasurementTileState extends State<MeasurementTile> {
     }
   }
 
+  String _repetirHelper(StatusMedida st) {
+    switch (st) {
+      case StatusMedida.ok:
+        return 'Resultado confirmado';
+      case StatusMedida.reprovadaAbaixo:
+      case StatusMedida.reprovadaAcima:
+      case StatusMedida.alertaAbaixo:
+      case StatusMedida.alertaAcima:
+        return 'Resultado fora da tolerância';
+      case StatusMedida.pendente:
+        return 'Selecione OK para confirmar';
+    }
+  }
+
   String _chanfroHelper({
     required StatusMedida status,
     required bool hasAngle,
     required bool hasMedida,
     required bool medidaValida,
+    required bool anguloValido,
+    required StatusMedida medidaStatus,
+    required StatusMedida anguloStatus,
   }) {
     if (!hasAngle || !hasMedida) {
       return 'Informe ângulo e medida para classificar';
     }
+    if (!anguloValido) {
+      return 'Ângulo inválido';
+    }
     if (!medidaValida) {
       return 'Medida inválida';
+    }
+    if (anguloStatus != StatusMedida.ok &&
+        anguloStatus != StatusMedida.pendente) {
+      switch (anguloStatus) {
+        case StatusMedida.reprovadaAbaixo:
+          return 'Ângulo abaixo do mínimo';
+        case StatusMedida.reprovadaAcima:
+          return 'Ângulo acima do máximo';
+        case StatusMedida.alertaAbaixo:
+        case StatusMedida.alertaAcima:
+          return 'Ângulo fora da tolerância';
+        case StatusMedida.ok:
+        case StatusMedida.pendente:
+          break;
+      }
+    }
+    if (medidaStatus != StatusMedida.ok &&
+        medidaStatus != StatusMedida.pendente) {
+      return _statusHelper(medidaStatus);
     }
     return _statusHelper(status);
   }
@@ -425,12 +570,27 @@ class _MeasurementTileState extends State<MeasurementTile> {
         .trim()
         .toLowerCase();
     final angleText = isChanfro ? _chanfroAngCtrl!.text.trim() : '';
-    final medidaText = isChanfro ? _chanfroMedCtrl!.text.trim() : ctrl!.text;
-    final valor = isRosca
-        ? null
-        : isChanfro
-        ? _parseManualValue(medidaText)
-        : _parseManualValue(ctrl!.text);
+    final medidaText = isChanfro
+        ? _chanfroMedCtrl!.text.trim()
+        : (ctrl != null ? ctrl.text : '');
+    final isRepetir3 = !isChanfro && !isRosca && _isRepetirTresPontos(item);
+
+    double? valor;
+    if (isRosca || isRepetir3) {
+      valor = null;
+    } else if (isChanfro) {
+      valor = _parseManualValue(medidaText);
+    } else {
+      valor = _parseManualValue(ctrl!.text);
+    }
+
+    double? angleValue;
+    bool hasAngle = false;
+    bool hasMedida = false;
+    bool medidaValida = false;
+    bool anguloValido = false;
+    StatusMedida medidaStatus = StatusMedida.pendente;
+    StatusMedida anguloStatus = StatusMedida.pendente;
 
     StatusMedida status;
     if (isRosca) {
@@ -440,14 +600,35 @@ class _MeasurementTileState extends State<MeasurementTile> {
           ? StatusMedida.reprovadaAcima
           : StatusMedida.pendente;
     } else if (isChanfro) {
-      final hasAngle = angleText.isNotEmpty;
-      final hasMedida = medidaText.trim().isNotEmpty;
-      final medidaValida = valor != null;
-      status = (!hasAngle || !hasMedida || !medidaValida)
-          ? StatusMedida.pendente
-          : item.avaliarStatus(valor);
+      hasAngle = angleText.isNotEmpty;
+      hasMedida = medidaText.trim().isNotEmpty;
+      angleValue = _parseAngleInput(angleText);
+      anguloValido = angleValue != null;
+      medidaValida = valor != null;
+      if (medidaValida) {
+        medidaStatus = item.avaliarStatus(valor);
+      }
+      if (anguloValido) {
+        anguloStatus = item.avaliarAngulo(angleValue);
+      }
+      if (!hasAngle || !hasMedida || !medidaValida || !anguloValido) {
+        status = StatusMedida.pendente;
+      } else if (medidaStatus != StatusMedida.ok) {
+        status = medidaStatus;
+      } else if (anguloStatus != StatusMedida.ok) {
+        status = anguloStatus;
+      } else {
+        status = StatusMedida.ok;
+      }
+    } else if (isRepetir3) {
+      status = item.status;
     } else {
-      status = item.avaliarStatus(valor);
+      hasMedida = ctrl!.text.trim().isNotEmpty;
+      medidaValida = valor != null;
+      if (medidaValida) {
+        medidaStatus = item.avaliarStatus(valor);
+      }
+      status = medidaValida ? medidaStatus : StatusMedida.pendente;
     }
 
     final theme = Theme.of(context);
@@ -460,10 +641,15 @@ class _MeasurementTileState extends State<MeasurementTile> {
         : isChanfro
         ? _chanfroHelper(
             status: status,
-            hasAngle: angleText.isNotEmpty,
-            hasMedida: medidaText.trim().isNotEmpty,
-            medidaValida: valor != null,
+            hasAngle: hasAngle,
+            hasMedida: hasMedida,
+            medidaValida: medidaValida,
+            anguloValido: anguloValido,
+            medidaStatus: medidaStatus,
+            anguloStatus: anguloStatus,
           )
+        : isRepetir3
+        ? _repetirHelper(status)
         : _statusHelper(status);
     final helperColor = _statusColor(status);
 
@@ -575,6 +761,36 @@ class _MeasurementTileState extends State<MeasurementTile> {
                 ),
                 onChanged: (_) => _handleChanfroChanged(),
               ),
+            ] else if (isRepetir3) ...[
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _pill(
+                    text: 'OK',
+                    bg: Colors.green.shade200,
+                    border: Colors.green.shade600,
+                    fg: Colors.green.shade900,
+                    selected:
+                        item.status == StatusMedida.ok &&
+                        (item.medicao ?? '').trim().toLowerCase() == 'ok',
+                    count: _countFor('OK'),
+                    onTap: () {
+                      FocusScope.of(context).unfocus();
+                      final alreadyOk =
+                          item.status == StatusMedida.ok &&
+                          (item.medicao ?? '').trim().toLowerCase() == 'ok';
+                      widget.onSelect(
+                        alreadyOk ? StatusMedida.pendente : StatusMedida.ok,
+                        alreadyOk ? null : 'OK',
+                      );
+                      setState(() {});
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(helper, style: TextStyle(color: helperColor)),
             ] else ...[
               TextField(
                 controller: ctrl,
@@ -608,16 +824,32 @@ class _MeasurementTileState extends State<MeasurementTile> {
     final angleNormalized = angle.trim();
     final medidaNormalized = medida.trim();
     final valor = _parseManualValue(medidaNormalized);
+    final angleValue = _parseAngleInput(angleNormalized);
     final hasAngle = angleNormalized.isNotEmpty;
     final hasMedida = medidaNormalized.isNotEmpty;
     final medidaValida = valor != null;
-    final novoStatus = (!hasAngle || !hasMedida || !medidaValida)
-        ? StatusMedida.pendente
-        : widget.item.avaliarStatus(valor);
-    final combined = (hasAngle || hasMedida)
-        ? '${angleNormalized} | ${medidaNormalized}'
-        : '';
-    widget.onSelect(novoStatus, combined);
+    final anguloValido = angleValue != null;
+    StatusMedida novoStatus;
+    if (!hasAngle || !hasMedida || !medidaValida || !anguloValido) {
+      novoStatus = StatusMedida.pendente;
+    } else {
+      final medidaStatus = widget.item.avaliarStatus(valor);
+      if (medidaStatus != StatusMedida.ok) {
+        novoStatus = medidaStatus;
+      } else {
+        final anguloStatus = widget.item.avaliarAngulo(angleValue);
+        novoStatus = anguloStatus != StatusMedida.ok
+            ? anguloStatus
+            : StatusMedida.ok;
+      }
+    }
+    final formattedAngle = _formatAngleForStorage(angleNormalized);
+    final combinedParts = <String>[];
+    if (hasMedida) combinedParts.add(medidaNormalized);
+    if (formattedAngle.isNotEmpty) combinedParts.add(formattedAngle);
+    final combined = combinedParts.join(' | ');
+
+    widget.onSelect(novoStatus, combined.isEmpty ? null : combined);
     setState(() {});
   }
 
