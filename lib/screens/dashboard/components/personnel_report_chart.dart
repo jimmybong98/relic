@@ -459,6 +459,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         ),
       ],
     );
+
   }
 
   void _buscar() {

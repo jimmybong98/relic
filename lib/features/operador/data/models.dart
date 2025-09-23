@@ -127,18 +127,39 @@ class MedidaItem {
   }
 
   StatusMedida avaliarAngulo(double? valor) {
-    final possuiFaixa = anguloMinimo != null || anguloMaximo != null;
+    final faixa = _resolverFaixaDeAngulo();
+    final double? min = faixa?.min;
+    final double? max = faixa?.max;
+    final possuiFaixa = min != null || max != null;
     if (!possuiFaixa) {
       return valor == null ? StatusMedida.pendente : StatusMedida.ok;
     }
     if (valor == null) return StatusMedida.pendente;
-    if (anguloMinimo != null && valor < anguloMinimo!) {
+    if (min != null && valor < min) {
       return StatusMedida.reprovadaAbaixo;
     }
-    if (anguloMaximo != null && valor > anguloMaximo!) {
+    if (max != null && valor > max) {
       return StatusMedida.reprovadaAcima;
     }
     return StatusMedida.ok;
+  }
+
+  ({double? min, double? max})? _resolverFaixaDeAngulo() {
+    if (anguloMinimo != null || anguloMaximo != null) {
+      return (min: anguloMinimo, max: anguloMaximo);
+    }
+
+    final fontes = <String>[faixaTexto, titulo];
+    if (observacao != null) fontes.add(observacao!);
+    if (instrumento != null) fontes.add(instrumento!);
+
+    for (final fonte in fontes) {
+      final texto = fonte.trim();
+      if (texto.isEmpty) continue;
+      final parsed = parseAngleRangeFromText(texto);
+      if (parsed != null) return parsed;
+    }
+    return null;
   }
 
   // ---------- Helpers internos de parsing ----------
@@ -253,14 +274,23 @@ class MedidaItem {
   }
 
   static bool _isPlusMinusConnector(String raw, String compact) {
-    if (raw.contains('±') || compact.contains('±')) return true;
-    final lower = compact.toLowerCase();
-    if (lower.contains('+/-') ||
-        lower.contains('+/−') ||
-        lower.contains('-/+')) {
+    final lowerRaw = raw.toLowerCase();
+    final lowerCompact = compact.toLowerCase();
+    if (lowerRaw.contains('±') || lowerCompact.contains('±')) return true;
+    if (lowerRaw.contains('mais ou menos') ||
+        lowerRaw.contains('maisoumenos') ||
+        lowerRaw.contains('maisomenos')) {
       return true;
     }
-    if (lower == '+-' || lower == '-+' || lower == '+−' || lower == '−+') {
+    if (lowerCompact.contains('+/-') ||
+        lowerCompact.contains('+/−') ||
+        lowerCompact.contains('-/+')) {
+      return true;
+    }
+    if (lowerCompact == '+-' ||
+        lowerCompact == '-+' ||
+        lowerCompact == '+−' ||
+        lowerCompact == '−+') {
       return true;
     }
     return false;
@@ -306,45 +336,106 @@ class MedidaItem {
 
   static ({double? min, double? max})? parseAngleRangeFromText(String texto) {
     if (texto.trim().isEmpty) return null;
-    final normalized = texto.replaceAll(',', '.');
-    final pattern = RegExp(
-      "-?\\d+(?:[.,]\\d+)?\\s*[°º](?:\\s*\\d+[\\u2019\\u2032']?)?(?:\\s*\\d+(?:[\\u0022\\u2033\\u201d]))?",
+    String normalizeConnectors(String input) {
+      var out = input.replaceAll(',', '.');
+      out = out.replaceAll('º', '°');
+      out = out.replaceAll('×', 'x');
+      out = out.replaceAll(RegExp(r'(\d)°\.(\d+)'), r'$1.$2°');
+      out = out.replaceAll(RegExp(r'([°º])\s*[xX]\s*(?=\d)'), r'$1 - ');
+      out = out.replaceAll(RegExp(r'([°º])\s+(?=\d)'), r'$1 - ');
+      out = out.replaceAll(RegExp(r'([°º])(?=\d)'), r'$1 - ');
+      out = out.replaceAll(RegExp(r'\+-'), '±');
+      out = out.replaceAll(RegExp(r'\+\s*-'), '±');
+      out = out.replaceAll(RegExp(r'-\s*\+'), '±');
+      out = out.replaceAll(RegExp(r'\+/-'), '±');
+      out = out.replaceAll(RegExp(r'-/\+'), '±');
+      out = out.replaceAll(
+        RegExp(r'mais\s+ou\s+menos', caseSensitive: false),
+        '±',
+      );
+      out = out.replaceAll('±', ' ± ');
+      out = out.replaceAll(RegExp(r'\s+'), ' ');
+      return out.trim();
+    }
+
+    final normalized = normalizeConnectors(texto);
+    final tokenPattern = RegExp(
+      "-?\\d+(?:[.,]\\d+)?(?:\\s*[°º])?(?:\\s*\\d+[\\u2019\\u2032'’′])?(?:\\s*\\d+(?:[\\u0022\\u2033\\u201d\"″]))?(?:\\s*graus?)?",
+      caseSensitive: false,
     );
-    final matches = pattern.allMatches(normalized).toList();
-    if (matches.length < 2) return null;
 
-    for (var i = 0; i < matches.length - 1; i++) {
-      final rawA = normalized.substring(matches[i].start, matches[i].end);
-      final rawB = normalized.substring(
-        matches[i + 1].start,
-        matches[i + 1].end,
-      );
-      final betweenRaw = normalized.substring(
-        matches[i].end,
-        matches[i + 1].start,
-      );
-      if (betweenRaw.trim().isEmpty) continue;
+    final tokens =
+        <({String raw, int start, int end, bool hasMarker, double value})>[];
 
-      final connectorNormalized = _normalizeLower(betweenRaw);
-      final connectorCompact = connectorNormalized.replaceAll(
-        RegExp(r'\s+'),
-        '',
-      );
-      final valueA = _parseAngleToken(rawA);
-      final valueB = _parseAngleToken(rawB);
-      if (valueA == null || valueB == null) continue;
+    bool hasAngleMarker(String raw) {
+      return RegExp("[°º'\"’′″]|grau", caseSensitive: false).hasMatch(raw);
+    }
 
-      if (_isPlusMinusConnector(betweenRaw, connectorCompact)) {
-        final range = [valueA - valueB, valueA + valueB]..sort();
+    for (final match in tokenPattern.allMatches(normalized)) {
+      final raw = match.group(0)?.trim();
+      if (raw == null || raw.isEmpty) continue;
+      if (!RegExp(r'\d').hasMatch(raw)) continue;
+      final value = _parseAngleToken(raw);
+      if (value == null) continue;
+      tokens.add((
+        raw: raw,
+        start: match.start,
+        end: match.end,
+        hasMarker: hasAngleMarker(raw),
+        value: value,
+      ));
+    }
+
+    if (tokens.length < 2) return null;
+
+    bool allowsRange(
+      String between,
+      String compact,
+      bool firstHasMarker,
+      bool secondHasMarker,
+    ) {
+      final trimmed = between.trim();
+      final lower = trimmed.toLowerCase();
+      if (_isRangeConnector(between, lower, compact)) return true;
+      if (trimmed.isEmpty && (firstHasMarker || secondHasMarker)) return true;
+      if ((compact == 'x' || compact == '×') &&
+          firstHasMarker &&
+          secondHasMarker) {
+        return true;
+      }
+      if ((lower == 'e' || lower == 'ou') &&
+          firstHasMarker &&
+          secondHasMarker) {
+        return true;
+      }
+      if ((compact == '/' || compact == '\\') &&
+          firstHasMarker &&
+          secondHasMarker) {
+        return true;
+      }
+      if (trimmed == ',' && firstHasMarker && secondHasMarker) return true;
+      if (RegExp(r'^[()\[\]\-–—~]*$', caseSensitive: false).hasMatch(trimmed) &&
+          (firstHasMarker || secondHasMarker)) {
+        return true;
+      }
+      return false;
+    }
+
+    for (var i = 0; i < tokens.length - 1; i++) {
+      final current = tokens[i];
+      final next = tokens[i + 1];
+      final between = normalized.substring(current.end, next.start);
+      final compact = between.replaceAll(RegExp(r'\s+'), '');
+
+      if (_isPlusMinusConnector(between, compact)) {
+        final tolerance = next.value;
+        final range = [current.value - tolerance, current.value + tolerance]
+          ..sort();
         return (min: range.first, max: range.last);
       }
 
-      if (_isRangeConnector(
-        betweenRaw,
-        connectorNormalized,
-        connectorCompact,
-      )) {
-        final range = [valueA, valueB]..sort();
+      if (allowsRange(between, compact, current.hasMarker, next.hasMarker)) {
+        final range = [current.value, next.value]..sort();
         return (min: range.first, max: range.last);
       }
     }
@@ -415,16 +506,100 @@ class MedidaItem {
     final observacao = rawObservacao?.toString();
     final periodicidade = rawPeriodicidade?.toString();
     final instrumento = rawInstrumento?.toString();
+    double? anguloMinDeduced;
+    double? anguloMaxDeduced;
 
-    ({double? min, double? max})? anguloRange;
-    for (final fonte in [faixa, titulo, observacao, instrumento]) {
-      final texto = (fonte ?? '').toString();
-      if (texto.trim().isEmpty) continue;
-      final parsed = parseAngleRangeFromText(texto);
-      if (parsed != null) {
-        anguloRange = parsed;
-        break;
+    void mergeAngleRange(({double? min, double? max})? candidate) {
+      if (candidate == null) return;
+      final candMin = candidate.min;
+      final candMax = candidate.max;
+      if (candMin != null) {
+        if (anguloMinDeduced == null || candMin < anguloMinDeduced!) {
+          anguloMinDeduced = candMin;
+        }
       }
+      if (candMax != null) {
+        if (anguloMaxDeduced == null || candMax > anguloMaxDeduced!) {
+          anguloMaxDeduced = candMax;
+        }
+      }
+    }
+
+    double? parseAngleValue(dynamic raw) {
+      if (raw == null) return null;
+      if (raw is num) return raw.toDouble();
+      final text = raw.toString().trim();
+      if (text.isEmpty) return null;
+      final tokenValue = _parseAngleToken(text);
+      if (tokenValue != null) return tokenValue;
+      return _toDouble(text);
+    }
+
+    ({double? min, double? max})? parseAnglePayload(dynamic raw) {
+      if (raw == null) return null;
+      if (raw is num) {
+        final v = raw.toDouble();
+        return (min: v, max: v);
+      }
+      final text = raw.toString().trim();
+      if (text.isEmpty) return null;
+      final parsed = parseAngleRangeFromText(text);
+      if (parsed != null) return parsed;
+      final single = parseAngleValue(text);
+      if (single != null) return (min: single, max: single);
+      return null;
+    }
+
+    bool textMentionsAngle(String text) {
+      final lower = _normalizeLower(text);
+      return text.contains('°') ||
+          text.contains('º') ||
+          lower.contains('grau') ||
+          lower.contains('angulo');
+    }
+
+    map.forEach((key, value) {
+      final normalizedKey = key.toString().toLowerCase();
+      if (!normalizedKey.contains('angulo')) return;
+      if (normalizedKey.contains('min')) {
+        final parsed = parseAngleValue(value);
+        if (parsed != null &&
+            (anguloMinDeduced == null || parsed < anguloMinDeduced!)) {
+          anguloMinDeduced = parsed;
+        }
+        return;
+      }
+      if (normalizedKey.contains('max')) {
+        final parsed = parseAngleValue(value);
+        if (parsed != null &&
+            (anguloMaxDeduced == null || parsed > anguloMaxDeduced!)) {
+          anguloMaxDeduced = parsed;
+        }
+        return;
+      }
+      mergeAngleRange(parseAnglePayload(value));
+    });
+
+    for (final fonte in [faixa, titulo, observacao, instrumento]) {
+      final texto = (fonte ?? '').toString().trim();
+      if (texto.isEmpty) continue;
+      if (!textMentionsAngle(texto)) continue;
+      mergeAngleRange(parseAnglePayload(texto));
+    }
+
+    for (final label in tol) {
+      final texto = label.trim();
+      if (texto.isEmpty) continue;
+      if (!textMentionsAngle(texto)) continue;
+      mergeAngleRange(parseAnglePayload(texto));
+    }
+
+    if (anguloMinDeduced != null &&
+        anguloMaxDeduced != null &&
+        anguloMinDeduced! > anguloMaxDeduced!) {
+      final tmp = anguloMinDeduced;
+      anguloMinDeduced = anguloMaxDeduced;
+      anguloMaxDeduced = tmp;
     }
 
     final rawCounts = map['contagens'];
@@ -470,8 +645,8 @@ class MedidaItem {
       instrumento: instrumento,
       tolerancias: tol,
       contagens: counts,
-      anguloMinimo: anguloRange?.min,
-      anguloMaximo: anguloRange?.max,
+      anguloMinimo: anguloMinDeduced,
+      anguloMaximo: anguloMaxDeduced,
     );
   }
 
