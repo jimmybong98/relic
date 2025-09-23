@@ -340,6 +340,10 @@ class MedidaItem {
       var out = input.replaceAll(',', '.');
       out = out.replaceAll('º', '°');
       out = out.replaceAll('×', 'x');
+      out = out.replaceAll(
+        RegExp(r'(?<=[\d°º])\s*[-–—]\s*(?=\d)'),
+        ' - ',
+      );
       out = out.replaceAll(RegExp(r'(\d)°\.(\d+)'), r'$1.$2°');
       out = out.replaceAll(RegExp(r'([°º])\s*[xX]\s*(?=\d)'), r'$1 - ');
       out = out.replaceAll(RegExp(r'([°º])\s+(?=\d)'), r'$1 - ');
@@ -421,26 +425,56 @@ class MedidaItem {
       return false;
     }
 
+    final candidates = <({double min, double max, int score, int index})>[];
+
     for (var i = 0; i < tokens.length - 1; i++) {
       final current = tokens[i];
       final next = tokens[i + 1];
       final between = normalized.substring(current.end, next.start);
       final compact = between.replaceAll(RegExp(r'\s+'), '');
+      final trimmed = between.trim();
+      final lower = trimmed.toLowerCase();
+      final markerCount =
+          (current.hasMarker ? 1 : 0) + (next.hasMarker ? 1 : 0);
 
       if (_isPlusMinusConnector(between, compact)) {
         final tolerance = next.value;
         final range = [current.value - tolerance, current.value + tolerance]
           ..sort();
-        return (min: range.first, max: range.last);
+        final score = 50 + markerCount * 10;
+        candidates.add((
+          min: range.first,
+          max: range.last,
+          score: score,
+          index: i,
+        ));
+        continue;
       }
 
       if (allowsRange(between, compact, current.hasMarker, next.hasMarker)) {
         final range = [current.value, next.value]..sort();
-        return (min: range.first, max: range.last);
+        var score = markerCount * 10;
+        if (markerCount > 0) {
+          score += 5;
+        } else if (lower.contains('grau')) {
+          score += 3;
+        }
+        candidates.add((
+          min: range.first,
+          max: range.last,
+          score: score,
+          index: i,
+        ));
       }
     }
 
-    return null;
+    if (candidates.isEmpty) return null;
+    candidates.sort((a, b) {
+      if (a.score != b.score) return b.score.compareTo(a.score);
+      return a.index.compareTo(b.index);
+    });
+    final best = candidates.first;
+    return (min: best.min, max: best.max);
   }
 
   factory MedidaItem.fromMap(Map<String, dynamic> map) {
