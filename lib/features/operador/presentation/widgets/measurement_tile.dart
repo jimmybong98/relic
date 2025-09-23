@@ -20,6 +20,18 @@ class MeasurementTile extends StatefulWidget {
   State<MeasurementTile> createState() => _MeasurementTileState();
 }
 
+double? _parseManualValue(String txt) {
+  final normalized = txt.replaceAll(',', '.').trim();
+  if (normalized.isEmpty) return null;
+  return double.tryParse(normalized);
+}
+
+double? _parseAngleInput(String txt) {
+  final sanitized = txt.replaceAll(RegExp("[°º'’′\"″”]"), '').trim();
+  if (sanitized.isEmpty) return null;
+  return _parseManualValue(sanitized);
+}
+
 class _MeasurementTileState extends State<MeasurementTile> {
   TextEditingController? _manualCtrl;
   TextEditingController? _chanfroAngCtrl;
@@ -441,18 +453,6 @@ class _MeasurementTileState extends State<MeasurementTile> {
       return '≤ ${max.toStringAsFixed(2)}$uni';
     }
     return '';
-  }
-
-  double? _parseManualValue(String txt) {
-    final normalized = txt.replaceAll(',', '.').trim();
-    if (normalized.isEmpty) return null;
-    return double.tryParse(normalized);
-  }
-
-  double? _parseAngleInput(String txt) {
-    final sanitized = txt.replaceAll(RegExp("[°º'’′\"″”]"), '').trim();
-    if (sanitized.isEmpty) return null;
-    return _parseManualValue(sanitized);
   }
 
   Color _statusColor(StatusMedida st) {
