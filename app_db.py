@@ -876,8 +876,13 @@ def _maquina_liberada(
     with conn.cursor() as cur:
         cur.execute("SELECT status FROM ordem_servico WHERE os=%s", (os_num,))
         st_row = cur.fetchone()
-        if st_row and (st_row.get("status") or "").strip().lower() == "encerrada":
+        status_atual = ""
+        if st_row:
+            status_atual = (st_row.get("status") or "").strip().lower()
+        if status_atual == "encerrada":
             return (False, "ordem_servico", "status=encerrada")
+        if status_atual == "pausada":
+            return (False, "ordem_servico", "status=pausada")
         # 1) Se existir liberação com status final, já libera
 
         cur.execute(
@@ -1913,6 +1918,45 @@ def operador_listar():
         return jsonify({"error": f"Falha ao consultar amostragens: {e}"}), 500
 
 
+def _registrar_pausa_operador(
+        cur,
+        os_num: str,
+        re_op: str,
+        part: Optional[str],
+        op: Optional[str],
+        motivo: Optional[str],
+):
+    """Registra uma pausa de jornada garantindo que não haja sobreposição."""
+
+    cur.execute("INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,))
+    cur.execute(
+        """
+        UPDATE operador_jornada
+           SET retorno_at = CURRENT_TIMESTAMP
+         WHERE os=%s
+           AND re_operador=%s
+           AND retorno_at IS NULL
+           AND (partnumber IS NULL OR partnumber = %s OR %s IS NULL)
+           AND (operacao IS NULL OR operacao = %s OR %s IS NULL)
+        """,
+        (
+            os_num,
+            re_op,
+            part or None,
+            part or None,
+            op or None,
+            op or None,
+        ),
+    )
+    cur.execute(
+        """
+        INSERT INTO operador_jornada (os, partnumber, operacao, re_operador, motivo)
+        VALUES (%s, %s, %s, %s, %s)
+        """,
+        (os_num, part or None, op or None, re_op, motivo or None),
+    )
+
+
 @app.route("/operador/fim_jornada", methods=["POST"])
 def operador_fim_jornada():
     payload = request.get_json(silent=True) or {}
@@ -1928,41 +1972,56 @@ def operador_fim_jornada():
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
-                cur.execute(
-                    "INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,)
-                )
-                # Caso exista uma pausa aberta para este operador, encerra-a
-                # antes de registrar a nova pausa, evitando sobreposição.
-                cur.execute(
-                    """
-                    UPDATE operador_jornada
-                       SET retorno_at = CURRENT_TIMESTAMP
-                     WHERE os=%s
-                       AND re_operador=%s
-                       AND retorno_at IS NULL
-                       AND (partnumber IS NULL OR partnumber = %s OR %s IS NULL)
-                       AND (operacao IS NULL OR operacao = %s OR %s IS NULL)
-                    """,
-                    (
-                        os_num,
-                        re_op,
-                        part or None,
-                        part or None,
-                        op or None,
-                        op or None,
-                    ),
-                )
-                cur.execute(
-                    """
-                    INSERT INTO operador_jornada (os, partnumber, operacao, re_operador, motivo)
-                    VALUES (%s, %s, %s, %s, %s)
-                    """,
-                    (os_num, part or None, op or None, re_op, motivo or None),
-                )
+                _registrar_pausa_operador(cur, os_num, re_op, part, op, motivo)
             c.commit()
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"error": f"Falha ao registrar fim de jornada: {e}"}), 500
+
+
+@app.route("/operador/troca_os", methods=["POST"])
+def operador_troca_os():
+    payload = request.get_json(silent=True) or {}
+    os_num = _norm(payload.get("os"))
+    re_op = _norm(payload.get("re"))
+    part = _norm_part(payload.get("partnumber"))
+    op = _norm_op(payload.get("operacao"))
+    motivo = _norm(payload.get("motivo")) or "Troca de OS"
+    if not os_num or not re_op:
+        return jsonify({"error": "Campos 'os' e 're' são obrigatórios"}), 400
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute("SELECT status FROM ordem_servico WHERE os=%s", (os_num,))
+                st_row = cur.fetchone()
+                status_atual = ""
+                if st_row:
+                    status_atual = (st_row.get("status") or "").strip().lower()
+                    if status_atual == "encerrada":
+                        return (
+                            jsonify({
+                                "error": "Ordem de serviço encerrada não pode ser pausada.",
+                                "code": "os_encerrada",
+                            }),
+                            409,
+                        )
+
+                _registrar_pausa_operador(cur, os_num, re_op, part, op, motivo)
+                cur.execute(
+                    "UPDATE ordem_servico SET status=%s WHERE os=%s",
+                    ("pausada", os_num),
+                )
+            c.commit()
+        return jsonify(
+            {
+                "status": "ok",
+                "motivo": motivo,
+                "os_status": "pausada",
+                "status_anterior": status_atual,
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": f"Falha ao registrar troca de OS: {e}"}), 500
 
 
 @app.route("/operador/encerrar_producao", methods=["POST"])
@@ -2647,7 +2706,15 @@ def _mensagem_bloqueio(
     det = str(detalhe or "")
 
     if fonte == "ordem_servico":
-        return base + "\nA ordem de serviço está encerrada."
+        det_lower = det.lower()
+        if "status=pausada" in det_lower:
+            return (
+                base
+                + "\nA ordem de serviço está pausada. Solicite nova liberação ao Preparador."
+            )
+        if "status=encerrada" in det_lower:
+            return base + "\nA ordem de serviço está encerrada."
+        return base + "\nSituação da ordem de serviço impede o registro no momento."
 
     base = "A máquina ainda não foi liberada pelo Preparador.\n" + base
 

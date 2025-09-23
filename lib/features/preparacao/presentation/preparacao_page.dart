@@ -267,6 +267,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       operacao: _opCtrl.text,
       categoria: _categoriaSel,
       maquina: _maquinaSel,
+      process: SearchFlowProcess.amostragem,
     );
 
     if (!iniciouFluxo) {
@@ -460,6 +461,10 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     final medidas = medidasAsync.value ?? [];
     final flowState = ref.watch(sharedSearchFormProvider);
     final flowLocked = flowState.isActive;
+    final flowProcessName = flowState.processDisplayName;
+    final flowOs = flowState.os.trim();
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final actionBottomPadding = bottomInset > 0 ? bottomInset + 16.0 : 16.0;
 
     // Pode registrar quando: RE e OS preenchidos + todas as medições preenchidas
     final reOk = _reCtrl.text.trim().isNotEmpty;
@@ -524,35 +529,24 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              if (flowLocked)
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.lock,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          flowState.os.trim().isEmpty
-                              ? 'Existe um fluxo de O.S. em andamento. Finalize a O.S. atual para iniciar outra.'
-                              : 'Fluxo ativo para a O.S. ${flowState.os}. Finalize a O.S. atual para iniciar outra.',
-                          style: Theme.of(context).textTheme.bodyMedium,
+          child: CustomScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (flowLocked)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
                         ),
+
                       ),
                     ],
                   ),
@@ -811,90 +805,144 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                         },
                       ),
 
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: () async {
-                            if (_formKey.currentState!.validate()) {
-                              if (!_ensureFlowConsistency()) return;
-                              FocusScope.of(context).unfocus();
-                              await ref
-                                  .read(
-                                    medidasPreparadorControllerProvider
-                                        .notifier,
-                                  )
-                                  .carregar(
-                                    partnumber: normalizeCode(_partCtrl.text),
-                                    operacao: normalizeCode(_opCtrl.text),
-                                  );
-                              if (mounted) {
-                                setState(() => _mostrarResumo = true);
-                              }
-                            }
-                          },
-                          icon: const Icon(Icons.search),
-                          label: const Text('Carregar medidas'),
+
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: () async {
+                                  if (_formKey.currentState!.validate()) {
+                                    if (!_ensureFlowConsistency()) return;
+                                    FocusScope.of(context).unfocus();
+                                    await ref
+                                        .read(
+                                          medidasPreparadorControllerProvider
+                                              .notifier,
+                                        )
+                                        .carregar(
+                                          partnumber: normalizeCode(
+                                            _partCtrl.text,
+                                          ),
+                                          operacao: normalizeCode(_opCtrl.text),
+                                        );
+                                    if (mounted) {
+                                      setState(() => _mostrarResumo = true);
+                                    }
+                                  }
+                                },
+                                icon: const Icon(Icons.search),
+                                label: const Text('Carregar medidas'),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 16),
-              Expanded(
-                child: medidasAsync.when(
-                  data: (list) {
-                    if (list.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'Nenhuma medida encontrada para a chave informada.',
-                        ),
-                      );
-                    }
-                    return ListView.separated(
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final item = list[index];
-                        return MeasurementTile(
-                          index: index,
-                          item: item,
-                          manualEntry: true,
-                          onSelect: (status, medicao) => ref
-                              .read(
-                                medidasPreparadorControllerProvider.notifier,
-                              )
-                              .setStatusAndMedicao(index, status, medicao),
-                        );
-                      },
-                    );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) =>
-                      Center(child: Text('Erro ao carregar:\n${e.toString()}')),
+                    const SizedBox(height: 16),
+                  ],
                 ),
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: podeRegistrar ? _registrarResultado : null,
-                  icon: _registrando
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.save_outlined),
-                  label: const Text('Registrar resultado'),
+              ..._buildMedidasSlivers(medidasAsync),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: AnimatedPadding(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.only(bottom: actionBottomPadding),
+                  child: SafeArea(
+                    top: false,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: podeRegistrar
+                                ? _registrarResultado
+                                : null,
+                            icon: _registrando
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.save_outlined),
+                            label: const Text('Registrar resultado'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  List<Widget> _buildMedidasSlivers(AsyncValue<List<MedidaItem>> medidasAsync) {
+    return medidasAsync.when(
+      data: (list) {
+        if (list.isEmpty) {
+          return [
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text(
+                    'Nenhuma medida encontrada para a chave informada.',
+                  ),
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 10)),
+          ];
+        }
+        return [
+          SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final item = list[index];
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: index == list.length - 1 ? 0 : 8,
+                ),
+                child: MeasurementTile(
+                  index: index,
+                  item: item,
+                  manualEntry: true,
+                  onSelect: (status, medicao) => ref
+                      .read(medidasPreparadorControllerProvider.notifier)
+                      .setStatusAndMedicao(index, status, medicao),
+                ),
+              );
+            }, childCount: list.length),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 10)),
+        ];
+      },
+      loading: () => [
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 10)),
+      ],
+      error: (e, _) => [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: Text('Erro ao carregar:\n${e.toString()}')),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 10)),
+      ],
     );
   }
 }
