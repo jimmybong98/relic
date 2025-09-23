@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 /// Representation of a summary item shown in the [SearchSummaryCard].
 class SummaryInfo {
   const SummaryInfo({required this.label, required this.value});
@@ -69,6 +70,51 @@ class SearchSummaryCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Convenience wrapper that combines the [SearchSummaryCard] with an action
+/// button to reopen the search form.
+class SearchSummarySection extends StatelessWidget {
+  const SearchSummarySection({
+    super.key,
+    required this.reLabel,
+    required this.reValue,
+    required this.items,
+    required this.onEdit,
+    this.itemWidth = 160,
+    this.editLabel = 'Alterar dados da busca',
+  });
+
+  final String reLabel;
+  final String reValue;
+  final List<SummaryInfo> items;
+  final VoidCallback onEdit;
+  final double itemWidth;
+  final String editLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SearchSummaryCard(
+          reLabel: reLabel,
+          reValue: reValue,
+          items: items,
+          itemWidth: itemWidth,
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit_outlined),
+            label: Text(editLabel),
+          ),
+        ),
+      ],
     );
   }
 }
