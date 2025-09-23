@@ -516,12 +516,52 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
+  Future<void> _iniciarTrocaFerramenta() async {
+    final re = _reCtrl.text.trim();
+    final os = _osCtrl.text.trim();
+    final part = _partCtrl.text.trim();
+    final operacao = _opCtrl.text.trim();
+    final maquinaValida = _maquinaSelecionadaValida();
+    final maquina = maquinaValida ? (_maquinaSel ?? '').trim() : '';
+
+    if (re.isEmpty ||
+        os.isEmpty ||
+        part.isEmpty ||
+        operacao.isEmpty ||
+        !maquinaValida) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Preencha R.E., O.S., peça, operação e máquina antes de trocar a ferramenta.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final sucesso = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => TrocaFerramentaPage(
+          re: re,
+          os: os,
+          partnumber: part,
+          operacao: operacao,
+          maquina: maquina,
+        ),
+      ),
+    );
+
+    if (sucesso == true) {
+      await _fimJornada('Troca de ferramenta');
+    }
+  }
+
   Future<void> _showFimJornadaDialog() async {
     const motivos = <String>[
       'Banheiro',
       'Refeição',
       'Fim do Turno',
-      'Troca de ferramenta',
       'Manutenção',
       'Falta de Material',
       'Problema de Qualidade',
@@ -589,48 +629,6 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     );
 
     if (confirmado != true) return;
-
-    if (motivo == 'Troca de ferramenta') {
-      final re = _reCtrl.text.trim();
-      final os = _osCtrl.text.trim();
-      final part = _partCtrl.text.trim();
-      final operacao = _opCtrl.text.trim();
-      final maquinaValida = _maquinaSelecionadaValida();
-      final maquina = maquinaValida ? (_maquinaSel ?? '').trim() : '';
-
-      if (re.isEmpty ||
-          os.isEmpty ||
-          part.isEmpty ||
-          operacao.isEmpty ||
-          !maquinaValida) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Preencha R.E., O.S., peça, operação e máquina antes de trocar a ferramenta.',
-            ),
-          ),
-        );
-        return;
-      }
-
-      final sucesso = await Navigator.of(context).push<bool>(
-        MaterialPageRoute(
-          builder: (_) => TrocaFerramentaPage(
-            re: re,
-            os: os,
-            partnumber: part,
-            operacao: operacao,
-            maquina: maquina,
-          ),
-        ),
-      );
-
-      if (sucesso == true) {
-        await _fimJornada(motivo);
-      }
-      return;
-    }
 
     await _fimJornada(motivo);
   }
@@ -1112,7 +1110,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                           alignment: Alignment.centerRight,
                           child: PopupMenuButton<String>(
                             onSelected: (value) {
-                              if (value == 'fim') {
+                              if (value == 'ferramenta') {
+                                _iniciarTrocaFerramenta();
+                              } else if (value == 'fim') {
                                 _showFimJornadaDialog();
                               } else if (value == 'troca') {
                                 _confirmTrocaOs();
@@ -1121,6 +1121,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                               }
                             },
                             itemBuilder: (context) => const [
+                              PopupMenuItem(
+                                value: 'ferramenta',
+                                child: Text('Troca de ferramenta'),
+                              ),
                               PopupMenuItem(
                                 value: 'fim',
                                 child: Text('Fim de Jornada'),
