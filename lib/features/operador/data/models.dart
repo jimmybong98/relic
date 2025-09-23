@@ -89,6 +89,8 @@ class MedidaItem {
   /// Rótulos de tolerância (até 4) vindos do backend do Operador (AE/AF/AG/AH...).
   final List<String> tolerancias;
   final Map<String, int> contagens;
+  final double? anguloMinimo;
+  final double? anguloMaximo;
 
   MedidaItem({
     required this.titulo,
@@ -104,6 +106,8 @@ class MedidaItem {
     this.instrumento,
     this.tolerancias = const [],
     Map<String, int>? contagens,
+    this.anguloMinimo,
+    this.anguloMaximo,
   }) : contagens = Map.unmodifiable(contagens ?? const {});
 
   /// Avalia um valor numérico contra os limites.
@@ -120,6 +124,42 @@ class MedidaItem {
       return StatusMedida.reprovadaAcima;
     }
     return StatusMedida.ok;
+  }
+
+  StatusMedida avaliarAngulo(double? valor) {
+    final faixa = _resolverFaixaDeAngulo();
+    final double? min = faixa?.min;
+    final double? max = faixa?.max;
+    final possuiFaixa = min != null || max != null;
+    if (!possuiFaixa) {
+      return valor == null ? StatusMedida.pendente : StatusMedida.ok;
+    }
+    if (valor == null) return StatusMedida.pendente;
+    if (min != null && valor < min) {
+      return StatusMedida.reprovadaAbaixo;
+    }
+    if (max != null && valor > max) {
+      return StatusMedida.reprovadaAcima;
+    }
+    return StatusMedida.ok;
+  }
+
+  ({double? min, double? max})? _resolverFaixaDeAngulo() {
+    if (anguloMinimo != null || anguloMaximo != null) {
+      return (min: anguloMinimo, max: anguloMaximo);
+    }
+
+    final fontes = <String>[faixaTexto, titulo];
+    if (observacao != null) fontes.add(observacao!);
+    if (instrumento != null) fontes.add(instrumento!);
+
+    for (final fonte in fontes) {
+      final texto = fonte.trim();
+      if (texto.isEmpty) continue;
+      final parsed = parseAngleRangeFromText(texto);
+      if (parsed != null) return parsed;
+    }
+    return null;
   }
 
   // ---------- Helpers internos de parsing ----------
@@ -233,6 +273,125 @@ class MedidaItem {
     return '';
   }
 
+  static bool _isPlusMinusConnector(String raw, String compact) {
+    if (raw.contains('±') || compact.contains('±')) return true;
+    final lower = compact.toLowerCase();
+    if (lower.contains('+/-') ||
+        lower.contains('+/−') ||
+        lower.contains('-/+')) {
+      return true;
+    }
+    if (lower == '+-' || lower == '-+' || lower == '+−' || lower == '−+') {
+      return true;
+    }
+    return false;
+  }
+
+  static bool _isRangeConnector(String raw, String normalized, String compact) {
+    if (_isPlusMinusConnector(raw, compact)) return false;
+    if (raw.contains('-') ||
+        raw.contains('–') ||
+        raw.contains('—') ||
+        raw.contains('~')) {
+      return true;
+    }
+    switch (compact) {
+      case 'a':
+      case 'ate':
+      case 'to':
+        return true;
+    }
+    return false;
+  }
+
+  static double? _parseAngleToken(String raw) {
+    var s = raw.trim();
+    if (s.isEmpty) return null;
+    s = s.replaceAll(',', '.');
+    final matches = RegExp(r'-?\d+(?:\.\d+)?').allMatches(s).toList();
+    if (matches.isEmpty) return null;
+    final numbers = matches
+        .map((m) => double.tryParse(m.group(0)!))
+        .whereType<double>()
+        .toList();
+    if (numbers.isEmpty) return null;
+    double value = numbers[0];
+    if (numbers.length >= 2) {
+      value += numbers[1] / 60.0;
+    }
+    if (numbers.length >= 3) {
+      value += numbers[2] / 3600.0;
+    }
+    return value;
+  }
+
+  static ({double? min, double? max})? parseAngleRangeFromText(String texto) {
+    if (texto.trim().isEmpty) return null;
+    final normalized = texto.replaceAll(',', '.');
+    final pattern = RegExp(
+      "-?\\d+(?:[.,]\\d+)?\\s*[°º](?:\\s*\\d+[\\u2019\\u2032']?)?(?:\\s*\\d+(?:[\\u0022\\u2033\\u201d]))?",
+    );
+    final matches = pattern.allMatches(normalized).toList();
+    if (matches.length < 2) return null;
+
+    for (var i = 0; i < matches.length - 1; i++) {
+      final rawA = normalized.substring(matches[i].start, matches[i].end);
+      final rawB = normalized.substring(
+        matches[i + 1].start,
+        matches[i + 1].end,
+      );
+      final betweenRaw = normalized.substring(
+        matches[i].end,
+        matches[i + 1].start,
+      );
+      final valueA = _parseAngleToken(rawA);
+      if (valueA == null) continue;
+
+      final trimmedBetween = betweenRaw.trim();
+      if (trimmedBetween.isEmpty) {
+        final trimmedRawB = rawB.trimLeft();
+        final leadingConnectorMatch = RegExp(
+          r'^[-–—~]',
+        ).matchAsPrefix(trimmedRawB);
+        if (leadingConnectorMatch != null) {
+          final sanitizedB = trimmedRawB
+              .substring(leadingConnectorMatch.end)
+              .trimLeft();
+          final valueB = _parseAngleToken(sanitizedB);
+          if (valueB != null) {
+            final range = [valueA, valueB]..sort();
+            return (min: range.first, max: range.last);
+          }
+        }
+        continue;
+      }
+
+      final connectorNormalized = _normalizeLower(betweenRaw);
+      final connectorCompact = connectorNormalized.replaceAll(
+        RegExp(r'\s+'),
+        '',
+      );
+      final valueB = _parseAngleToken(rawB);
+      if (valueB == null) continue;
+
+      if (_isPlusMinusConnector(betweenRaw, connectorCompact)) {
+        final range = [valueA - valueB, valueA + valueB]..sort();
+        return (min: range.first, max: range.last);
+      }
+
+      if (_isRangeConnector(
+        betweenRaw,
+        connectorNormalized,
+        connectorCompact,
+      )) {
+        final range = [valueA, valueB]..sort();
+        return (min: range.first, max: range.last);
+      }
+    }
+
+    return null;
+  }
+
   factory MedidaItem.fromMap(Map<String, dynamic> map) {
     // Valores diretos do JSON
     String titulo = (map['titulo'] ?? '').toString();
@@ -290,6 +449,24 @@ class MedidaItem {
         ? (map['tolerancias'] as List).map((e) => e.toString()).toList()
         : const <String>[];
 
+    final rawObservacao = map['observacao'];
+    final rawPeriodicidade = map['periodicidade'];
+    final rawInstrumento = map['instrumento'];
+    final observacao = rawObservacao?.toString();
+    final periodicidade = rawPeriodicidade?.toString();
+    final instrumento = rawInstrumento?.toString();
+
+    ({double? min, double? max})? anguloRange;
+    for (final fonte in [faixa, titulo, observacao, instrumento]) {
+      final texto = (fonte ?? '').toString();
+      if (texto.trim().isEmpty) continue;
+      final parsed = parseAngleRangeFromText(texto);
+      if (parsed != null) {
+        anguloRange = parsed;
+        break;
+      }
+    }
+
     final rawCounts = map['contagens'];
     final counts = <String, int>{};
     if (rawCounts is Map) {
@@ -328,11 +505,13 @@ class MedidaItem {
       unidade: uni,
       status: statusFromString(map['status']?.toString()),
       medicao: map['medicao']?.toString(),
-      observacao: map['observacao']?.toString(),
-      periodicidade: map['periodicidade']?.toString(),
-      instrumento: map['instrumento']?.toString(),
+      observacao: observacao,
+      periodicidade: periodicidade,
+      instrumento: instrumento,
       tolerancias: tol,
       contagens: counts,
+      anguloMinimo: anguloRange?.min,
+      anguloMaximo: anguloRange?.max,
     );
   }
 
