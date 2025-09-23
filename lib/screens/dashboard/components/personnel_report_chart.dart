@@ -161,7 +161,6 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           otherRows.add(item);
         }
       }
-
       result
         ..addAll(pauseRows)
         ..addAll(otherRows);
@@ -297,7 +296,14 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     String columnKey,
   ) {
     final label = headerMap[columnKey] ?? columnKey;
-    return LongPressDraggable<String>(
+    Widget wrapPointer(Widget child) {
+      return MouseRegion(
+        cursor: SystemMouseCursors.grab,
+        child: child,
+      );
+    }
+
+    return Draggable<String>(
       data: columnKey,
       dragAnchorStrategy: pointerDragAnchorStrategy,
       feedback: Material(
@@ -311,22 +317,26 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           showDelete: false,
         ),
       ),
-      childWhenDragging: Opacity(
-        opacity: 0.5,
-        child: IgnorePointer(
-          child: _buildColumnChip(
-            context,
-            columnKey,
-            label,
-            enableTooltip: false,
+      childWhenDragging: wrapPointer(
+        Opacity(
+          opacity: 0.5,
+          child: IgnorePointer(
+            child: _buildColumnChip(
+              context,
+              columnKey,
+              label,
+              enableTooltip: false,
+            ),
           ),
         ),
       ),
-      child: _buildColumnChip(
-        context,
-        columnKey,
-        label,
-        onPressed: () => _hideColumn(columnKey),
+      child: wrapPointer(
+        _buildColumnChip(
+          context,
+          columnKey,
+          label,
+          onPressed: () => _hideColumn(columnKey),
+        ),
       ),
     );
   }
@@ -475,7 +485,6 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         const SizedBox(height: 6),
         Text(
           'Toque para ocultar e arraste os chips, soltando nas áreas destacadas para reordenar.',
-
           style: theme.textTheme.bodySmall,
         ),
       ],
