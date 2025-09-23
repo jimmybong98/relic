@@ -73,31 +73,62 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     List<Map<String, dynamic>> rows,
   ) {
     final result = <Map<String, dynamic>>[];
-    DateTime? lastGroup;
-    for (final row in rows) {
+    var index = 0;
+    while (index < rows.length) {
+      final row = rows[index];
       final dt = row['__dt'] as DateTime?;
-      if (dt != null) {
-        final normalized = DateTime(
-          dt.year,
-          dt.month,
-          dt.day,
-          dt.hour,
-          dt.minute,
-          dt.second,
-        );
-        if (lastGroup == null || normalized != lastGroup) {
-          final label = DateFormat('dd/MM/yyyy HH:mm:ss').format(dt);
-          result.add({
-            '__isGroup': true,
-            '__dt': normalized,
-            'created_at': label,
-          });
-          lastGroup = normalized;
-        }
-      } else {
-        lastGroup = null;
+      if (dt == null) {
+        result.add(row);
+        index++;
+        continue;
       }
-      result.add(row);
+
+      DateTime normalize(DateTime value) => DateTime(
+        value.year,
+        value.month,
+        value.day,
+        value.hour,
+        value.minute,
+        value.second,
+      );
+
+      final normalized = normalize(dt);
+      final groupRows = <Map<String, dynamic>>[];
+      while (index < rows.length) {
+        final current = rows[index];
+        final currentDt = current['__dt'] as DateTime?;
+        if (currentDt == null) {
+          break;
+        }
+        if (normalize(currentDt) != normalized) {
+          break;
+        }
+        groupRows.add(current);
+        index++;
+      }
+
+      result.add({
+        '__isGroup': true,
+        '__dt': normalized,
+        'created_at': DateFormat(
+          'dd/MM/yyyy HH:mm:ss',
+        ).format(groupRows.first['__dt'] as DateTime),
+      });
+
+      final pauseRows = <Map<String, dynamic>>[];
+      final otherRows = <Map<String, dynamic>>[];
+      for (final item in groupRows) {
+        final event = item['evento']?.toString();
+        if (event == 'pausa_jornada') {
+          pauseRows.add(item);
+        } else {
+          otherRows.add(item);
+        }
+      }
+
+      result
+        ..addAll(pauseRows)
+        ..addAll(otherRows);
     }
     return result;
   }
