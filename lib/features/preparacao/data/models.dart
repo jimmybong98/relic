@@ -125,18 +125,39 @@ class MedidaItem {
   }
 
   StatusMedida avaliarAngulo(double? valor) {
-    final possuiFaixa = anguloMinimo != null || anguloMaximo != null;
+    final faixa = _resolverFaixaDeAngulo();
+    final double? min = faixa?.min;
+    final double? max = faixa?.max;
+    final possuiFaixa = min != null || max != null;
     if (!possuiFaixa) {
       return valor == null ? StatusMedida.pendente : StatusMedida.ok;
     }
     if (valor == null) return StatusMedida.pendente;
-    if (anguloMinimo != null && valor < anguloMinimo!) {
+    if (min != null && valor < min) {
       return StatusMedida.reprovadaAbaixo;
     }
-    if (anguloMaximo != null && valor > anguloMaximo!) {
+    if (max != null && valor > max) {
       return StatusMedida.reprovadaAcima;
     }
     return StatusMedida.ok;
+  }
+
+  ({double? min, double? max})? _resolverFaixaDeAngulo() {
+    if (anguloMinimo != null || anguloMaximo != null) {
+      return (min: anguloMinimo, max: anguloMaximo);
+    }
+
+    final fontes = <String>[faixaTexto, titulo];
+    if (observacao != null) fontes.add(observacao!);
+    if (instrumento != null) fontes.add(instrumento!);
+
+    for (final fonte in fontes) {
+      final texto = fonte.trim();
+      if (texto.isEmpty) continue;
+      final parsed = parseAngleRangeFromText(texto);
+      if (parsed != null) return parsed;
+    }
+    return null;
   }
 
   // ---------- Helpers internos de parsing ----------
@@ -327,8 +348,9 @@ class MedidaItem {
       final trimmedBetween = betweenRaw.trim();
       if (trimmedBetween.isEmpty) {
         final trimmedRawB = rawB.trimLeft();
-        final leadingConnectorMatch =
-            RegExp(r'^[-–—~]').matchAsPrefix(trimmedRawB);
+        final leadingConnectorMatch = RegExp(
+          r'^[-–—~]',
+        ).matchAsPrefix(trimmedRawB);
         if (leadingConnectorMatch != null) {
           final sanitizedB = trimmedRawB
               .substring(leadingConnectorMatch.end)
