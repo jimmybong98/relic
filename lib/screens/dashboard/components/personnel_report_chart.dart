@@ -218,7 +218,6 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       _hiddenColumns[_tipo]!.remove(columnKey);
     });
   }
-
   void _reorderVisibleColumn(String columnKey, int dropIndex) {
     final headerMap = _headerConfigs[_tipo] ?? const {};
     _ensureColumnState(headerMap);
@@ -476,6 +475,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         const SizedBox(height: 6),
         Text(
           'Toque para ocultar e arraste os chips, soltando nas áreas destacadas para reordenar.',
+
           style: theme.textTheme.bodySmall,
         ),
       ],
