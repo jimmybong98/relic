@@ -141,6 +141,8 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
         instrumento: item.instrumento,
         tolerancias: item.tolerancias,
         contagens: item.contagens,
+        anguloMinimo: item.anguloMinimo,
+        anguloMaximo: item.anguloMaximo,
       );
     }).toList();
 
@@ -168,6 +170,8 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
       instrumento: antigo.instrumento,
       tolerancias: antigo.tolerancias,
       contagens: antigo.contagens,
+      anguloMinimo: antigo.anguloMinimo,
+      anguloMaximo: antigo.anguloMaximo,
     );
     setState(() {
       _medidasSelecionadas = itens;
