@@ -1370,8 +1370,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       }
     }
 
-    final fillerWidth = targetWidth - contentWidth > tolerance
-        ? targetWidth - contentWidth
+    final effectiveWidth = contentWidth > targetWidth
+        ? contentWidth
+        : targetWidth;
+    final fillerWidth = effectiveWidth - contentWidth > tolerance
+        ? effectiveWidth - contentWidth
         : 0.0;
 
     final cells = <Widget>[];
@@ -1426,7 +1429,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       cells.add(SizedBox(width: fillerWidth));
     }
     return Container(
-      width: targetWidth,
+      width: effectiveWidth,
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(8),
@@ -1548,8 +1551,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       }
     }
 
-    final fillerWidth = targetWidth - contentWidth > tolerance
-        ? targetWidth - contentWidth
+    final effectiveWidth = contentWidth > targetWidth
+        ? contentWidth
+        : targetWidth;
+    final fillerWidth = effectiveWidth - contentWidth > tolerance
+        ? effectiveWidth - contentWidth
         : 0.0;
 
     final cells = <Widget>[];
@@ -1584,7 +1590,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       cells.add(SizedBox(width: fillerWidth));
     }
     return Container(
-      width: targetWidth,
+      width: effectiveWidth,
       decoration: BoxDecoration(
         color: background,
         border: Border(
