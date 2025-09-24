@@ -337,6 +337,105 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     return _TableMetrics(columnWidths: widths, totalWidth: totalWidth);
   }
 
+  _TableMetrics _fitColumnsToViewport(
+    _TableMetrics metrics,
+    int columnCount,
+    double viewportWidth,
+  ) {
+    if (columnCount <= 0 || metrics.columnWidths.isEmpty) {
+      return const _TableMetrics(columnWidths: <double>[], totalWidth: 0);
+    }
+
+    final spacing = _columnSpacing * math.max(0, columnCount - 1);
+    final adjusted = List<double>.from(metrics.columnWidths);
+    final contentWidth = adjusted.fold<double>(0, (sum, width) => sum + width);
+    final baseTotalWidth = contentWidth + spacing;
+
+    if (!viewportWidth.isFinite || viewportWidth <= 0) {
+      return _TableMetrics(columnWidths: adjusted, totalWidth: baseTotalWidth);
+    }
+
+    final minContentWidth = columnCount * _minColumnWidth;
+    final minTotalWidth = minContentWidth + spacing;
+
+    if (baseTotalWidth <= viewportWidth) {
+      if (adjusted.isNotEmpty) {
+        adjusted[adjusted.length - 1] += viewportWidth - baseTotalWidth;
+      }
+      return _TableMetrics(columnWidths: adjusted, totalWidth: viewportWidth);
+    }
+
+    final targetTotalWidth = math.max(viewportWidth, minTotalWidth);
+    final targetContentWidth = targetTotalWidth - spacing;
+    var remainingReduction = contentWidth - targetContentWidth;
+
+    if (remainingReduction <= 0) {
+      if (adjusted.isNotEmpty) {
+        adjusted[adjusted.length - 1] += targetContentWidth - contentWidth;
+      }
+      final newContent = adjusted.fold<double>(0, (sum, width) => sum + width);
+      return _TableMetrics(
+        columnWidths: adjusted,
+        totalWidth: newContent + spacing,
+      );
+    }
+
+    const double tolerance = 0.1;
+    while (remainingReduction > tolerance) {
+      double adjustableSum = 0;
+      for (final width in adjusted) {
+        final available = width - _minColumnWidth;
+        if (available > 0) {
+          adjustableSum += available;
+        }
+      }
+      if (adjustableSum <= 0) {
+        final actualContent = adjusted.fold<double>(
+          0,
+          (sum, width) => sum + width,
+        );
+        return _TableMetrics(
+          columnWidths: adjusted,
+          totalWidth: actualContent + spacing,
+        );
+      }
+
+      var reducedThisPass = 0.0;
+      for (var i = 0; i < adjusted.length; i++) {
+        final available = adjusted[i] - _minColumnWidth;
+        if (available <= 0) continue;
+        final share = remainingReduction * (available / adjustableSum);
+        final reduction = math.min(available, share);
+        if (reduction <= 0) continue;
+        adjusted[i] -= reduction;
+        reducedThisPass += reduction;
+      }
+
+      if (reducedThisPass <= 0) {
+        break;
+      }
+      remainingReduction -= reducedThisPass;
+    }
+
+    final adjustedContentWidth = adjusted.fold<double>(
+      0,
+      (sum, width) => sum + width,
+    );
+    final diff = targetContentWidth - adjustedContentWidth;
+    if (diff > tolerance && adjusted.isNotEmpty) {
+      adjusted[adjusted.length - 1] += diff;
+    }
+
+    final finalContentWidth = adjusted.fold<double>(
+      0,
+      (sum, width) => sum + width,
+    );
+    return _TableMetrics(
+      columnWidths: adjusted,
+      totalWidth: finalContentWidth + spacing,
+    );
+  }
+
   Widget _buildColumnChip(
     BuildContext context,
     String columnKey,
@@ -1058,26 +1157,32 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                         visibleColumns,
                         dados,
                       );
-                      final baseWidth = metrics.totalWidth;
-                      final availableWidth = math.max(
-                        baseWidth,
-                        constraints.maxWidth - (_horizontalMargin * 2),
+                      final mediaWidth = MediaQuery.maybeOf(
+                        context,
+                      )?.size.width;
+                      final rawViewportWidth = constraints.maxWidth.isFinite
+                          ? constraints.maxWidth
+                          : (mediaWidth ?? metrics.totalWidth);
+                      final availableViewportWidth = rawViewportWidth.isFinite
+                          ? math.max(
+                              0.0,
+                              rawViewportWidth - (_horizontalMargin * 2),
+                            )
+                          : rawViewportWidth;
+                      final fittedMetrics = _fitColumnsToViewport(
+                        metrics,
+                        visibleColumns.length,
+                        availableViewportWidth,
                       );
-                      final adjustedColumns = List<double>.from(
-                        metrics.columnWidths,
-                      );
-                      if (adjustedColumns.isNotEmpty &&
-                          availableWidth > baseWidth) {
-                        adjustedColumns[adjustedColumns.length - 1] +=
-                            availableWidth - baseWidth;
-                      }
+                      final adjustedColumns = fittedMetrics.columnWidths;
+                      final tableWidth = fittedMetrics.totalWidth;
                       final rows = <Widget>[
                         _buildTableHeaderRow(
                           context,
                           headerMap,
                           visibleColumns,
                           adjustedColumns,
-                          availableWidth,
+                          tableWidth,
                         ),
                         const SizedBox(height: 8),
                       ];
@@ -1087,7 +1192,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                             _buildGroupHeaderRow(
                               context,
                               row,
-                              availableWidth,
+                              tableWidth,
                               groupColor,
                             ),
                           );
@@ -1098,7 +1203,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                               row,
                               visibleColumns,
                               adjustedColumns,
-                              availableWidth,
+                              tableWidth,
                               pauseColor,
                             ),
                           );
@@ -1111,7 +1216,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                             horizontal: _horizontalMargin,
                           ),
                           child: SizedBox(
-                            width: availableWidth,
+                            width: tableWidth,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: rows,
