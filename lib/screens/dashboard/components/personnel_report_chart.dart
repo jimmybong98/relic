@@ -1299,10 +1299,35 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       alpha: 0.4,
     );
     final borderColor = theme.dividerColor.withOpacity(0.18);
+    final spacingCount = math.max(0, visibleColumns.length - 1);
+    final spacingWidth = columnSpacing * spacingCount;
+    final resolvedWidths = List<double>.from(columnWidths);
+    var intrinsicWidth = spacingWidth;
+    for (final width in resolvedWidths) {
+      intrinsicWidth += width;
+    }
+    var containerWidth = math.max(totalWidth, intrinsicWidth);
+    if (resolvedWidths.isNotEmpty) {
+      final diff = containerWidth - intrinsicWidth;
+      if (diff.abs() > 0.5) {
+        final lastIndex = resolvedWidths.length - 1;
+        final adjusted = (resolvedWidths[lastIndex] + diff).clamp(
+          0.0,
+          double.infinity,
+        );
+        resolvedWidths[lastIndex] = adjusted;
+        intrinsicWidth = spacingWidth;
+        for (final width in resolvedWidths) {
+          intrinsicWidth += width;
+        }
+        containerWidth = math.max(totalWidth, intrinsicWidth);
+      }
+    }
+
     final cells = <Widget>[];
     for (var index = 0; index < visibleColumns.length; index++) {
       final columnKey = visibleColumns[index];
-      final width = columnWidths[index];
+      final width = resolvedWidths[index];
       cells.add(
         SizedBox(
           width: width,
@@ -1347,7 +1372,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       }
     }
     return Container(
-      width: totalWidth,
+      width: containerWidth,
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(8),
@@ -1396,6 +1421,31 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final theme = Theme.of(context);
     final isPause = row['evento'] == 'pausa_jornada';
     final background = isPause ? pauseColor : null;
+    final spacingCount = math.max(0, visibleColumns.length - 1);
+    final spacingWidth = columnSpacing * spacingCount;
+    final resolvedWidths = List<double>.from(columnWidths);
+    var intrinsicWidth = spacingWidth;
+    for (final width in resolvedWidths) {
+      intrinsicWidth += width;
+    }
+    var containerWidth = math.max(totalWidth, intrinsicWidth);
+    if (resolvedWidths.isNotEmpty) {
+      final diff = containerWidth - intrinsicWidth;
+      if (diff.abs() > 0.5) {
+        final lastIndex = resolvedWidths.length - 1;
+        final adjusted = (resolvedWidths[lastIndex] + diff).clamp(
+          0.0,
+          double.infinity,
+        );
+        resolvedWidths[lastIndex] = adjusted;
+        intrinsicWidth = spacingWidth;
+        for (final width in resolvedWidths) {
+          intrinsicWidth += width;
+        }
+        containerWidth = math.max(totalWidth, intrinsicWidth);
+      }
+    }
+
     final cells = <Widget>[];
     for (var index = 0; index < visibleColumns.length; index++) {
       final columnKey = visibleColumns[index];
@@ -1403,7 +1453,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       final text = value == null ? '' : value.toString();
       cells.add(
         Container(
-          width: columnWidths[index],
+          width: resolvedWidths[index],
           padding: const EdgeInsets.symmetric(
             horizontal: _cellHorizontalPadding,
             vertical: _cellVerticalPadding,
@@ -1422,7 +1472,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       }
     }
     return Container(
-      width: totalWidth,
+      width: containerWidth,
       decoration: BoxDecoration(
         color: background,
         border: Border(
@@ -1892,7 +1942,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                       final columnSpacing = spacingCount == 0
                           ? 0.0
                           : fittedMetrics.columnSpacing;
-                      final naturalTableWidth = fittedMetrics.totalWidth;
+                      final spacingWidth = columnSpacing * spacingCount;
+                      final naturalTableWidth = adjustedColumns.fold<double>(
+                        spacingWidth,
+                        (sum, width) => sum + width,
+                      );
                       final viewportBaseline = availableViewportWidth.isFinite
                           ? availableViewportWidth
                           : naturalTableWidth;
