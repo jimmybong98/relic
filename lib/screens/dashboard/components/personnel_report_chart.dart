@@ -1312,20 +1312,37 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     }
 
     var contentWidth = computeContentWidth();
-    var containerWidth = math.max(totalWidth, contentWidth);
+    final targetWidth = totalWidth;
+    const tolerance = 0.5;
 
-    if (resolvedWidths.isNotEmpty && contentWidth - containerWidth > 0.5) {
-      final overflow = contentWidth - containerWidth;
-      final lastIndex = resolvedWidths.length - 1;
-      resolvedWidths[lastIndex] = math.max(
-        0.0,
-        resolvedWidths[lastIndex] - overflow,
-      );
+    if (resolvedWidths.isNotEmpty && contentWidth - targetWidth > tolerance) {
+      var overflow = contentWidth - targetWidth;
+      for (var index = resolvedWidths.length - 1;
+          index >= 0 && overflow > tolerance;
+          index--) {
+        final available = resolvedWidths[index] - _minColumnWidth;
+        if (available <= 0) {
+          continue;
+        }
+        final reduction = math.min(available, overflow);
+        resolvedWidths[index] -= reduction;
+        overflow -= reduction;
+      }
+
+      if (overflow > tolerance) {
+        final lastIndex = resolvedWidths.length - 1;
+        resolvedWidths[lastIndex] = math.max(
+          0.0,
+          resolvedWidths[lastIndex] - overflow,
+        );
+      }
+
       contentWidth = computeContentWidth();
-      containerWidth = math.max(totalWidth, contentWidth);
     }
 
-    final fillerWidth = containerWidth - contentWidth;
+    final fillerWidth = targetWidth - contentWidth > tolerance
+        ? targetWidth - contentWidth
+        : 0.0;
 
     final cells = <Widget>[];
     for (var index = 0; index < visibleColumns.length; index++) {
@@ -1378,7 +1395,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       cells.add(SizedBox(width: fillerWidth));
     }
     return Container(
-      width: containerWidth,
+      width: targetWidth,
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(8),
@@ -1440,20 +1457,37 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     }
 
     var contentWidth = computeContentWidth();
-    var containerWidth = math.max(totalWidth, contentWidth);
+    final targetWidth = totalWidth;
+    const tolerance = 0.5;
 
-    if (resolvedWidths.isNotEmpty && contentWidth - containerWidth > 0.5) {
-      final overflow = contentWidth - containerWidth;
-      final lastIndex = resolvedWidths.length - 1;
-      resolvedWidths[lastIndex] = math.max(
-        0.0,
-        resolvedWidths[lastIndex] - overflow,
-      );
+    if (resolvedWidths.isNotEmpty && contentWidth - targetWidth > tolerance) {
+      var overflow = contentWidth - targetWidth;
+      for (var index = resolvedWidths.length - 1;
+          index >= 0 && overflow > tolerance;
+          index--) {
+        final available = resolvedWidths[index] - _minColumnWidth;
+        if (available <= 0) {
+          continue;
+        }
+        final reduction = math.min(available, overflow);
+        resolvedWidths[index] -= reduction;
+        overflow -= reduction;
+      }
+
+      if (overflow > tolerance) {
+        final lastIndex = resolvedWidths.length - 1;
+        resolvedWidths[lastIndex] = math.max(
+          0.0,
+          resolvedWidths[lastIndex] - overflow,
+        );
+      }
+
       contentWidth = computeContentWidth();
-      containerWidth = math.max(totalWidth, contentWidth);
     }
 
-    final fillerWidth = containerWidth - contentWidth;
+    final fillerWidth = targetWidth - contentWidth > tolerance
+        ? targetWidth - contentWidth
+        : 0.0;
 
     final cells = <Widget>[];
     for (var index = 0; index < visibleColumns.length; index++) {
@@ -1484,7 +1518,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       cells.add(SizedBox(width: fillerWidth));
     }
     return Container(
-      width: containerWidth,
+      width: targetWidth,
       decoration: BoxDecoration(
         color: background,
         border: Border(
