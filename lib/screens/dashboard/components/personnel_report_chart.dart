@@ -1316,7 +1316,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
 
     var contentWidth = computeContentWidth();
     final targetWidth = totalWidth;
-    const tolerance = 0.5;
+    const tolerance = 0.001;
 
     if (resolvedWidths.isNotEmpty && contentWidth - targetWidth > tolerance) {
       var overflow = contentWidth - targetWidth;
@@ -1357,13 +1357,16 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         overflow = contentWidth - targetWidth;
       }
 
-      if (overflow > tolerance && resolvedWidths.isNotEmpty) {
-        final lastIndex = resolvedWidths.length - 1;
-        resolvedWidths[lastIndex] = math.max(
-          0.0,
-          resolvedWidths[lastIndex] - overflow,
-        );
-        contentWidth = computeContentWidth();
+      if (resolvedWidths.isNotEmpty) {
+        final overflowAfterAdjust = contentWidth - targetWidth;
+        if (overflowAfterAdjust > tolerance) {
+          final lastIndex = resolvedWidths.length - 1;
+          resolvedWidths[lastIndex] = math.max(
+            0.0,
+            resolvedWidths[lastIndex] - overflowAfterAdjust,
+          );
+          contentWidth = computeContentWidth();
+        }
       }
     }
 
@@ -1419,7 +1422,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         cells.add(SizedBox(width: math.max(0, gapWidth)));
       }
     }
-    if (fillerWidth > 0.5) {
+    if (fillerWidth > tolerance) {
       cells.add(SizedBox(width: fillerWidth));
     }
     return Container(
@@ -1491,7 +1494,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
 
     var contentWidth = computeContentWidth();
     final targetWidth = totalWidth;
-    const tolerance = 0.5;
+    const tolerance = 0.001;
 
     if (resolvedWidths.isNotEmpty && contentWidth - targetWidth > tolerance) {
       var overflow = contentWidth - targetWidth;
@@ -1532,13 +1535,16 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         overflow = contentWidth - targetWidth;
       }
 
-      if (overflow > tolerance && resolvedWidths.isNotEmpty) {
-        final lastIndex = resolvedWidths.length - 1;
-        resolvedWidths[lastIndex] = math.max(
-          0.0,
-          resolvedWidths[lastIndex] - overflow,
-        );
-        contentWidth = computeContentWidth();
+      if (resolvedWidths.isNotEmpty) {
+        final overflowAfterAdjust = contentWidth - targetWidth;
+        if (overflowAfterAdjust > tolerance) {
+          final lastIndex = resolvedWidths.length - 1;
+          resolvedWidths[lastIndex] = math.max(
+            0.0,
+            resolvedWidths[lastIndex] - overflowAfterAdjust,
+          );
+          contentWidth = computeContentWidth();
+        }
       }
     }
 
@@ -1574,7 +1580,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         cells.add(SizedBox(width: math.max(0, gapWidth)));
       }
     }
-    if (fillerWidth > 0.5) {
+    if (fillerWidth > tolerance) {
       cells.add(SizedBox(width: fillerWidth));
     }
     return Container(
