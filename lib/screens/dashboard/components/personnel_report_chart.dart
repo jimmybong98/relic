@@ -995,7 +995,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                     : contentWidth >= 30
                         ? 20.0
                         : contentWidth * 0.7;
-        iconTapSize = iconTapSize.clamp(18.0, contentWidth);
+        final minTapSize = math.min(18.0, contentWidth);
+        iconTapSize = iconTapSize.clamp(minTapSize, contentWidth);
         final availableForLabel = math.max(0.0, contentWidth - iconTapSize);
         final startPadding = math.min(
           _cellHorizontalPadding,
