@@ -38,13 +38,20 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     'operador': <String>[],
     'preparador': <String>[],
   };
+  final Map<String, Map<String, double>> _columnWidthOverrides = {
+    'operador': <String, double>{},
+    'preparador': <String, double>{},
+  };
+
+  String? _activeResizeColumn;
 
   static const double _columnSpacing = 12;
   static const double _cellHorizontalPadding = 12;
   static const double _cellVerticalPadding = 10;
   static const double _horizontalMargin = 12;
-  static const double _minColumnWidth = 56;
-  static const double _maxColumnWidth = 320;
+  static const double _minColumnWidth = 40;
+  static const double _maxColumnWidth = 480;
+  static const double _resizeHandleHitWidth = 16;
 
   static const Map<String, Map<String, String>> _headerConfigs = {
     'preparador': {
@@ -198,8 +205,13 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final allowedSet = allowedKeys.toSet();
     final order = _columnOrders.putIfAbsent(_tipo, () => <String>[]);
     final hidden = _hiddenColumns.putIfAbsent(_tipo, () => <String>{});
+    final overrides = _columnWidthOverrides.putIfAbsent(
+      _tipo,
+      () => <String, double>{},
+    );
     order.removeWhere((key) => !allowedSet.contains(key));
     hidden.removeWhere((key) => !allowedSet.contains(key));
+    overrides.removeWhere((key, _) => !allowedSet.contains(key));
     for (final key in allowedKeys) {
       if (!order.contains(key)) {
         order.add(key);
@@ -232,6 +244,42 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     _ensureColumnState(headerMap);
     setState(() {
       _hiddenColumns[_tipo]!.remove(columnKey);
+    });
+  }
+
+  void _setColumnWidthOverride(String columnKey, double width) {
+    final overrides = _columnWidthOverrides[_tipo];
+    if (overrides == null) {
+      return;
+    }
+    final clamped = width.clamp(_minColumnWidth, _maxColumnWidth).toDouble();
+    final previous = overrides[columnKey];
+    if (previous != null && (previous - clamped).abs() <= 0.1) {
+      return;
+    }
+    setState(() {
+      overrides[columnKey] = clamped;
+    });
+  }
+
+  void _removeColumnWidthOverride(String columnKey) {
+    final overrides = _columnWidthOverrides[_tipo];
+    if (overrides == null) {
+      return;
+    }
+    if (!overrides.containsKey(columnKey)) {
+      if (_activeResizeColumn == columnKey) {
+        setState(() {
+          _activeResizeColumn = null;
+        });
+      }
+      return;
+    }
+    setState(() {
+      overrides.remove(columnKey);
+      if (_activeResizeColumn == columnKey) {
+        _activeResizeColumn = null;
+      }
     });
   }
 
@@ -340,8 +388,9 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   _TableMetrics _fitColumnsToViewport(
     _TableMetrics metrics,
     int columnCount,
-    double viewportWidth,
-  ) {
+    double viewportWidth, {
+    Set<int> lockedColumns = const <int>{},
+  }) {
     if (columnCount <= 0 || metrics.columnWidths.isEmpty) {
       return const _TableMetrics(columnWidths: <double>[], totalWidth: 0);
     }
@@ -359,10 +408,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final minTotalWidth = minContentWidth + spacing;
 
     if (baseTotalWidth <= viewportWidth) {
-      if (adjusted.isNotEmpty) {
-        adjusted[adjusted.length - 1] += viewportWidth - baseTotalWidth;
-      }
-      return _TableMetrics(columnWidths: adjusted, totalWidth: viewportWidth);
+      return _TableMetrics(
+        columnWidths: adjusted,
+        totalWidth: math.max(baseTotalWidth, viewportWidth),
+      );
     }
 
     final targetTotalWidth = math.max(viewportWidth, minTotalWidth);
@@ -370,21 +419,22 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     var remainingReduction = contentWidth - targetContentWidth;
 
     if (remainingReduction <= 0) {
-      if (adjusted.isNotEmpty) {
-        adjusted[adjusted.length - 1] += targetContentWidth - contentWidth;
-      }
       final newContent = adjusted.fold<double>(0, (sum, width) => sum + width);
+      final newTotal = newContent + spacing;
       return _TableMetrics(
         columnWidths: adjusted,
-        totalWidth: newContent + spacing,
+        totalWidth: math.max(newTotal, viewportWidth),
       );
     }
 
     const double tolerance = 0.1;
     while (remainingReduction > tolerance) {
       double adjustableSum = 0;
-      for (final width in adjusted) {
-        final available = width - _minColumnWidth;
+      for (var i = 0; i < adjusted.length; i++) {
+        if (lockedColumns.contains(i)) {
+          continue;
+        }
+        final available = adjusted[i] - _minColumnWidth;
         if (available > 0) {
           adjustableSum += available;
         }
@@ -402,6 +452,9 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
 
       var reducedThisPass = 0.0;
       for (var i = 0; i < adjusted.length; i++) {
+        if (lockedColumns.contains(i)) {
+          continue;
+        }
         final available = adjusted[i] - _minColumnWidth;
         if (available <= 0) continue;
         final share = remainingReduction * (available / adjustableSum);
@@ -421,18 +474,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       0,
       (sum, width) => sum + width,
     );
-    final diff = targetContentWidth - adjustedContentWidth;
-    if (diff > tolerance && adjusted.isNotEmpty) {
-      adjusted[adjusted.length - 1] += diff;
-    }
-
-    final finalContentWidth = adjusted.fold<double>(
-      0,
-      (sum, width) => sum + width,
-    );
+    final finalTotalWidth = adjustedContentWidth + spacing;
     return _TableMetrics(
       columnWidths: adjusted,
-      totalWidth: finalContentWidth + spacing,
+      totalWidth: math.max(finalTotalWidth, viewportWidth),
     );
   }
 
@@ -587,6 +632,74 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     );
   }
 
+  Widget _buildResizeHandle(
+    BuildContext context,
+    String columnKey,
+    double currentWidth,
+  ) {
+    final theme = Theme.of(context);
+    final isActive = _activeResizeColumn == columnKey;
+    final indicatorColor = isActive
+        ? theme.colorScheme.primary
+        : theme.dividerColor.withOpacity(0.6);
+    final overrides = _columnWidthOverrides[_tipo];
+    return Tooltip(
+      message:
+          'Arraste para redimensionar. Toque duas vezes para restaurar o tamanho automático.',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.resizeColumn,
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onHorizontalDragStart: (_) {
+            if (_activeResizeColumn != columnKey) {
+              setState(() {
+                _activeResizeColumn = columnKey;
+              });
+            }
+          },
+          onHorizontalDragUpdate: (details) {
+            final baseWidth = overrides?[columnKey] ?? currentWidth;
+            final nextWidth = (baseWidth + details.delta.dx).clamp(
+              _minColumnWidth,
+              _maxColumnWidth,
+            );
+            _setColumnWidthOverride(columnKey, nextWidth.toDouble());
+          },
+          onHorizontalDragEnd: (_) {
+            if (_activeResizeColumn == columnKey) {
+              setState(() {
+                _activeResizeColumn = null;
+              });
+            }
+          },
+          onHorizontalDragCancel: () {
+            if (_activeResizeColumn == columnKey) {
+              setState(() {
+                _activeResizeColumn = null;
+              });
+            }
+          },
+          onDoubleTap: () {
+            _removeColumnWidthOverride(columnKey);
+          },
+          child: SizedBox(
+            width: _resizeHandleHitWidth,
+            child: Center(
+              child: Container(
+                width: 2,
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: indicatorColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildColumnManager(
     BuildContext context,
     Map<String, String> headerMap,
@@ -656,7 +769,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         ),
         const SizedBox(height: 6),
         Text(
-          'Toque para ocultar e arraste os chips, soltando nas áreas destacadas para reordenar.',
+          'Toque para ocultar e arraste os chips, soltando nas áreas destacadas para reordenar. Arraste os divisores no cabeçalho para ajustar a largura das colunas.',
           style: theme.textTheme.bodySmall,
         ),
       ],
@@ -678,18 +791,36 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final cells = <Widget>[];
     for (var index = 0; index < visibleColumns.length; index++) {
       final columnKey = visibleColumns[index];
+      final width = columnWidths[index];
       cells.add(
-        Container(
-          width: columnWidths[index],
-          padding: const EdgeInsets.symmetric(
-            horizontal: _cellHorizontalPadding,
-            vertical: _cellVerticalPadding,
-          ),
-          alignment: Alignment.centerLeft,
-          child: _buildHeaderLabel(
-            columnKey,
-            headerMap[columnKey] ?? columnKey,
-            () => _hideColumn(columnKey),
+        SizedBox(
+          width: width,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: Container(
+                  padding: EdgeInsetsDirectional.only(
+                    start: _cellHorizontalPadding,
+                    end: _cellHorizontalPadding + (_resizeHandleHitWidth / 2),
+                    top: _cellVerticalPadding,
+                    bottom: _cellVerticalPadding,
+                  ),
+                  alignment: Alignment.centerLeft,
+                  child: _buildHeaderLabel(
+                    columnKey,
+                    headerMap[columnKey] ?? columnKey,
+                    () => _hideColumn(columnKey),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                bottom: 0,
+                right: 0,
+                child: _buildResizeHandle(context, columnKey, width),
+              ),
+            ],
           ),
         ),
       );
@@ -1157,12 +1288,38 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                         visibleColumns,
                         dados,
                       );
+                      final overrides =
+                          _columnWidthOverrides[_tipo] ??
+                          const <String, double>{};
+                      final lockedIndices = <int>{};
+                      final overrideAdjusted = List<double>.from(
+                        metrics.columnWidths,
+                      );
+                      double overrideContentWidth = 0;
+                      for (var i = 0; i < overrideAdjusted.length; i++) {
+                        final overrideWidth = overrides[visibleColumns[i]];
+                        if (overrideWidth != null) {
+                          final clamped = overrideWidth
+                              .clamp(_minColumnWidth, _maxColumnWidth)
+                              .toDouble();
+                          overrideAdjusted[i] = clamped;
+                          lockedIndices.add(i);
+                        }
+                        overrideContentWidth += overrideAdjusted[i];
+                      }
+                      final spacingWidth =
+                          _columnSpacing *
+                          math.max(0, visibleColumns.length - 1);
+                      final manualMetrics = _TableMetrics(
+                        columnWidths: overrideAdjusted,
+                        totalWidth: overrideContentWidth + spacingWidth,
+                      );
                       final mediaWidth = MediaQuery.maybeOf(
                         context,
                       )?.size.width;
                       final rawViewportWidth = constraints.maxWidth.isFinite
                           ? constraints.maxWidth
-                          : (mediaWidth ?? metrics.totalWidth);
+                          : (mediaWidth ?? manualMetrics.totalWidth);
                       final availableViewportWidth = rawViewportWidth.isFinite
                           ? math.max(
                               0.0,
@@ -1170,9 +1327,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                             )
                           : rawViewportWidth;
                       final fittedMetrics = _fitColumnsToViewport(
-                        metrics,
+                        manualMetrics,
                         visibleColumns.length,
                         availableViewportWidth,
+                        lockedColumns: lockedIndices,
                       );
                       final adjustedColumns = fittedMetrics.columnWidths;
                       final tableWidth = fittedMetrics.totalWidth;
