@@ -1020,7 +1020,13 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           bottom: _cellVerticalPadding,
         );
 
-        return SizedBox.expand(
+        final resolvedHeight = constraints.maxHeight.isFinite &&
+                constraints.maxHeight > 0
+            ? constraints.maxHeight
+            : _headerRowMinHeight;
+        return SizedBox(
+          width: contentWidth,
+          height: resolvedHeight,
           child: Stack(
             fit: StackFit.expand,
             children: [
