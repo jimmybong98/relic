@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../constants.dart';
@@ -11,6 +13,13 @@ class PersonnelReportChart extends StatefulWidget {
 
   @override
   State<PersonnelReportChart> createState() => _PersonnelReportChartState();
+}
+
+class _TableMetrics {
+  const _TableMetrics({required this.columnWidths, required this.totalWidth});
+
+  final List<double> columnWidths;
+  final double totalWidth;
 }
 
 class _PersonnelReportChartState extends State<PersonnelReportChart> {
@@ -29,6 +38,13 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     'operador': <String>[],
     'preparador': <String>[],
   };
+
+  static const double _columnSpacing = 12;
+  static const double _cellHorizontalPadding = 12;
+  static const double _cellVerticalPadding = 10;
+  static const double _horizontalMargin = 12;
+  static const double _minColumnWidth = 56;
+  static const double _maxColumnWidth = 320;
 
   static const Map<String, Map<String, String>> _headerConfigs = {
     'preparador': {
@@ -263,6 +279,64 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     });
   }
 
+  _TableMetrics _computeTableMetrics(
+    BuildContext context,
+    Map<String, String> headerMap,
+    List<String> visibleColumns,
+    List<Map<String, dynamic>> rows,
+  ) {
+    final direction = Directionality.of(context);
+    final theme = Theme.of(context);
+    final headerStyle =
+        theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600) ??
+        const TextStyle(fontSize: 12, fontWeight: FontWeight.w600);
+    const dataStyle = TextStyle(fontSize: 12);
+    final painter = TextPainter(
+      textDirection: direction,
+      maxLines: 1,
+      ellipsis: '…',
+    );
+
+    double measure(String text, TextStyle style) {
+      if (text.isEmpty) {
+        return 0;
+      }
+      painter
+        ..text = TextSpan(text: text, style: style)
+        ..layout(maxWidth: double.infinity);
+      return painter.width;
+    }
+
+    final widths = <double>[];
+    for (final columnKey in visibleColumns) {
+      double maxWidth = 0;
+      maxWidth = math.max(
+        maxWidth,
+        measure(headerMap[columnKey] ?? columnKey, headerStyle),
+      );
+      for (final row in rows) {
+        if (row['__isGroup'] == true) {
+          continue;
+        }
+        final value = row[columnKey];
+        if (value == null) {
+          continue;
+        }
+        maxWidth = math.max(maxWidth, measure(value.toString(), dataStyle));
+      }
+      final padded = maxWidth + (_cellHorizontalPadding * 2);
+      final width = padded.clamp(_minColumnWidth, _maxColumnWidth).toDouble();
+      widths.add(width);
+    }
+
+    final spacing = _columnSpacing * math.max(0, visibleColumns.length - 1);
+    final totalWidth = widths.fold<double>(
+      spacing,
+      (value, element) => value + element,
+    );
+    return _TableMetrics(columnWidths: widths, totalWidth: totalWidth);
+  }
+
   Widget _buildColumnChip(
     BuildContext context,
     String columnKey,
@@ -299,10 +373,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   ) {
     final label = headerMap[columnKey] ?? columnKey;
     Widget wrapPointer(Widget child) {
-      return MouseRegion(
-        cursor: SystemMouseCursors.grab,
-        child: child,
-      );
+      return MouseRegion(cursor: SystemMouseCursors.grab, child: child);
     }
 
     return Draggable<String>(
@@ -490,6 +561,126 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           style: theme.textTheme.bodySmall,
         ),
       ],
+    );
+  }
+
+  Widget _buildTableHeaderRow(
+    BuildContext context,
+    Map<String, String> headerMap,
+    List<String> visibleColumns,
+    List<double> columnWidths,
+    double totalWidth,
+  ) {
+    final theme = Theme.of(context);
+    final background = theme.colorScheme.surfaceContainerHighest.withValues(
+      alpha: 0.4,
+    );
+    final borderColor = theme.dividerColor.withOpacity(0.18);
+    final cells = <Widget>[];
+    for (var index = 0; index < visibleColumns.length; index++) {
+      final columnKey = visibleColumns[index];
+      cells.add(
+        Container(
+          width: columnWidths[index],
+          padding: const EdgeInsets.symmetric(
+            horizontal: _cellHorizontalPadding,
+            vertical: _cellVerticalPadding,
+          ),
+          alignment: Alignment.centerLeft,
+          child: _buildHeaderLabel(
+            columnKey,
+            headerMap[columnKey] ?? columnKey,
+            () => _hideColumn(columnKey),
+          ),
+        ),
+      );
+      if (index != visibleColumns.length - 1) {
+        cells.add(const SizedBox(width: _columnSpacing));
+      }
+    }
+    return Container(
+      width: totalWidth,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: cells),
+    );
+  }
+
+  Widget _buildGroupHeaderRow(
+    BuildContext context,
+    Map<String, dynamic> row,
+    double totalWidth,
+    Color groupColor,
+  ) {
+    final theme = Theme.of(context);
+    final textStyle = theme.textTheme.labelLarge?.copyWith(
+      fontWeight: FontWeight.bold,
+    );
+    final createdAt = row['created_at']?.toString() ?? '';
+    final text = createdAt.isEmpty ? 'Horário' : 'Horário: $createdAt';
+    return Container(
+      width: totalWidth,
+      margin: const EdgeInsets.only(top: 12, bottom: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: _cellHorizontalPadding,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: groupColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(text, style: textStyle),
+    );
+  }
+
+  Widget _buildDataRowWidget(
+    BuildContext context,
+    Map<String, dynamic> row,
+    List<String> visibleColumns,
+    List<double> columnWidths,
+    double totalWidth,
+    Color pauseColor,
+  ) {
+    final theme = Theme.of(context);
+    final isPause = row['evento'] == 'pausa_jornada';
+    final background = isPause ? pauseColor : null;
+    final cells = <Widget>[];
+    for (var index = 0; index < visibleColumns.length; index++) {
+      final columnKey = visibleColumns[index];
+      final value = row[columnKey];
+      final text = value == null ? '' : value.toString();
+      cells.add(
+        Container(
+          width: columnWidths[index],
+          padding: const EdgeInsets.symmetric(
+            horizontal: _cellHorizontalPadding,
+            vertical: _cellVerticalPadding,
+          ),
+          alignment: Alignment.centerLeft,
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 12),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        ),
+      );
+      if (index != visibleColumns.length - 1) {
+        cells.add(const SizedBox(width: _columnSpacing));
+      }
+    }
+    return Container(
+      width: totalWidth,
+      decoration: BoxDecoration(
+        color: background,
+        border: Border(
+          bottom: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
+        ),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: cells),
     );
   }
 
@@ -861,82 +1052,70 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                       final groupColor = theme.colorScheme.surfaceVariant
                           .withOpacity(0.25);
                       final pauseColor = Colors.orange.withOpacity(0.12);
-                      final firstColumnKey = visibleColumns.isNotEmpty
-                          ? visibleColumns.first
-                          : null;
+                      final metrics = _computeTableMetrics(
+                        context,
+                        headerMap,
+                        visibleColumns,
+                        dados,
+                      );
+                      final baseWidth = metrics.totalWidth;
+                      final availableWidth = math.max(
+                        baseWidth,
+                        constraints.maxWidth - (_horizontalMargin * 2),
+                      );
+                      final adjustedColumns = List<double>.from(
+                        metrics.columnWidths,
+                      );
+                      if (adjustedColumns.isNotEmpty &&
+                          availableWidth > baseWidth) {
+                        adjustedColumns[adjustedColumns.length - 1] +=
+                            availableWidth - baseWidth;
+                      }
+                      final rows = <Widget>[
+                        _buildTableHeaderRow(
+                          context,
+                          headerMap,
+                          visibleColumns,
+                          adjustedColumns,
+                          availableWidth,
+                        ),
+                        const SizedBox(height: 8),
+                      ];
+                      for (final row in dados) {
+                        if (row['__isGroup'] == true) {
+                          rows.add(
+                            _buildGroupHeaderRow(
+                              context,
+                              row,
+                              availableWidth,
+                              groupColor,
+                            ),
+                          );
+                        } else {
+                          rows.add(
+                            _buildDataRowWidget(
+                              context,
+                              row,
+                              visibleColumns,
+                              adjustedColumns,
+                              availableWidth,
+                              pauseColor,
+                            ),
+                          );
+                        }
+                      }
                       return SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minWidth: constraints.maxWidth,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: _horizontalMargin,
                           ),
-                          child: DataTable(
-                            columnSpacing: 12,
-                            horizontalMargin: 12,
-                            columns: visibleColumns
-                                .map(
-                                  (h) => DataColumn(
-                                    label: _buildHeaderLabel(
-                                      h,
-                                      headerMap[h] ?? h,
-                                      () => _hideColumn(h),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            rows: dados.map((r) {
-                              final isGroup = r['__isGroup'] == true;
-                              final isPause = r['evento'] == 'pausa_jornada';
-                              return DataRow(
-                                color:
-                                    MaterialStateProperty.resolveWith<Color?>((
-                                      states,
-                                    ) {
-                                      if (isGroup) return groupColor;
-                                      if (isPause) return pauseColor;
-                                      return null;
-                                    }),
-                                cells: visibleColumns.map((h) {
-                                  if (isGroup) {
-                                    if (h != firstColumnKey) {
-                                      return const DataCell(SizedBox.shrink());
-                                    }
-                                    final text = 'Horário: ${r['created_at'] ?? ''}';
-                                    final style = theme.textTheme.labelLarge
-                                        ?.copyWith(fontWeight: FontWeight.bold);
-                                    return DataCell(
-                                      ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          minHeight: 40,
-                                          minWidth: 0,
-                                        ),
-                                        child: OverflowBox(
-                                          minWidth: 0,
-                                          maxWidth: double.infinity,
-                                          alignment: Alignment.centerLeft,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 4,
-                                            ),
-                                            child: Text(text, style: style),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  final value = r[h];
-                                  final display = value == null
-                                      ? ''
-                                      : value.toString();
-                                  return DataCell(
-                                    Text(
-                                      display,
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  );
-                                }).toList(),
-                              );
-                            }).toList(),
+                          child: SizedBox(
+                            width: availableWidth,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: rows,
+                            ),
                           ),
                         ),
                       );
