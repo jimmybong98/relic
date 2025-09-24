@@ -1300,13 +1300,18 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     );
     final borderColor = theme.dividerColor.withOpacity(0.18);
     final spacingCount = math.max(0, visibleColumns.length - 1);
-    final spacingWidth = columnSpacing * spacingCount;
+    final gapWidths = spacingCount > 0
+        ? List<double>.filled(spacingCount, columnSpacing)
+        : const <double>[];
     final resolvedWidths = List<double>.from(columnWidths);
 
     double computeContentWidth() {
-      var sum = spacingWidth;
+      var sum = 0.0;
       for (final width in resolvedWidths) {
         sum += width;
+      }
+      for (final gap in gapWidths) {
+        sum += gap;
       }
       return sum;
     }
@@ -1317,27 +1322,47 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
 
     if (resolvedWidths.isNotEmpty && contentWidth - targetWidth > tolerance) {
       var overflow = contentWidth - targetWidth;
-      for (var index = resolvedWidths.length - 1;
-          index >= 0 && overflow > tolerance;
-          index--) {
-        final available = resolvedWidths[index] - _minColumnWidth;
-        if (available <= 0) {
-          continue;
+
+      if (gapWidths.isNotEmpty) {
+        for (var index = gapWidths.length - 1;
+            index >= 0 && overflow > tolerance;
+            index--) {
+          final available = gapWidths[index];
+          if (available <= 0) {
+            continue;
+          }
+          final reduction = math.min(available, overflow);
+          gapWidths[index] -= reduction;
+          overflow -= reduction;
         }
-        final reduction = math.min(available, overflow);
-        resolvedWidths[index] -= reduction;
-        overflow -= reduction;
+        contentWidth = computeContentWidth();
+        overflow = contentWidth - targetWidth;
       }
 
       if (overflow > tolerance) {
+        for (var index = resolvedWidths.length - 1;
+            index >= 0 && overflow > tolerance;
+            index--) {
+          final available = resolvedWidths[index] - _minColumnWidth;
+          if (available <= 0) {
+            continue;
+          }
+          final reduction = math.min(available, overflow);
+          resolvedWidths[index] -= reduction;
+          overflow -= reduction;
+        }
+        contentWidth = computeContentWidth();
+        overflow = contentWidth - targetWidth;
+      }
+
+      if (overflow > tolerance && resolvedWidths.isNotEmpty) {
         final lastIndex = resolvedWidths.length - 1;
         resolvedWidths[lastIndex] = math.max(
           0.0,
           resolvedWidths[lastIndex] - overflow,
         );
+        contentWidth = computeContentWidth();
       }
-
-      contentWidth = computeContentWidth();
     }
 
     final fillerWidth = targetWidth - contentWidth > tolerance
@@ -1388,7 +1413,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         ),
       );
       if (index != visibleColumns.length - 1) {
-        cells.add(SizedBox(width: columnSpacing));
+        final gapWidth = gapWidths.isNotEmpty ? gapWidths[index] : columnSpacing;
+        cells.add(SizedBox(width: math.max(0, gapWidth)));
       }
     }
     if (fillerWidth > 0.5) {
@@ -1445,13 +1471,18 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final isPause = row['evento'] == 'pausa_jornada';
     final background = isPause ? pauseColor : null;
     final spacingCount = math.max(0, visibleColumns.length - 1);
-    final spacingWidth = columnSpacing * spacingCount;
+    final gapWidths = spacingCount > 0
+        ? List<double>.filled(spacingCount, columnSpacing)
+        : const <double>[];
     final resolvedWidths = List<double>.from(columnWidths);
 
     double computeContentWidth() {
-      var sum = spacingWidth;
+      var sum = 0.0;
       for (final width in resolvedWidths) {
         sum += width;
+      }
+      for (final gap in gapWidths) {
+        sum += gap;
       }
       return sum;
     }
@@ -1462,27 +1493,47 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
 
     if (resolvedWidths.isNotEmpty && contentWidth - targetWidth > tolerance) {
       var overflow = contentWidth - targetWidth;
-      for (var index = resolvedWidths.length - 1;
-          index >= 0 && overflow > tolerance;
-          index--) {
-        final available = resolvedWidths[index] - _minColumnWidth;
-        if (available <= 0) {
-          continue;
+
+      if (gapWidths.isNotEmpty) {
+        for (var index = gapWidths.length - 1;
+            index >= 0 && overflow > tolerance;
+            index--) {
+          final available = gapWidths[index];
+          if (available <= 0) {
+            continue;
+          }
+          final reduction = math.min(available, overflow);
+          gapWidths[index] -= reduction;
+          overflow -= reduction;
         }
-        final reduction = math.min(available, overflow);
-        resolvedWidths[index] -= reduction;
-        overflow -= reduction;
+        contentWidth = computeContentWidth();
+        overflow = contentWidth - targetWidth;
       }
 
       if (overflow > tolerance) {
+        for (var index = resolvedWidths.length - 1;
+            index >= 0 && overflow > tolerance;
+            index--) {
+          final available = resolvedWidths[index] - _minColumnWidth;
+          if (available <= 0) {
+            continue;
+          }
+          final reduction = math.min(available, overflow);
+          resolvedWidths[index] -= reduction;
+          overflow -= reduction;
+        }
+        contentWidth = computeContentWidth();
+        overflow = contentWidth - targetWidth;
+      }
+
+      if (overflow > tolerance && resolvedWidths.isNotEmpty) {
         final lastIndex = resolvedWidths.length - 1;
         resolvedWidths[lastIndex] = math.max(
           0.0,
           resolvedWidths[lastIndex] - overflow,
         );
+        contentWidth = computeContentWidth();
       }
-
-      contentWidth = computeContentWidth();
     }
 
     final fillerWidth = targetWidth - contentWidth > tolerance
@@ -1511,7 +1562,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         ),
       );
       if (index != visibleColumns.length - 1) {
-        cells.add(SizedBox(width: columnSpacing));
+        final gapWidth = gapWidths.isNotEmpty ? gapWidths[index] : columnSpacing;
+        cells.add(SizedBox(width: math.max(0, gapWidth)));
       }
     }
     if (fillerWidth > 0.5) {
