@@ -795,14 +795,15 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       cells.add(
         SizedBox(
           width: width,
-          child: Stack(
-            clipBehavior: Clip.none,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Positioned.fill(
+              Expanded(
                 child: Container(
                   padding: EdgeInsetsDirectional.only(
                     start: _cellHorizontalPadding,
-                    end: _cellHorizontalPadding + (_resizeHandleHitWidth / 2),
+                    end: _cellHorizontalPadding,
                     top: _cellVerticalPadding,
                     bottom: _cellVerticalPadding,
                   ),
@@ -814,10 +815,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                   ),
                 ),
               ),
-              Positioned(
-                top: 0,
-                bottom: 0,
-                right: 0,
+              Align(
+                alignment: Alignment.centerRight,
                 child: _buildResizeHandle(context, columnKey, width),
               ),
             ],
