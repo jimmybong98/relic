@@ -1302,27 +1302,30 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final spacingCount = math.max(0, visibleColumns.length - 1);
     final spacingWidth = columnSpacing * spacingCount;
     final resolvedWidths = List<double>.from(columnWidths);
-    var intrinsicWidth = spacingWidth;
-    for (final width in resolvedWidths) {
-      intrinsicWidth += width;
-    }
-    var containerWidth = math.max(totalWidth, intrinsicWidth);
-    if (resolvedWidths.isNotEmpty) {
-      final diff = containerWidth - intrinsicWidth;
-      if (diff.abs() > 0.5) {
-        final lastIndex = resolvedWidths.length - 1;
-        final adjusted = (resolvedWidths[lastIndex] + diff).clamp(
-          0.0,
-          double.infinity,
-        );
-        resolvedWidths[lastIndex] = adjusted;
-        intrinsicWidth = spacingWidth;
-        for (final width in resolvedWidths) {
-          intrinsicWidth += width;
-        }
-        containerWidth = math.max(totalWidth, intrinsicWidth);
+
+    double computeContentWidth() {
+      var sum = spacingWidth;
+      for (final width in resolvedWidths) {
+        sum += width;
       }
+      return sum;
     }
+
+    var contentWidth = computeContentWidth();
+    var containerWidth = math.max(totalWidth, contentWidth);
+
+    if (resolvedWidths.isNotEmpty && contentWidth - containerWidth > 0.5) {
+      final overflow = contentWidth - containerWidth;
+      final lastIndex = resolvedWidths.length - 1;
+      resolvedWidths[lastIndex] = math.max(
+        0.0,
+        resolvedWidths[lastIndex] - overflow,
+      );
+      contentWidth = computeContentWidth();
+      containerWidth = math.max(totalWidth, contentWidth);
+    }
+
+    final fillerWidth = containerWidth - contentWidth;
 
     final cells = <Widget>[];
     for (var index = 0; index < visibleColumns.length; index++) {
@@ -1370,6 +1373,9 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       if (index != visibleColumns.length - 1) {
         cells.add(SizedBox(width: columnSpacing));
       }
+    }
+    if (fillerWidth > 0.5) {
+      cells.add(SizedBox(width: fillerWidth));
     }
     return Container(
       width: containerWidth,
@@ -1424,27 +1430,30 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final spacingCount = math.max(0, visibleColumns.length - 1);
     final spacingWidth = columnSpacing * spacingCount;
     final resolvedWidths = List<double>.from(columnWidths);
-    var intrinsicWidth = spacingWidth;
-    for (final width in resolvedWidths) {
-      intrinsicWidth += width;
-    }
-    var containerWidth = math.max(totalWidth, intrinsicWidth);
-    if (resolvedWidths.isNotEmpty) {
-      final diff = containerWidth - intrinsicWidth;
-      if (diff.abs() > 0.5) {
-        final lastIndex = resolvedWidths.length - 1;
-        final adjusted = (resolvedWidths[lastIndex] + diff).clamp(
-          0.0,
-          double.infinity,
-        );
-        resolvedWidths[lastIndex] = adjusted;
-        intrinsicWidth = spacingWidth;
-        for (final width in resolvedWidths) {
-          intrinsicWidth += width;
-        }
-        containerWidth = math.max(totalWidth, intrinsicWidth);
+
+    double computeContentWidth() {
+      var sum = spacingWidth;
+      for (final width in resolvedWidths) {
+        sum += width;
       }
+      return sum;
     }
+
+    var contentWidth = computeContentWidth();
+    var containerWidth = math.max(totalWidth, contentWidth);
+
+    if (resolvedWidths.isNotEmpty && contentWidth - containerWidth > 0.5) {
+      final overflow = contentWidth - containerWidth;
+      final lastIndex = resolvedWidths.length - 1;
+      resolvedWidths[lastIndex] = math.max(
+        0.0,
+        resolvedWidths[lastIndex] - overflow,
+      );
+      contentWidth = computeContentWidth();
+      containerWidth = math.max(totalWidth, contentWidth);
+    }
+
+    final fillerWidth = containerWidth - contentWidth;
 
     final cells = <Widget>[];
     for (var index = 0; index < visibleColumns.length; index++) {
@@ -1470,6 +1479,9 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       if (index != visibleColumns.length - 1) {
         cells.add(SizedBox(width: columnSpacing));
       }
+    }
+    if (fillerWidth > 0.5) {
+      cells.add(SizedBox(width: fillerWidth));
     }
     return Container(
       width: containerWidth,
