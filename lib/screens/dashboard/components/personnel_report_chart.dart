@@ -743,6 +743,28 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     );
   }
 
+  List<int> _buildColumnFlexes(List<double> widths) {
+    if (widths.isEmpty) {
+      return const <int>[];
+    }
+    final positiveWidths = widths.map((width) => math.max(0.0, width)).toList();
+    final total = positiveWidths.fold<double>(0, (sum, width) => sum + width);
+    if (total <= 0) {
+      return List<int>.filled(widths.length, 1);
+    }
+    final scale = 1000 / total;
+    final flexes = <int>[];
+    for (final width in positiveWidths) {
+      final flex = math.max(1, (width * scale).round());
+      flexes.add(flex);
+    }
+    final sumFlex = flexes.fold<int>(0, (sum, value) => sum + value);
+    if (sumFlex <= 0) {
+      return List<int>.filled(widths.length, 1);
+    }
+    return flexes;
+  }
+
   _TableMetrics _fitColumnsToViewport(
     _TableMetrics metrics,
     int columnCount,
@@ -1288,6 +1310,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     Map<String, String> headerMap,
     List<String> visibleColumns,
     List<double> columnWidths,
+    List<int> columnFlexes,
     double totalWidth,
     double columnSpacing,
     List<Map<String, dynamic>> sourceRows,
@@ -1298,140 +1321,92 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     );
     final borderColor = theme.dividerColor.withOpacity(0.18);
     final spacingCount = math.max(0, visibleColumns.length - 1);
-    final gapWidths = spacingCount > 0
-        ? List<double>.filled(spacingCount, columnSpacing)
-        : const <double>[];
+    final totalSpacing = spacingCount * columnSpacing;
     final resolvedWidths = List<double>.from(columnWidths);
-
-    double computeContentWidth() {
-      var sum = 0.0;
-      for (final width in resolvedWidths) {
-        sum += width;
-      }
-      for (final gap in gapWidths) {
-        sum += gap;
-      }
-      return sum;
-    }
-
-    var contentWidth = computeContentWidth();
-    final targetWidth = totalWidth;
-    const tolerance = 0.001;
-
-    if (resolvedWidths.isNotEmpty && contentWidth - targetWidth > tolerance) {
-      var overflow = contentWidth - targetWidth;
-
-      if (gapWidths.isNotEmpty) {
-        for (
-          var index = gapWidths.length - 1;
-          index >= 0 && overflow > tolerance;
-          index--
-        ) {
-          final available = gapWidths[index];
-          if (available <= 0) {
-            continue;
-          }
-          final reduction = math.min(available, overflow);
-          gapWidths[index] -= reduction;
-          overflow -= reduction;
-        }
-        contentWidth = computeContentWidth();
-        overflow = contentWidth - targetWidth;
-      }
-
-      if (overflow > tolerance) {
-        for (
-          var index = resolvedWidths.length - 1;
-          index >= 0 && overflow > tolerance;
-          index--
-        ) {
-          final available = resolvedWidths[index] - _minColumnWidth;
-          if (available <= 0) {
-            continue;
-          }
-          final reduction = math.min(available, overflow);
-          resolvedWidths[index] -= reduction;
-          overflow -= reduction;
-        }
-        contentWidth = computeContentWidth();
-        overflow = contentWidth - targetWidth;
-      }
-
-      if (resolvedWidths.isNotEmpty) {
-        final overflowAfterAdjust = contentWidth - targetWidth;
-        if (overflowAfterAdjust > tolerance) {
-          final lastIndex = resolvedWidths.length - 1;
-          resolvedWidths[lastIndex] = math.max(
-            0.0,
-            resolvedWidths[lastIndex] - overflowAfterAdjust,
-          );
-          contentWidth = computeContentWidth();
-        }
-      }
-    }
+    final flexes = columnFlexes.isEmpty
+        ? _buildColumnFlexes(resolvedWidths)
+        : columnFlexes;
 
     final cells = <Widget>[];
     for (var index = 0; index < visibleColumns.length; index++) {
       final columnKey = visibleColumns[index];
-      final width = resolvedWidths[index];
+      final fallbackWidth = resolvedWidths[index];
+      final flex = index < flexes.length ? math.max(1, flexes[index]) : 1;
       cells.add(
-        SizedBox(
-          width: width,
-          child: SizedBox(
-            height: _headerRowMinHeight,
-            child: Stack(
-              fit: StackFit.expand,
-              clipBehavior: Clip.none,
-              children: [
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    start: _cellHorizontalPadding,
-                    end: _cellHorizontalPadding + _resizeHandleHitWidth,
-                  ),
-                  child: _buildHeaderLabel(
-                    context,
-                    columnKey,
-                    headerMap[columnKey] ?? columnKey,
-                    () => _hideColumn(columnKey),
-                    () => _showColumnFilterSheet(
-                      context,
-                      columnKey,
-                      headerMap[columnKey] ?? columnKey,
-                      sourceRows,
-                    ),
-                    _isColumnFiltered(columnKey),
-                  ),
-                ),
-                Align(
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: _buildResizeHandle(context, columnKey, width),
-                ),
-              ],
+        Flexible(
+          fit: FlexFit.tight,
+          flex: flex,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: _minColumnWidth),
+            child: SizedBox(
+              height: _headerRowMinHeight,
+              child: LayoutBuilder(
+                builder: (context, cellConstraints) {
+                  final maxWidth = cellConstraints.maxWidth.isFinite
+                      ? cellConstraints.maxWidth
+                      : math.max(_minColumnWidth, fallbackWidth);
+                  return Stack(
+                    fit: StackFit.expand,
+                    clipBehavior: Clip.none,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          start: _cellHorizontalPadding,
+                          end:
+                              _cellHorizontalPadding + _resizeHandleHitWidth,
+                        ),
+                        child: _buildHeaderLabel(
+                          context,
+                          columnKey,
+                          headerMap[columnKey] ?? columnKey,
+                          () => _hideColumn(columnKey),
+                          () => _showColumnFilterSheet(
+                            context,
+                            columnKey,
+                            headerMap[columnKey] ?? columnKey,
+                            sourceRows,
+                          ),
+                          _isColumnFiltered(columnKey),
+                        ),
+                      ),
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child:
+                            _buildResizeHandle(context, columnKey, maxWidth),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
       );
       if (index != visibleColumns.length - 1) {
-        final gapWidth = gapWidths.isNotEmpty
-            ? gapWidths[index]
-            : columnSpacing;
-        cells.add(SizedBox(width: math.max(0, gapWidth)));
+        cells.add(SizedBox(width: math.max(0, columnSpacing)));
       }
     }
-    final safeContentWidth = math.max(0.0, contentWidth);
-    final contentRow = Row(mainAxisSize: MainAxisSize.min, children: cells);
-    final containerWidth = math.max(targetWidth, safeContentWidth);
+
+    final effectiveWidth = math.max(
+      totalWidth,
+      resolvedWidths.fold<double>(0, (sum, width) => sum + width) + totalSpacing,
+    );
+    final contentRow = Row(
+      mainAxisSize: MainAxisSize.max,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: cells,
+    );
     return Container(
-      width: containerWidth,
+      width: effectiveWidth,
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: borderColor),
       ),
-      child: Align(
-        alignment: AlignmentDirectional.centerStart,
+      child: Padding(
+        padding: EdgeInsets.zero,
         child: SizedBox(
-          width: safeContentWidth,
+          width: effectiveWidth,
           child: contentRow,
         ),
       ),
@@ -1470,6 +1445,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     Map<String, dynamic> row,
     List<String> visibleColumns,
     List<double> columnWidths,
+    List<int> columnFlexes,
     double totalWidth,
     double columnSpacing,
     Color pauseColor,
@@ -1478,123 +1454,66 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final isPause = row['evento'] == 'pausa_jornada';
     final background = isPause ? pauseColor : null;
     final spacingCount = math.max(0, visibleColumns.length - 1);
-    final gapWidths = spacingCount > 0
-        ? List<double>.filled(spacingCount, columnSpacing)
-        : const <double>[];
-    final resolvedWidths = List<double>.from(columnWidths);
-
-    double computeContentWidth() {
-      var sum = 0.0;
-      for (final width in resolvedWidths) {
-        sum += width;
-      }
-      for (final gap in gapWidths) {
-        sum += gap;
-      }
-      return sum;
-    }
-
-    var contentWidth = computeContentWidth();
-    final targetWidth = totalWidth;
-    const tolerance = 0.001;
-
-    if (resolvedWidths.isNotEmpty && contentWidth - targetWidth > tolerance) {
-      var overflow = contentWidth - targetWidth;
-
-      if (gapWidths.isNotEmpty) {
-        for (
-          var index = gapWidths.length - 1;
-          index >= 0 && overflow > tolerance;
-          index--
-        ) {
-          final available = gapWidths[index];
-          if (available <= 0) {
-            continue;
-          }
-          final reduction = math.min(available, overflow);
-          gapWidths[index] -= reduction;
-          overflow -= reduction;
-        }
-        contentWidth = computeContentWidth();
-        overflow = contentWidth - targetWidth;
-      }
-
-      if (overflow > tolerance) {
-        for (
-          var index = resolvedWidths.length - 1;
-          index >= 0 && overflow > tolerance;
-          index--
-        ) {
-          final available = resolvedWidths[index] - _minColumnWidth;
-          if (available <= 0) {
-            continue;
-          }
-          final reduction = math.min(available, overflow);
-          resolvedWidths[index] -= reduction;
-          overflow -= reduction;
-        }
-        contentWidth = computeContentWidth();
-        overflow = contentWidth - targetWidth;
-      }
-
-      if (resolvedWidths.isNotEmpty) {
-        final overflowAfterAdjust = contentWidth - targetWidth;
-        if (overflowAfterAdjust > tolerance) {
-          final lastIndex = resolvedWidths.length - 1;
-          resolvedWidths[lastIndex] = math.max(
-            0.0,
-            resolvedWidths[lastIndex] - overflowAfterAdjust,
-          );
-          contentWidth = computeContentWidth();
-        }
-      }
-    }
+    final totalSpacing = spacingCount * columnSpacing;
+    final flexes = columnFlexes.isEmpty
+        ? _buildColumnFlexes(columnWidths)
+        : columnFlexes;
 
     final cells = <Widget>[];
     for (var index = 0; index < visibleColumns.length; index++) {
       final columnKey = visibleColumns[index];
+      final flex = index < flexes.length ? math.max(1, flexes[index]) : 1;
       final value = row[columnKey];
       final text = value == null ? '' : value.toString();
       cells.add(
-        Container(
-          width: resolvedWidths[index],
-          padding: const EdgeInsets.symmetric(
-            horizontal: _cellHorizontalPadding,
-            vertical: _cellVerticalPadding,
-          ),
-          alignment: Alignment.centerLeft,
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 12),
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
+        Flexible(
+          fit: FlexFit.tight,
+          flex: flex,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: _minColumnWidth),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _cellHorizontalPadding,
+                vertical: _cellVerticalPadding,
+              ),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  text,
+                  style: const TextStyle(fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ),
           ),
         ),
       );
       if (index != visibleColumns.length - 1) {
-        final gapWidth = gapWidths.isNotEmpty
-            ? gapWidths[index]
-            : columnSpacing;
-        cells.add(SizedBox(width: math.max(0, gapWidth)));
+        cells.add(SizedBox(width: math.max(0, columnSpacing)));
       }
     }
-    final safeContentWidth = math.max(0.0, contentWidth);
-    final contentRow = Row(mainAxisSize: MainAxisSize.min, children: cells);
-    final containerWidth = math.max(targetWidth, safeContentWidth);
+
+    final effectiveWidth = math.max(
+      totalWidth,
+      columnWidths.fold<double>(0, (sum, width) => sum + width) + totalSpacing,
+    );
+    final contentRow = Row(
+      mainAxisSize: MainAxisSize.max,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: cells,
+    );
     return Container(
-      width: containerWidth,
+      width: effectiveWidth,
       decoration: BoxDecoration(
         color: background,
         border: Border(
           bottom: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
         ),
       ),
-      child: Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: SizedBox(
-          width: safeContentWidth,
-          child: contentRow,
-        ),
+      child: SizedBox(
+        width: effectiveWidth,
+        child: contentRow,
       ),
     );
   }
@@ -2055,6 +1974,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                         lockedColumns: lockedIndices,
                       );
                       final adjustedColumns = fittedMetrics.columnWidths;
+                      final columnFlexes = _buildColumnFlexes(adjustedColumns);
                       final columnSpacing = spacingCount == 0
                           ? 0.0
                           : fittedMetrics.columnSpacing;
@@ -2076,6 +1996,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                           headerMap,
                           visibleColumns,
                           adjustedColumns,
+                          columnFlexes,
                           tableWidth,
                           columnSpacing,
                           dados,
@@ -2099,6 +2020,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                               row,
                               visibleColumns,
                               adjustedColumns,
+                              columnFlexes,
                               tableWidth,
                               columnSpacing,
                               pauseColor,
