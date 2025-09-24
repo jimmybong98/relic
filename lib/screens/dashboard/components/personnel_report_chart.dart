@@ -838,10 +838,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     }
 
     contentWidth = adjusted.fold<double>(0, (sum, width) => sum + width);
-    totalWidth = contentWidth + spacingWidth;
     final spacingValue = spacingCount == 0
         ? 0.0
         : math.max(_minColumnSpacing, spacingWidth / spacingCount);
+    final adjustedSpacingWidth = spacingCount * spacingValue;
+    totalWidth = contentWidth + adjustedSpacingWidth;
     return _TableMetrics(
       columnWidths: adjusted,
       totalWidth: totalWidth,
