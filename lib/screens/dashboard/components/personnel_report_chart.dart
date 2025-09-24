@@ -16,10 +16,15 @@ class PersonnelReportChart extends StatefulWidget {
 }
 
 class _TableMetrics {
-  const _TableMetrics({required this.columnWidths, required this.totalWidth});
+  const _TableMetrics({
+    required this.columnWidths,
+    required this.totalWidth,
+    required this.columnSpacing,
+  });
 
   final List<double> columnWidths;
   final double totalWidth;
+  final double columnSpacing;
 }
 
 class _FilterDialogResult {
@@ -30,6 +35,142 @@ class _FilterDialogResult {
 
   final Set<String> selectedValues;
   final bool clearFilter;
+}
+
+class _ColumnFilterDialog extends StatefulWidget {
+  const _ColumnFilterDialog({
+    required this.label,
+    required this.values,
+    required this.initialSelection,
+    required this.describeValue,
+  });
+
+  final String label;
+  final List<String> values;
+  final Set<String> initialSelection;
+  final String Function(String) describeValue;
+
+  @override
+  State<_ColumnFilterDialog> createState() => _ColumnFilterDialogState();
+}
+
+class _ColumnFilterDialogState extends State<_ColumnFilterDialog> {
+  late Set<String> _tempSelected;
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    final baseSelection = widget.initialSelection.isEmpty
+        ? widget.values.toSet()
+        : Set<String>.from(widget.initialSelection);
+    baseSelection.retainAll(widget.values);
+    if (baseSelection.isEmpty && widget.values.isNotEmpty) {
+      _tempSelected = widget.values.toSet();
+    } else {
+      _tempSelected = baseSelection;
+    }
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final allSelected =
+        widget.values.isNotEmpty &&
+        _tempSelected.length == widget.values.length;
+    final listHeight = math.min(320.0, 36.0 * widget.values.length + 12);
+    return AlertDialog(
+      title: Text('Filtrar ${widget.label}'),
+      content: SizedBox(
+        width: 340,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CheckboxListTile(
+              dense: true,
+              value: allSelected,
+              onChanged: (value) {
+                setState(() {
+                  if (value == true) {
+                    _tempSelected = widget.values.toSet();
+                  } else {
+                    _tempSelected = <String>{};
+                  }
+                });
+              },
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text('Selecionar tudo'),
+              contentPadding: EdgeInsets.zero,
+            ),
+            const Divider(height: 12),
+            SizedBox(
+              height: listHeight,
+              child: Scrollbar(
+                controller: _scrollController,
+                thumbVisibility: widget.values.length > 8,
+                child: ListView.builder(
+                  controller: _scrollController,
+                  itemCount: widget.values.length,
+                  itemBuilder: (context, index) {
+                    final value = widget.values[index];
+                    final checked = _tempSelected.contains(value);
+                    return CheckboxListTile(
+                      dense: true,
+                      value: checked,
+                      onChanged: (selected) {
+                        setState(() {
+                          if (selected == true) {
+                            _tempSelected.add(value);
+                          } else {
+                            _tempSelected.remove(value);
+                          }
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(widget.describeValue(value)),
+                      contentPadding: EdgeInsets.zero,
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(
+              context,
+            ).pop(const _FilterDialogResult(clearFilter: true));
+          },
+          child: const Text('Limpar filtro'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _tempSelected.isEmpty
+              ? null
+              : () {
+                  Navigator.of(context).pop(
+                    _FilterDialogResult(
+                      selectedValues: Set<String>.from(_tempSelected),
+                    ),
+                  );
+                },
+          child: const Text('Aplicar'),
+        ),
+      ],
+    );
+  }
 }
 
 class _PersonnelReportChartState extends State<PersonnelReportChart> {
@@ -58,8 +199,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   };
 
   String? _activeResizeColumn;
+  final ScrollController _tableScrollController = ScrollController();
 
   static const double _columnSpacing = 12;
+  static const double _minColumnSpacing = 6;
   static const double _cellHorizontalPadding = 12;
   static const double _cellVerticalPadding = 10;
   static const double _headerRowMinHeight = 44;
@@ -371,98 +514,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final result = await showDialog<_FilterDialogResult>(
       context: context,
       builder: (context) {
-        var tempSelected = initialSelection.isEmpty
-            ? sortedValues.toSet()
-            : Set<String>.from(initialSelection);
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final allSelected = tempSelected.length == sortedValues.length;
-            final listHeight = math.min(320.0, 36.0 * sortedValues.length + 12);
-            return AlertDialog(
-              title: Text('Filtrar $label'),
-              content: SizedBox(
-                width: 340,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CheckboxListTile(
-                      dense: true,
-                      value: allSelected,
-                      onChanged: (value) {
-                        setModalState(() {
-                          if (value == true) {
-                            tempSelected = sortedValues.toSet();
-                          } else {
-                            tempSelected = <String>{};
-                          }
-                        });
-                      },
-                      controlAffinity: ListTileControlAffinity.leading,
-                      title: const Text('Selecionar tudo'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    const Divider(height: 12),
-                    SizedBox(
-                      height: listHeight,
-                      child: Scrollbar(
-                        thumbVisibility: sortedValues.length > 8,
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: sortedValues.length,
-                          itemBuilder: (context, index) {
-                            final value = sortedValues[index];
-                            final checked = tempSelected.contains(value);
-                            return CheckboxListTile(
-                              dense: true,
-                              value: checked,
-                              onChanged: (selected) {
-                                setModalState(() {
-                                  if (selected == true) {
-                                    tempSelected.add(value);
-                                  } else {
-                                    tempSelected.remove(value);
-                                  }
-                                });
-                              },
-                              controlAffinity: ListTileControlAffinity.leading,
-                              title: Text(_describeFilterValue(value)),
-                              contentPadding: EdgeInsets.zero,
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(
-                      context,
-                    ).pop(const _FilterDialogResult(clearFilter: true));
-                  },
-                  child: const Text('Limpar filtro'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                FilledButton(
-                  onPressed: tempSelected.isEmpty
-                      ? null
-                      : () {
-                          Navigator.of(context).pop(
-                            _FilterDialogResult(
-                              selectedValues: Set<String>.from(tempSelected),
-                            ),
-                          );
-                        },
-                  child: const Text('Aplicar'),
-                ),
-              ],
-            );
-          },
+        return _ColumnFilterDialog(
+          label: label,
+          values: sortedValues,
+          initialSelection: initialSelection,
+          describeValue: _describeFilterValue,
         );
       },
     );
@@ -487,6 +543,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     _osCtrl.dispose();
     _partCtrl.dispose();
     _opCtrl.dispose();
+    _tableScrollController.dispose();
     super.dispose();
   }
 
@@ -672,12 +729,18 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       widths.add(width);
     }
 
-    final spacing = _columnSpacing * math.max(0, visibleColumns.length - 1);
+    final spacingCount = math.max(0, visibleColumns.length - 1);
+    final spacing = _columnSpacing * spacingCount;
     final totalWidth = widths.fold<double>(
       spacing,
       (value, element) => value + element,
     );
-    return _TableMetrics(columnWidths: widths, totalWidth: totalWidth);
+    final appliedSpacing = spacingCount == 0 ? 0.0 : _columnSpacing;
+    return _TableMetrics(
+      columnWidths: widths,
+      totalWidth: totalWidth,
+      columnSpacing: appliedSpacing,
+    );
   }
 
   _TableMetrics _fitColumnsToViewport(
@@ -687,84 +750,103 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     Set<int> lockedColumns = const <int>{},
   }) {
     if (columnCount <= 0 || metrics.columnWidths.isEmpty) {
-      return const _TableMetrics(columnWidths: <double>[], totalWidth: 0);
+      return _TableMetrics(
+        columnWidths: List<double>.from(metrics.columnWidths),
+        totalWidth: metrics.totalWidth,
+        columnSpacing: metrics.columnSpacing,
+      );
     }
 
-    final spacing = _columnSpacing * math.max(0, columnCount - 1);
+    final spacingCount = math.max(0, columnCount - 1);
     final adjusted = List<double>.from(metrics.columnWidths);
-    final contentWidth = adjusted.fold<double>(0, (sum, width) => sum + width);
-    final baseTotalWidth = contentWidth + spacing;
+    final baseSpacing = spacingCount == 0 ? 0.0 : metrics.columnSpacing;
+    var spacingWidth = baseSpacing * spacingCount;
+    var contentWidth = adjusted.fold<double>(0, (sum, width) => sum + width);
+    var totalWidth = contentWidth + spacingWidth;
 
     if (!viewportWidth.isFinite || viewportWidth <= 0) {
-      return _TableMetrics(columnWidths: adjusted, totalWidth: baseTotalWidth);
+      final spacingValue = spacingCount == 0 ? 0.0 : baseSpacing;
+      return _TableMetrics(
+        columnWidths: adjusted,
+        totalWidth: totalWidth,
+        columnSpacing: spacingValue,
+      );
     }
 
+    final minSpacingWidth = spacingCount * _minColumnSpacing;
     final minContentWidth = columnCount * _minColumnWidth;
-    final minTotalWidth = minContentWidth + spacing;
-
-    if (baseTotalWidth <= viewportWidth) {
-      return _TableMetrics(columnWidths: adjusted, totalWidth: baseTotalWidth);
-    }
-
-    final targetTotalWidth = math.max(viewportWidth, minTotalWidth);
-    final targetContentWidth = targetTotalWidth - spacing;
-    var remainingReduction = contentWidth - targetContentWidth;
+    final absoluteMinTotalWidth = minContentWidth + minSpacingWidth;
+    final targetTotalWidth = math.max(viewportWidth, absoluteMinTotalWidth);
+    var remainingReduction = totalWidth - targetTotalWidth;
 
     if (remainingReduction <= 0) {
-      final newContent = adjusted.fold<double>(0, (sum, width) => sum + width);
-      final newTotal = newContent + spacing;
-      return _TableMetrics(columnWidths: adjusted, totalWidth: newTotal);
+      final spacingValue = spacingCount == 0 ? 0.0 : baseSpacing;
+      return _TableMetrics(
+        columnWidths: adjusted,
+        totalWidth: totalWidth,
+        columnSpacing: spacingValue,
+      );
+    }
+
+    if (spacingCount > 0 && spacingWidth > minSpacingWidth) {
+      final spacingReduction = math.min(
+        remainingReduction,
+        spacingWidth - minSpacingWidth,
+      );
+      if (spacingReduction > 0) {
+        spacingWidth -= spacingReduction;
+        remainingReduction -= spacingReduction;
+      }
     }
 
     const double tolerance = 0.1;
-    while (remainingReduction > tolerance) {
-      double adjustableSum = 0;
-      for (var i = 0; i < adjusted.length; i++) {
-        if (lockedColumns.contains(i)) {
-          continue;
+    if (remainingReduction > tolerance) {
+      while (remainingReduction > tolerance) {
+        double adjustableSum = 0;
+        for (var i = 0; i < adjusted.length; i++) {
+          if (lockedColumns.contains(i)) {
+            continue;
+          }
+          final available = adjusted[i] - _minColumnWidth;
+          if (available > 0) {
+            adjustableSum += available;
+          }
         }
-        final available = adjusted[i] - _minColumnWidth;
-        if (available > 0) {
-          adjustableSum += available;
+        if (adjustableSum <= tolerance) {
+          break;
         }
-      }
-      if (adjustableSum <= 0) {
-        final actualContent = adjusted.fold<double>(
-          0,
-          (sum, width) => sum + width,
-        );
-        return _TableMetrics(
-          columnWidths: adjusted,
-          totalWidth: actualContent + spacing,
-        );
-      }
 
-      var reducedThisPass = 0.0;
-      for (var i = 0; i < adjusted.length; i++) {
-        if (lockedColumns.contains(i)) {
-          continue;
+        var reducedThisPass = 0.0;
+        for (var i = 0; i < adjusted.length; i++) {
+          if (lockedColumns.contains(i)) {
+            continue;
+          }
+          final available = adjusted[i] - _minColumnWidth;
+          if (available <= 0) continue;
+          final share = remainingReduction * (available / adjustableSum);
+          final reduction = math.min(available, share);
+          if (reduction <= 0) continue;
+          adjusted[i] -= reduction;
+          reducedThisPass += reduction;
         }
-        final available = adjusted[i] - _minColumnWidth;
-        if (available <= 0) continue;
-        final share = remainingReduction * (available / adjustableSum);
-        final reduction = math.min(available, share);
-        if (reduction <= 0) continue;
-        adjusted[i] -= reduction;
-        reducedThisPass += reduction;
-      }
 
-      if (reducedThisPass <= 0) {
-        break;
+        if (reducedThisPass <= tolerance) {
+          break;
+        }
+        remainingReduction -= reducedThisPass;
       }
-      remainingReduction -= reducedThisPass;
     }
 
-    final adjustedContentWidth = adjusted.fold<double>(
-      0,
-      (sum, width) => sum + width,
+    contentWidth = adjusted.fold<double>(0, (sum, width) => sum + width);
+    totalWidth = contentWidth + spacingWidth;
+    final spacingValue = spacingCount == 0
+        ? 0.0
+        : math.max(_minColumnSpacing, spacingWidth / spacingCount);
+    return _TableMetrics(
+      columnWidths: adjusted,
+      totalWidth: totalWidth,
+      columnSpacing: spacingValue,
     );
-    final finalTotalWidth = adjustedContentWidth + spacing;
-    return _TableMetrics(columnWidths: adjusted, totalWidth: finalTotalWidth);
   }
 
   Widget _buildColumnChip(
@@ -1143,6 +1225,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     List<String> visibleColumns,
     List<double> columnWidths,
     double totalWidth,
+    double columnSpacing,
     List<Map<String, dynamic>> sourceRows,
   ) {
     final theme = Theme.of(context);
@@ -1194,7 +1277,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         ),
       );
       if (index != visibleColumns.length - 1) {
-        cells.add(const SizedBox(width: _columnSpacing));
+        cells.add(SizedBox(width: columnSpacing));
       }
     }
     return Container(
@@ -1241,6 +1324,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     List<String> visibleColumns,
     List<double> columnWidths,
     double totalWidth,
+    double columnSpacing,
     Color pauseColor,
   ) {
     final theme = Theme.of(context);
@@ -1268,7 +1352,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         ),
       );
       if (index != visibleColumns.length - 1) {
-        cells.add(const SizedBox(width: _columnSpacing));
+        cells.add(SizedBox(width: columnSpacing));
       }
     }
     return Container(
@@ -1707,12 +1791,18 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                         }
                         overrideContentWidth += overrideAdjusted[i];
                       }
-                      final spacingWidth =
-                          _columnSpacing *
-                          math.max(0, visibleColumns.length - 1);
+                      final spacingCount = math.max(
+                        0,
+                        visibleColumns.length - 1,
+                      );
+                      final baseSpacing = spacingCount == 0
+                          ? 0.0
+                          : metrics.columnSpacing;
+                      final manualSpacingWidth = baseSpacing * spacingCount;
                       final manualMetrics = _TableMetrics(
                         columnWidths: overrideAdjusted,
-                        totalWidth: overrideContentWidth + spacingWidth,
+                        totalWidth: overrideContentWidth + manualSpacingWidth,
+                        columnSpacing: baseSpacing,
                       );
                       final mediaWidth = MediaQuery.maybeOf(
                         context,
@@ -1733,12 +1823,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                         lockedColumns: lockedIndices,
                       );
                       final adjustedColumns = fittedMetrics.columnWidths;
-                      final adjustedContentWidth = adjustedColumns.fold<double>(
-                        0,
-                        (sum, width) => sum + width,
-                      );
-                      final naturalTableWidth =
-                          adjustedContentWidth + spacingWidth;
+                      final columnSpacing = spacingCount == 0
+                          ? 0.0
+                          : fittedMetrics.columnSpacing;
+                      final naturalTableWidth = fittedMetrics.totalWidth;
                       final viewportBaseline = availableViewportWidth.isFinite
                           ? availableViewportWidth
                           : naturalTableWidth;
@@ -1753,6 +1841,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                           visibleColumns,
                           adjustedColumns,
                           tableWidth,
+                          columnSpacing,
                           dados,
                         ),
                         const SizedBox(height: 8),
@@ -1775,12 +1864,16 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                               visibleColumns,
                               adjustedColumns,
                               tableWidth,
+                              columnSpacing,
                               pauseColor,
                             ),
                           );
                         }
                       }
-                      return SingleChildScrollView(
+                      final needsHorizontalScroll =
+                          naturalTableWidth - viewportBaseline > 0.5;
+                      final tableView = SingleChildScrollView(
+                        controller: _tableScrollController,
                         scrollDirection: Axis.horizontal,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
@@ -1794,6 +1887,14 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                             ),
                           ),
                         ),
+                      );
+                      return Scrollbar(
+                        controller: _tableScrollController,
+                        thumbVisibility: needsHorizontalScroll,
+                        trackVisibility: needsHorizontalScroll,
+                        notificationPredicate: (notification) =>
+                            notification.metrics.axis == Axis.horizontal,
+                        child: tableView,
                       );
                     },
                   ),
