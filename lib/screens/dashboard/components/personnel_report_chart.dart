@@ -1370,13 +1370,6 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       }
     }
 
-    final effectiveWidth = contentWidth > targetWidth
-        ? contentWidth
-        : targetWidth;
-    final fillerWidth = effectiveWidth - contentWidth > tolerance
-        ? effectiveWidth - contentWidth
-        : 0.0;
-
     final cells = <Widget>[];
     for (var index = 0; index < visibleColumns.length; index++) {
       final columnKey = visibleColumns[index];
@@ -1425,17 +1418,23 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         cells.add(SizedBox(width: math.max(0, gapWidth)));
       }
     }
-    if (fillerWidth > tolerance) {
-      cells.add(SizedBox(width: fillerWidth));
-    }
+    final safeContentWidth = math.max(0.0, contentWidth);
+    final contentRow = Row(mainAxisSize: MainAxisSize.min, children: cells);
+    final containerWidth = math.max(targetWidth, safeContentWidth);
     return Container(
-      width: effectiveWidth,
+      width: containerWidth,
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: borderColor),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: cells),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: SizedBox(
+          width: safeContentWidth,
+          child: contentRow,
+        ),
+      ),
     );
   }
 
@@ -1551,13 +1550,6 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       }
     }
 
-    final effectiveWidth = contentWidth > targetWidth
-        ? contentWidth
-        : targetWidth;
-    final fillerWidth = effectiveWidth - contentWidth > tolerance
-        ? effectiveWidth - contentWidth
-        : 0.0;
-
     final cells = <Widget>[];
     for (var index = 0; index < visibleColumns.length; index++) {
       final columnKey = visibleColumns[index];
@@ -1586,18 +1578,24 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         cells.add(SizedBox(width: math.max(0, gapWidth)));
       }
     }
-    if (fillerWidth > tolerance) {
-      cells.add(SizedBox(width: fillerWidth));
-    }
+    final safeContentWidth = math.max(0.0, contentWidth);
+    final contentRow = Row(mainAxisSize: MainAxisSize.min, children: cells);
+    final containerWidth = math.max(targetWidth, safeContentWidth);
     return Container(
-      width: effectiveWidth,
+      width: containerWidth,
       decoration: BoxDecoration(
         color: background,
         border: Border(
           bottom: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
         ),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: cells),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: SizedBox(
+          width: safeContentWidth,
+          child: contentRow,
+        ),
+      ),
     );
   }
 
