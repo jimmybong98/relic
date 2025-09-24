@@ -990,12 +990,12 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         var iconTapSize = contentWidth >= 72
             ? 32.0
             : contentWidth >= 54
-                ? 28.0
-                : contentWidth >= 40
-                    ? 24.0
-                    : contentWidth >= 30
-                        ? 20.0
-                        : contentWidth * 0.7;
+            ? 28.0
+            : contentWidth >= 40
+            ? 24.0
+            : contentWidth >= 30
+            ? 20.0
+            : contentWidth * 0.7;
         final minTapSize = math.min(18.0, contentWidth);
         iconTapSize = iconTapSize.clamp(minTapSize, contentWidth);
         final availableForLabel = math.max(0.0, contentWidth - iconTapSize);
@@ -1021,8 +1021,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           bottom: _cellVerticalPadding,
         );
 
-        final resolvedHeight = constraints.maxHeight.isFinite &&
-                constraints.maxHeight > 0
+        final resolvedHeight =
+            constraints.maxHeight.isFinite && constraints.maxHeight > 0
             ? constraints.maxHeight
             : _headerRowMinHeight;
         return SizedBox(
@@ -1057,8 +1057,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                 child: Padding(
                   padding: iconPadding,
                   child: Tooltip(
-                    message:
-                        filterActive ? 'Editar filtro' : 'Filtrar coluna',
+                    message: filterActive ? 'Editar filtro' : 'Filtrar coluna',
                     child: SizedBox(
                       width: iconTapSize,
                       height: iconTapSize,
@@ -1066,8 +1065,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                         type: MaterialType.transparency,
                         child: InkWell(
                           onTap: onFilter,
-                          borderRadius:
-                              BorderRadius.circular(iconTapSize / 2),
+                          borderRadius: BorderRadius.circular(iconTapSize / 2),
                           child: Center(
                             child: Icon(
                               filterActive
@@ -1324,9 +1322,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       var overflow = contentWidth - targetWidth;
 
       if (gapWidths.isNotEmpty) {
-        for (var index = gapWidths.length - 1;
-            index >= 0 && overflow > tolerance;
-            index--) {
+        for (
+          var index = gapWidths.length - 1;
+          index >= 0 && overflow > tolerance;
+          index--
+        ) {
           final available = gapWidths[index];
           if (available <= 0) {
             continue;
@@ -1340,9 +1340,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       }
 
       if (overflow > tolerance) {
-        for (var index = resolvedWidths.length - 1;
-            index >= 0 && overflow > tolerance;
-            index--) {
+        for (
+          var index = resolvedWidths.length - 1;
+          index >= 0 && overflow > tolerance;
+          index--
+        ) {
           final available = resolvedWidths[index] - _minColumnWidth;
           if (available <= 0) {
             continue;
@@ -1378,42 +1380,42 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           width: width,
           child: Container(
             constraints: const BoxConstraints(minHeight: _headerRowMinHeight),
-            child: Row(
-              mainAxisSize: MainAxisSize.max,
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Stack(
+              fit: StackFit.expand,
+              clipBehavior: Clip.none,
               children: [
-                Expanded(
-                  child: Container(
-                    padding: EdgeInsetsDirectional.only(
-                      start: _cellHorizontalPadding,
-                      end: _cellHorizontalPadding,
-                      top: _cellVerticalPadding,
-                      bottom: _cellVerticalPadding,
-                    ),
-                    alignment: Alignment.centerLeft,
-                    child: _buildHeaderLabel(
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    start: _cellHorizontalPadding,
+                    end: _cellHorizontalPadding + _resizeHandleHitWidth,
+                  ),
+                  child: _buildHeaderLabel(
+                    context,
+                    columnKey,
+                    headerMap[columnKey] ?? columnKey,
+                    () => _hideColumn(columnKey),
+                    () => _showColumnFilterSheet(
                       context,
                       columnKey,
                       headerMap[columnKey] ?? columnKey,
-                      () => _hideColumn(columnKey),
-                      () => _showColumnFilterSheet(
-                        context,
-                        columnKey,
-                        headerMap[columnKey] ?? columnKey,
-                        sourceRows,
-                      ),
-                      _isColumnFiltered(columnKey),
+                      sourceRows,
                     ),
+                    _isColumnFiltered(columnKey),
                   ),
                 ),
-                _buildResizeHandle(context, columnKey, width),
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: _buildResizeHandle(context, columnKey, width),
+                ),
               ],
             ),
           ),
         ),
       );
       if (index != visibleColumns.length - 1) {
-        final gapWidth = gapWidths.isNotEmpty ? gapWidths[index] : columnSpacing;
+        final gapWidth = gapWidths.isNotEmpty
+            ? gapWidths[index]
+            : columnSpacing;
         cells.add(SizedBox(width: math.max(0, gapWidth)));
       }
     }
@@ -1495,9 +1497,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       var overflow = contentWidth - targetWidth;
 
       if (gapWidths.isNotEmpty) {
-        for (var index = gapWidths.length - 1;
-            index >= 0 && overflow > tolerance;
-            index--) {
+        for (
+          var index = gapWidths.length - 1;
+          index >= 0 && overflow > tolerance;
+          index--
+        ) {
           final available = gapWidths[index];
           if (available <= 0) {
             continue;
@@ -1511,9 +1515,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       }
 
       if (overflow > tolerance) {
-        for (var index = resolvedWidths.length - 1;
-            index >= 0 && overflow > tolerance;
-            index--) {
+        for (
+          var index = resolvedWidths.length - 1;
+          index >= 0 && overflow > tolerance;
+          index--
+        ) {
           final available = resolvedWidths[index] - _minColumnWidth;
           if (available <= 0) {
             continue;
@@ -1562,7 +1568,9 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         ),
       );
       if (index != visibleColumns.length - 1) {
-        final gapWidth = gapWidths.isNotEmpty ? gapWidths[index] : columnSpacing;
+        final gapWidth = gapWidths.isNotEmpty
+            ? gapWidths[index]
+            : columnSpacing;
         cells.add(SizedBox(width: math.max(0, gapWidth)));
       }
     }
