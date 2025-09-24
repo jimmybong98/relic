@@ -22,6 +22,16 @@ class _TableMetrics {
   final double totalWidth;
 }
 
+class _FilterDialogResult {
+  const _FilterDialogResult({
+    this.selectedValues = const <String>{},
+    this.clearFilter = false,
+  });
+
+  final Set<String> selectedValues;
+  final bool clearFilter;
+}
+
 class _PersonnelReportChartState extends State<PersonnelReportChart> {
   final _osCtrl = TextEditingController();
   final _partCtrl = TextEditingController();
@@ -41,6 +51,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   final Map<String, Map<String, double>> _columnWidthOverrides = {
     'operador': <String, double>{},
     'preparador': <String, double>{},
+  };
+  final Map<String, Map<String, Set<String>>> _columnFilters = {
+    'operador': <String, Set<String>>{},
+    'preparador': <String, Set<String>>{},
   };
 
   String? _activeResizeColumn;
@@ -193,6 +207,281 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     return result;
   }
 
+  String _normalizeFilterValue(dynamic value) {
+    final raw = value?.toString();
+    if (raw == null) return '';
+    return raw.trim();
+  }
+
+  String _describeFilterValue(String value) {
+    return value.isEmpty ? '(Vazio)' : value;
+  }
+
+  String _formatFilterPreview(Set<String> values) {
+    if (values.isEmpty) return '';
+    const maxPreview = 2;
+    final sorted = values.map(_describeFilterValue).toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    if (sorted.length <= maxPreview) {
+      return sorted.join(', ');
+    }
+    final remaining = sorted.length - maxPreview;
+    return '${sorted.take(maxPreview).join(', ')} +$remaining';
+  }
+
+  bool _isColumnFiltered(String columnKey) {
+    final filters = _columnFilters[_tipo];
+    if (filters == null) return false;
+    final values = filters[columnKey];
+    return values != null && values.isNotEmpty;
+  }
+
+  void _clearFilter(String columnKey) {
+    final filters = _columnFilters[_tipo];
+    if (filters == null) return;
+    if (!filters.containsKey(columnKey)) return;
+    setState(() {
+      filters.remove(columnKey);
+    });
+  }
+
+  void _clearAllFilters() {
+    final filters = _columnFilters[_tipo];
+    if (filters == null || filters.isEmpty) return;
+    setState(() {
+      filters.clear();
+    });
+  }
+
+  List<Map<String, dynamic>> _applyFiltersToRows(
+    List<Map<String, dynamic>> rows,
+    Map<String, Set<String>> filters,
+  ) {
+    if (rows.isEmpty || filters.isEmpty) {
+      return List<Map<String, dynamic>>.from(rows);
+    }
+
+    final normalizedFilters = <String, Set<String>>{};
+    filters.forEach((key, value) {
+      if (value.isNotEmpty) {
+        normalizedFilters[key] = value;
+      }
+    });
+
+    if (normalizedFilters.isEmpty) {
+      return List<Map<String, dynamic>>.from(rows);
+    }
+
+    final result = <Map<String, dynamic>>[];
+    Map<String, dynamic>? activeGroup;
+    var groupRows = <Map<String, dynamic>>[];
+
+    void flushGroup() {
+      if (activeGroup != null) {
+        if (groupRows.isNotEmpty) {
+          result.add(activeGroup!);
+          result.addAll(groupRows);
+        }
+        activeGroup = null;
+        groupRows = <Map<String, dynamic>>[];
+      }
+    }
+
+    for (final row in rows) {
+      if (row['__isGroup'] == true) {
+        flushGroup();
+        activeGroup = row;
+        continue;
+      }
+
+      var include = true;
+      for (final entry in normalizedFilters.entries) {
+        final normalizedValue = _normalizeFilterValue(row[entry.key]);
+        if (!entry.value.contains(normalizedValue)) {
+          include = false;
+          break;
+        }
+      }
+
+      if (!include) {
+        continue;
+      }
+
+      if (activeGroup != null) {
+        groupRows.add(row);
+      } else {
+        result.add(row);
+      }
+    }
+
+    flushGroup();
+    return result;
+  }
+
+  List<Map<String, dynamic>> _applyActiveFilters(
+    List<Map<String, dynamic>> rows,
+  ) {
+    final filters = _columnFilters[_tipo];
+    if (filters == null || filters.isEmpty) {
+      return List<Map<String, dynamic>>.from(rows);
+    }
+    return _applyFiltersToRows(rows, filters);
+  }
+
+  Future<void> _showColumnFilterSheet(
+    BuildContext context,
+    String columnKey,
+    String label,
+    List<Map<String, dynamic>> sourceRows,
+  ) async {
+    final filters = _columnFilters[_tipo]!;
+    final otherFilters = <String, Set<String>>{};
+    filters.forEach((key, value) {
+      if (key == columnKey || value.isEmpty) return;
+      otherFilters[key] = value;
+    });
+
+    final rowsForValues = _applyFiltersToRows(sourceRows, otherFilters);
+    final values = <String>{};
+    for (final row in rowsForValues) {
+      if (row['__isGroup'] == true) {
+        continue;
+      }
+      values.add(_normalizeFilterValue(row[columnKey]));
+    }
+
+    if (values.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Nenhum valor disponível para filtrar em $label.'),
+        ),
+      );
+      return;
+    }
+
+    final sortedValues = values.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final currentSelection = filters[columnKey];
+    final initialSelection =
+        (currentSelection == null || currentSelection.isEmpty)
+        ? sortedValues.toSet()
+        : currentSelection.where(values.contains).toSet();
+
+    final result = await showDialog<_FilterDialogResult>(
+      context: context,
+      builder: (context) {
+        var tempSelected = initialSelection.isEmpty
+            ? sortedValues.toSet()
+            : Set<String>.from(initialSelection);
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final allSelected = tempSelected.length == sortedValues.length;
+            final listHeight = math.min(320.0, 36.0 * sortedValues.length + 12);
+            return AlertDialog(
+              title: Text('Filtrar $label'),
+              content: SizedBox(
+                width: 340,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CheckboxListTile(
+                      dense: true,
+                      value: allSelected,
+                      onChanged: (value) {
+                        setModalState(() {
+                          if (value == true) {
+                            tempSelected = sortedValues.toSet();
+                          } else {
+                            tempSelected = <String>{};
+                          }
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: const Text('Selecionar tudo'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    const Divider(height: 12),
+                    SizedBox(
+                      height: listHeight,
+                      child: Scrollbar(
+                        thumbVisibility: sortedValues.length > 8,
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: sortedValues.length,
+                          itemBuilder: (context, index) {
+                            final value = sortedValues[index];
+                            final checked = tempSelected.contains(value);
+                            return CheckboxListTile(
+                              dense: true,
+                              value: checked,
+                              onChanged: (selected) {
+                                setModalState(() {
+                                  if (selected == true) {
+                                    tempSelected.add(value);
+                                  } else {
+                                    tempSelected.remove(value);
+                                  }
+                                });
+                              },
+                              controlAffinity: ListTileControlAffinity.leading,
+                              title: Text(_describeFilterValue(value)),
+                              contentPadding: EdgeInsets.zero,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(
+                      context,
+                    ).pop(const _FilterDialogResult(clearFilter: true));
+                  },
+                  child: const Text('Limpar filtro'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: tempSelected.isEmpty
+                      ? null
+                      : () {
+                          Navigator.of(context).pop(
+                            _FilterDialogResult(
+                              selectedValues: Set<String>.from(tempSelected),
+                            ),
+                          );
+                        },
+                  child: const Text('Aplicar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      if (result.clearFilter ||
+          result.selectedValues.isEmpty ||
+          result.selectedValues.length == sortedValues.length) {
+        filters.remove(columnKey);
+      } else {
+        filters[columnKey] = Set<String>.from(result.selectedValues);
+      }
+    });
+  }
+
   @override
   void dispose() {
     _osCtrl.dispose();
@@ -210,9 +499,14 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       _tipo,
       () => <String, double>{},
     );
+    final filters = _columnFilters.putIfAbsent(
+      _tipo,
+      () => <String, Set<String>>{},
+    );
     order.removeWhere((key) => !allowedSet.contains(key));
     hidden.removeWhere((key) => !allowedSet.contains(key));
     overrides.removeWhere((key, _) => !allowedSet.contains(key));
+    filters.removeWhere((key, _) => !allowedSet.contains(key));
     for (final key in allowedKeys) {
       if (!order.contains(key)) {
         order.add(key);
@@ -409,10 +703,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final minTotalWidth = minContentWidth + spacing;
 
     if (baseTotalWidth <= viewportWidth) {
-      return _TableMetrics(
-        columnWidths: adjusted,
-        totalWidth: math.max(baseTotalWidth, viewportWidth),
-      );
+      return _TableMetrics(columnWidths: adjusted, totalWidth: baseTotalWidth);
     }
 
     final targetTotalWidth = math.max(viewportWidth, minTotalWidth);
@@ -422,10 +713,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     if (remainingReduction <= 0) {
       final newContent = adjusted.fold<double>(0, (sum, width) => sum + width);
       final newTotal = newContent + spacing;
-      return _TableMetrics(
-        columnWidths: adjusted,
-        totalWidth: math.max(newTotal, viewportWidth),
-      );
+      return _TableMetrics(columnWidths: adjusted, totalWidth: newTotal);
     }
 
     const double tolerance = 0.1;
@@ -476,10 +764,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       (sum, width) => sum + width,
     );
     final finalTotalWidth = adjustedContentWidth + spacing;
-    return _TableMetrics(
-      columnWidths: adjusted,
-      totalWidth: math.max(finalTotalWidth, viewportWidth),
-    );
+    return _TableMetrics(columnWidths: adjusted, totalWidth: finalTotalWidth);
   }
 
   Widget _buildColumnChip(
@@ -602,21 +887,28 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildHeaderLabel(
+    BuildContext context,
     String columnKey,
     String label,
     VoidCallback onHide,
+    VoidCallback onFilter,
+    bool filterActive,
   ) {
-    return Tooltip(
-      message: 'Toque para ocultar',
-      child: InkWell(
-        onTap: onHide,
-        borderRadius: BorderRadius.circular(6),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
+    final theme = Theme.of(context);
+    final iconColor = filterActive
+        ? theme.colorScheme.primary
+        : theme.iconTheme.color?.withOpacity(0.7) ?? theme.hintColor;
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        Expanded(
+          child: Tooltip(
+            message: 'Toque para ocultar',
+            child: InkWell(
+              onTap: onHide,
+              borderRadius: BorderRadius.circular(6),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 child: Text(
                   label,
                   style: const TextStyle(fontSize: 12),
@@ -624,12 +916,29 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                   maxLines: 1,
                 ),
               ),
-              const SizedBox(width: 4),
-              const Icon(Icons.visibility_off_outlined, size: 16),
-            ],
+            ),
           ),
         ),
-      ),
+        const SizedBox(width: 4),
+        Tooltip(
+          message: filterActive ? 'Editar filtro' : 'Filtrar coluna',
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints.tightFor(width: 24, height: 24),
+              onPressed: onFilter,
+              icon: Icon(
+                filterActive ? Icons.filter_alt : Icons.filter_alt_outlined,
+                size: 16,
+                color: iconColor,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -770,8 +1079,59 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         ),
         const SizedBox(height: 6),
         Text(
-          'Toque para ocultar e arraste os chips, soltando nas áreas destacadas para reordenar. Arraste os divisores no cabeçalho para ajustar a largura das colunas.',
+          'Toque para ocultar e arraste os chips, soltando nas áreas destacadas para reordenar. Arraste os divisores no cabeçalho para ajustar a largura das colunas. Use o ícone de filtro no cabeçalho para filtrar os valores.',
           style: theme.textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+
+  Widget? _buildActiveFilterSummary(
+    BuildContext context,
+    Map<String, String> headerMap,
+    List<Map<String, dynamic>> sourceRows,
+  ) {
+    final filters = _columnFilters[_tipo];
+    if (filters == null || filters.isEmpty) {
+      return null;
+    }
+    final chips = <Widget>[];
+    filters.forEach((columnKey, values) {
+      if (values.isEmpty) return;
+      final label = headerMap[columnKey] ?? columnKey;
+      final preview = _formatFilterPreview(values);
+      chips.add(
+        InputChip(
+          avatar: const Icon(Icons.filter_alt, size: 18),
+          label: Text('$label: $preview'),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          onPressed: () =>
+              _showColumnFilterSheet(context, columnKey, label, sourceRows),
+          onDeleted: () => _clearFilter(columnKey),
+          deleteIcon: const Icon(Icons.close, size: 18),
+        ),
+      );
+    });
+
+    if (chips.isEmpty) {
+      return null;
+    }
+
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Filtros ativos', style: theme.textTheme.labelMedium),
+        const SizedBox(height: 6),
+        Wrap(spacing: 8, runSpacing: 8, children: chips),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _clearAllFilters,
+            icon: const Icon(Icons.filter_alt_off, size: 18),
+            label: const Text('Limpar filtros'),
+          ),
         ),
       ],
     );
@@ -783,6 +1143,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     List<String> visibleColumns,
     List<double> columnWidths,
     double totalWidth,
+    List<Map<String, dynamic>> sourceRows,
   ) {
     final theme = Theme.of(context);
     final background = theme.colorScheme.surfaceContainerHighest.withValues(
@@ -812,9 +1173,17 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                     ),
                     alignment: Alignment.centerLeft,
                     child: _buildHeaderLabel(
+                      context,
                       columnKey,
                       headerMap[columnKey] ?? columnKey,
                       () => _hideColumn(columnKey),
+                      () => _showColumnFilterSheet(
+                        context,
+                        columnKey,
+                        headerMap[columnKey] ?? columnKey,
+                        sourceRows,
+                      ),
+                      _isColumnFiltered(columnKey),
                     ),
                   ),
                 ),
@@ -1261,13 +1630,40 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                 visibleColumns,
                 hiddenColumns,
               );
+              final filterSummary = _buildActiveFilterSummary(
+                context,
+                headerMap,
+                dados,
+              );
+              final filteredRows = _applyActiveFilters(dados);
               if (visibleColumns.isEmpty) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     manager,
+                    if (filterSummary != null) ...[
+                      const SizedBox(height: 12),
+                      filterSummary,
+                    ],
                     const SizedBox(height: 12),
                     const Text('Selecione ao menos uma coluna para exibir.'),
+                  ],
+                );
+              }
+              if (filteredRows.isEmpty) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    manager,
+                    if (filterSummary != null) ...[
+                      const SizedBox(height: 12),
+                      filterSummary,
+                    ],
+                    const SizedBox(height: 12),
+                    Text(
+                      'Nenhum resultado com os filtros aplicados.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ],
                 );
               }
@@ -1275,6 +1671,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   manager,
+                  if (filterSummary != null) ...[
+                    const SizedBox(height: 12),
+                    filterSummary,
+                  ],
                   const SizedBox(height: 12),
                   LayoutBuilder(
                     builder: (context, constraints) {
@@ -1286,7 +1686,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                         context,
                         headerMap,
                         visibleColumns,
-                        dados,
+                        filteredRows,
                       );
                       final overrides =
                           _columnWidthOverrides[_tipo] ??
@@ -1333,7 +1733,19 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                         lockedColumns: lockedIndices,
                       );
                       final adjustedColumns = fittedMetrics.columnWidths;
-                      final tableWidth = fittedMetrics.totalWidth;
+                      final adjustedContentWidth = adjustedColumns.fold<double>(
+                        0,
+                        (sum, width) => sum + width,
+                      );
+                      final naturalTableWidth =
+                          adjustedContentWidth + spacingWidth;
+                      final viewportBaseline = availableViewportWidth.isFinite
+                          ? availableViewportWidth
+                          : naturalTableWidth;
+                      final tableWidth = math.max(
+                        naturalTableWidth,
+                        viewportBaseline,
+                      );
                       final rows = <Widget>[
                         _buildTableHeaderRow(
                           context,
@@ -1341,10 +1753,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                           visibleColumns,
                           adjustedColumns,
                           tableWidth,
+                          dados,
                         ),
                         const SizedBox(height: 8),
                       ];
-                      for (final row in dados) {
+                      for (final row in filteredRows) {
                         if (row['__isGroup'] == true) {
                           rows.add(
                             _buildGroupHeaderRow(
