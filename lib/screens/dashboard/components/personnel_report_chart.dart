@@ -48,6 +48,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   static const double _columnSpacing = 12;
   static const double _cellHorizontalPadding = 12;
   static const double _cellVerticalPadding = 10;
+  static const double _headerRowMinHeight = 44;
   static const double _horizontalMargin = 12;
   static const double _minColumnWidth = 40;
   static const double _maxColumnWidth = 480;
@@ -795,31 +796,31 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       cells.add(
         SizedBox(
           width: width,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: Container(
-                  padding: EdgeInsetsDirectional.only(
-                    start: _cellHorizontalPadding,
-                    end: _cellHorizontalPadding,
-                    top: _cellVerticalPadding,
-                    bottom: _cellVerticalPadding,
-                  ),
-                  alignment: Alignment.centerLeft,
-                  child: _buildHeaderLabel(
-                    columnKey,
-                    headerMap[columnKey] ?? columnKey,
-                    () => _hideColumn(columnKey),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: _headerRowMinHeight),
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: EdgeInsetsDirectional.only(
+                      start: _cellHorizontalPadding,
+                      end: _cellHorizontalPadding,
+                      top: _cellVerticalPadding,
+                      bottom: _cellVerticalPadding,
+                    ),
+                    alignment: Alignment.centerLeft,
+                    child: _buildHeaderLabel(
+                      columnKey,
+                      headerMap[columnKey] ?? columnKey,
+                      () => _hideColumn(columnKey),
+                    ),
                   ),
                 ),
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: _buildResizeHandle(context, columnKey, width),
-              ),
-            ],
+                _buildResizeHandle(context, columnKey, width),
+              ],
+            ),
           ),
         ),
       );
