@@ -1378,8 +1378,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       cells.add(
         SizedBox(
           width: width,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: _headerRowMinHeight),
+          child: SizedBox(
+            height: _headerRowMinHeight,
             child: Stack(
               fit: StackFit.expand,
               clipBehavior: Clip.none,
