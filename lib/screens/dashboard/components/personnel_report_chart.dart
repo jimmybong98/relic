@@ -980,47 +980,105 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final iconColor = filterActive
         ? theme.colorScheme.primary
         : theme.iconTheme.color?.withOpacity(0.7) ?? theme.hintColor;
-    return Row(
-      mainAxisSize: MainAxisSize.max,
-      children: [
-        Expanded(
-          child: Tooltip(
-            message: 'Toque para ocultar',
-            child: InkWell(
-              onTap: onHide,
-              borderRadius: BorderRadius.circular(6),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                child: Text(
-                  label,
-                  style: const TextStyle(fontSize: 12),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final contentWidth = constraints.maxWidth;
+        if (!contentWidth.isFinite || contentWidth <= 0) {
+          return const SizedBox.shrink();
+        }
+        var iconTapSize = contentWidth >= 72
+            ? 32.0
+            : contentWidth >= 54
+                ? 28.0
+                : contentWidth >= 40
+                    ? 24.0
+                    : contentWidth >= 30
+                        ? 20.0
+                        : contentWidth * 0.7;
+        iconTapSize = iconTapSize.clamp(18.0, contentWidth);
+        final availableForLabel = math.max(0.0, contentWidth - iconTapSize);
+        final startPadding = math.min(
+          _cellHorizontalPadding,
+          math.max(2.0, availableForLabel * 0.35),
+        );
+        final gap = math.max(2.0, math.min(6.0, startPadding));
+        var endPadding = iconTapSize + gap;
+        final maxEndPadding = math.max(0.0, contentWidth - startPadding);
+        if (endPadding > maxEndPadding) {
+          endPadding = maxEndPadding;
+        }
+        final labelPadding = EdgeInsetsDirectional.only(
+          start: startPadding,
+          end: endPadding,
+          top: _cellVerticalPadding,
+          bottom: _cellVerticalPadding,
+        );
+        final iconPadding = EdgeInsetsDirectional.only(
+          end: math.max(2.0, math.min(startPadding, _cellHorizontalPadding)),
+          top: _cellVerticalPadding,
+          bottom: _cellVerticalPadding,
+        );
+
+        return SizedBox.expand(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned.fill(
+                child: Padding(
+                  padding: labelPadding,
+                  child: Tooltip(
+                    message: 'Toque para ocultar',
+                    child: InkWell(
+                      onTap: onHide,
+                      borderRadius: BorderRadius.circular(6),
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          label,
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Tooltip(
-          message: filterActive ? 'Editar filtro' : 'Filtrar coluna',
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.compact,
-              constraints: const BoxConstraints.tightFor(width: 24, height: 24),
-              onPressed: onFilter,
-              icon: Icon(
-                filterActive ? Icons.filter_alt : Icons.filter_alt_outlined,
-                size: 16,
-                color: iconColor,
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: Padding(
+                  padding: iconPadding,
+                  child: Tooltip(
+                    message:
+                        filterActive ? 'Editar filtro' : 'Filtrar coluna',
+                    child: SizedBox(
+                      width: iconTapSize,
+                      height: iconTapSize,
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: InkWell(
+                          onTap: onFilter,
+                          borderRadius:
+                              BorderRadius.circular(iconTapSize / 2),
+                          child: Center(
+                            child: Icon(
+                              filterActive
+                                  ? Icons.filter_alt
+                                  : Icons.filter_alt_outlined,
+                              size: iconTapSize <= 20 ? 14 : 16,
+                              color: iconColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
