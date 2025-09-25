@@ -1099,15 +1099,3 @@ class _MeasurementTileState extends State<MeasurementTile> {
     return _buildAutomaticEntry(context);
   }
 }
-
-double? _parseManualValue(String txt) {
-  final normalized = txt.replaceAll(',', '.').trim();
-  if (normalized.isEmpty) return null;
-  return double.tryParse(normalized);
-}
-
-double? _parseAngleInput(String txt) {
-  final sanitized = txt.replaceAll(RegExp("[°º'’′\"″”]"), '').trim();
-  if (sanitized.isEmpty) return null;
-  return _parseManualValue(sanitized);
-}
