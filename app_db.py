@@ -2493,7 +2493,7 @@ def relatorio_status_os():
             return "Finalizada"
         return "Aberta"
 
-    def _classificar_escolha(texto: str) -> Optional[str]:
+    def _classificar_status(texto: str) -> Optional[str]:
         if not texto:
             return None
         base = _normalize_text(_strip_side_prefix(texto))
@@ -2502,10 +2502,14 @@ def relatorio_status_os():
         if "reprov" in base:
             if "abaix" in base:
                 return "reprovada_abaixo"
+            if "acima" in base:
+                return "reprovada_acima"
             return "reprovada_acima"
         if "alerta" in base:
             if "abaix" in base:
                 return "alerta_abaixo"
+            if "acima" in base:
+                return "alerta_acima"
             return "alerta_acima"
         if base in {"ok", "aprovado", "aprovada", "conforme"}:
             return "ok"
@@ -2562,7 +2566,7 @@ def relatorio_status_os():
 
                 cur.execute(
                     """
-                    SELECT a.os, a.partnumber, a.maquina, i.escolha
+                    SELECT a.os, a.partnumber, a.maquina, i.status, i.escolha
                       FROM operador_amostragem a
                       JOIN operador_amostragem_item i ON i.amostragem_id = a.id
                     """,
@@ -2602,9 +2606,13 @@ def relatorio_status_os():
                             lista_cat = dados.setdefault("categorias", [])
                             if categoria not in lista_cat:
                                 lista_cat.append(categoria)
-                    escolha = row.get("escolha") or ""
-                    for parte in _split_choices(escolha):
-                        chave = _classificar_escolha(parte)
+                    status_bruto = row.get("status") or ""
+                    partes_status = _split_choices(status_bruto)
+                    if not partes_status:
+                        escolha = row.get("escolha") or ""
+                        partes_status = _split_choices(escolha)
+                    for parte in partes_status:
+                        chave = _classificar_status(parte)
                         if chave is None:
                             continue
                         dados[chave] = dados.get(chave, 0) + 1
