@@ -211,6 +211,10 @@ class _StatusOsPageState extends State<StatusOsPage> {
     });
   }
 
+  int _contarOsPorStatus(String status) {
+    return _rows.where((row) => (row['status'] ?? '') == status).length;
+  }
+
   Map<String, int> _totaisPorStatus(String status) {
     final totais = {for (final key in _statusKeys) key: 0};
     for (final row in _rows) {
@@ -325,15 +329,64 @@ class _StatusOsPageState extends State<StatusOsPage> {
     );
   }
 
+  Widget _buildResumoStatus() {
+    final abertas = _contarOsPorStatus('Aberta');
+    final finalizadas = _contarOsPorStatus('Finalizada');
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cards = [
+          _StatusCountCard(
+            key: const ValueKey('status_card_abertas'),
+            titulo: 'OS abertas',
+            total: abertas,
+            icon: Icons.folder_open_outlined,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          _StatusCountCard(
+            key: const ValueKey('status_card_finalizadas'),
+            titulo: 'OS finalizadas',
+            total: finalizadas,
+            icon: Icons.task_alt_outlined,
+            color: Theme.of(context).colorScheme.secondary,
+          ),
+        ];
+
+        if (constraints.maxWidth < 720) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [cards[0], const SizedBox(height: 16), cards[1]],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: cards[0]),
+            const SizedBox(width: 16),
+            Expanded(child: cards[1]),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildGraficos() {
     final totaisAbertas = _totaisPorStatus('Aberta');
-    final totaisFechadas = _totaisPorStatus('Finalizada');
+    final totaisFinalizadas = _totaisPorStatus('Finalizada');
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final charts = [
-          _StatusPieCard(titulo: 'OS abertas', totais: totaisAbertas),
-          _StatusPieCard(titulo: 'OS finalizadas', totais: totaisFechadas),
+          _StatusPieCard(
+            key: const ValueKey('status_pie_abertas'),
+            titulo: 'OS abertas',
+            totais: totaisAbertas,
+          ),
+          _StatusPieCard(
+            key: const ValueKey('status_pie_finalizadas'),
+            titulo: 'OS finalizadas',
+            totais: totaisFinalizadas,
+          ),
         ];
 
         if (constraints.maxWidth < 720) {
@@ -478,6 +531,8 @@ class _StatusOsPageState extends State<StatusOsPage> {
               const SizedBox(height: 16),
               _buildFiltros(),
               const SizedBox(height: 16),
+              _buildResumoStatus(),
+              const SizedBox(height: 16),
               _buildGraficos(),
               const SizedBox(height: 16),
               Expanded(child: _buildTabela(headers)),
@@ -489,8 +544,67 @@ class _StatusOsPageState extends State<StatusOsPage> {
   }
 }
 
+class _StatusCountCard extends StatelessWidget {
+  const _StatusCountCard({
+    super.key,
+    required this.titulo,
+    required this.total,
+    required this.icon,
+    required this.color,
+  });
+
+  final String titulo;
+  final int total;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(titulo, style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$total',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _StatusPieCard extends StatelessWidget {
-  const _StatusPieCard({required this.titulo, required this.totais});
+  const _StatusPieCard({
+    super.key,
+    required this.titulo,
+    required this.totais,
+  });
 
   final String titulo;
   final Map<String, int> totais;
