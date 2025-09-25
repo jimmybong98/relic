@@ -15,6 +15,18 @@ from datetime import date, datetime
 
 from openpyxl import Workbook
 
+LIBERACAO_STATUS_OK = (
+    "liberada",
+    "liberado",
+    "ok",
+    "aprovada",
+    "aprovado",
+)
+
+
+def _status_liberacao_final(status: Optional[str]) -> bool:
+    return (status or "").strip().lower() in LIBERACAO_STATUS_OK
+
 # --------- MySQL ----------
 import pymysql
 from pymysql.cursors import DictCursor
@@ -882,11 +894,74 @@ def _maquina_liberada(
         if status_atual == "encerrada":
             return (False, "ordem_servico", "status=encerrada")
         if status_atual == "pausada":
-            return (False, "ordem_servico", "status=pausada")
+            # Verifica se há liberação final posterior à pausa mais recente.
+            with conn.cursor() as cur:
+                placeholders = ",".join(["%s"] * len(LIBERACAO_STATUS_OK))
+                cur.execute(
+                    f"""
+                    SELECT created_at
+                      FROM preparador_liberacao
+                     WHERE os=%s
+                       AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
+                       AND maquina=%s
+                       AND LOWER(COALESCE(status_geral,'')) IN ({placeholders})
+                     ORDER BY id DESC
+                     LIMIT 1
+                    """,
+                    (os_num, part, maquina, *LIBERACAO_STATUS_OK),
+                )
+                ultima_liberacao = cur.fetchone()
+
+            ultima_liberacao_at = (
+                ultima_liberacao.get("created_at") if ultima_liberacao else None
+            )
+
+            ultima_pausa_at = None
+            retorno_at = None
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT pausa_at, retorno_at
+                      FROM operador_jornada
+                     WHERE os=%s
+                       AND (partnumber IS NULL OR partnumber = %s OR %s IS NULL)
+                       AND (operacao IS NULL OR operacao = %s OR %s IS NULL)
+                     ORDER BY pausa_at DESC
+                     LIMIT 1
+                    """,
+                    (os_num, part or None, part or None, op or None, op or None),
+                )
+                ultima_pausa = cur.fetchone()
+                if ultima_pausa:
+                    ultima_pausa_at = ultima_pausa.get("pausa_at")
+                    retorno_at = ultima_pausa.get("retorno_at")
+
+            pode_reabrir = False
+            if retorno_at is not None:
+                pode_reabrir = True
+            elif ultima_liberacao_at and (
+                not ultima_pausa_at or ultima_liberacao_at >= ultima_pausa_at
+            ):
+                pode_reabrir = True
+
+            if pode_reabrir:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        UPDATE ordem_servico
+                           SET status='aberta'
+                         WHERE os=%s
+                        """,
+                        (os_num,),
+                    )
+                conn.commit()
+                status_atual = "aberta"
+            else:
+                return (False, "ordem_servico", "status=pausada")
         # 1) Se existir liberação com status final, já libera
 
         cur.execute(
-            """
+            f"""
             SELECT status_geral
             FROM preparador_liberacao
             WHERE os=%s
@@ -900,8 +975,8 @@ def _maquina_liberada(
         )
         row = cur.fetchone()
         if row:
-            st = (row.get("status_geral") or "").strip().lower()
-            if st in ("liberada", "liberado", "ok", "aprovada", "aprovado"):
+            st = row.get("status_geral")
+            if _status_liberacao_final(st):
                 return (True, "preparador_liberacao", f"status_geral={st}")
             # se há registro mas não liberada, informa
             return (False, "preparador_liberacao", f"status_geral={st or 'indefinido'}")
@@ -1235,17 +1310,18 @@ def resultado_preparador():
                 )
 
             with c.cursor() as cur:
+                placeholders = ",".join(["%s"] * len(LIBERACAO_STATUS_OK))
                 cur.execute(
-                    """
+                    f"""
                     SELECT partnumber, operacao, status_geral
                     FROM preparador_liberacao
                     WHERE os=%s
                       AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
                       AND maquina=%s
-                      AND status_geral IN ('liberada','liberado','ok','aprovada','aprovado')
+                      AND LOWER(COALESCE(status_geral,'')) IN ({placeholders})
                     ORDER BY id DESC LIMIT 1
                     """,
-                    (os_num, part, maquina),
+                    (os_num, part, maquina, *LIBERACAO_STATUS_OK),
                 )
                 row_os = cur.fetchone()
                 if row_os and contexto_tipo != "troca_ferramenta":
@@ -1413,6 +1489,17 @@ def resultado_preparador():
                             parsed["instrumento"] or None,
                             parsed["observacao"],
                         ),
+                    )
+
+                if _status_liberacao_final(status_geral):
+                    cur.execute(
+                        """
+                        UPDATE ordem_servico
+                           SET status='aberta'
+                         WHERE os=%s
+                           AND LOWER(TRIM(COALESCE(status,''))) IN ('', 'pausada')
+                        """,
+                        (os_num,),
                     )
 
                 if contexto_tipo == "troca_ferramenta":
