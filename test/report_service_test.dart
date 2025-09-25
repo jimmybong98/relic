@@ -60,4 +60,15 @@ void main() {
     expect(requestedUri.queryParameters['section'], 'liberacao');
     expect(requestedUri.queryParameters['os'], '456');
   });
+
+  test('fetchOsStatusOverview hits os_status endpoint', () async {
+    late Uri requestedUri;
+    final client = MockClient((req) async {
+      requestedUri = req.url;
+      return http.Response('[]', 200);
+    });
+    final service = ReportService(client: client, baseUrl: 'http://dummy');
+    await service.fetchOsStatusOverview();
+    expect(requestedUri.path, '/reports/os_status');
+  });
 }
