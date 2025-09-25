@@ -629,6 +629,13 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Jornada pausada. Motivo: $motivo')),
         );
+
+        if (motivo == 'Fim do Turno') {
+          setState(() {
+            _reCtrl.clear();
+          });
+        }
+
         return true;
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
