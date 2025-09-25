@@ -211,6 +211,10 @@ class _StatusOsPageState extends State<StatusOsPage> {
     });
   }
 
+  int _contarOsPorStatus(String status) {
+    return _rows.where((row) => (row['status'] ?? '') == status).length;
+  }
+
   Map<String, int> _totaisPorStatus(String status) {
     final totais = {for (final key in _statusKeys) key: 0};
     for (final row in _rows) {
@@ -326,28 +330,58 @@ class _StatusOsPageState extends State<StatusOsPage> {
   }
 
   Widget _buildGraficos() {
+    final abertas = _contarOsPorStatus('Aberta');
+    final finalizadas = _contarOsPorStatus('Finalizada');
     final totaisAbertas = _totaisPorStatus('Aberta');
-    final totaisFechadas = _totaisPorStatus('Finalizada');
+    final totaisFinalizadas = _totaisPorStatus('Finalizada');
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final isStacked = constraints.maxWidth < 720;
+        final cards = [
+          _StatusCountCard(
+            titulo: 'OS abertas',
+            total: abertas,
+            icon: Icons.folder_open_outlined,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          _StatusCountCard(
+            titulo: 'OS finalizadas',
+            total: finalizadas,
+            icon: Icons.task_alt_outlined,
+            color: Theme.of(context).colorScheme.secondary,
+          ),
+        ];
         final charts = [
           _StatusPieCard(titulo: 'OS abertas', totais: totaisAbertas),
-          _StatusPieCard(titulo: 'OS finalizadas', totais: totaisFechadas),
+          _StatusPieCard(titulo: 'OS finalizadas', totais: totaisFinalizadas),
         ];
 
-        if (constraints.maxWidth < 720) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [charts[0], const SizedBox(height: 16), charts[1]],
-          );
-        }
-
-        return Row(
+        return Column(
+          crossAxisAlignment:
+              isStacked ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
           children: [
-            Expanded(child: charts[0]),
-            const SizedBox(width: 16),
-            Expanded(child: charts[1]),
+            if (isStacked)
+              ...[cards[0], const SizedBox(height: 16), cards[1]]
+            else
+              Row(
+                children: [
+                  Expanded(child: cards[0]),
+                  const SizedBox(width: 16),
+                  Expanded(child: cards[1]),
+                ],
+              ),
+            const SizedBox(height: 16),
+            if (isStacked)
+              ...[charts[0], const SizedBox(height: 16), charts[1]]
+            else
+              Row(
+                children: [
+                  Expanded(child: charts[0]),
+                  const SizedBox(width: 16),
+                  Expanded(child: charts[1]),
+                ],
+              ),
           ],
         );
       },
@@ -483,6 +517,60 @@ class _StatusOsPageState extends State<StatusOsPage> {
               Expanded(child: _buildTabela(headers)),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusCountCard extends StatelessWidget {
+  const _StatusCountCard({
+    required this.titulo,
+    required this.total,
+    required this.icon,
+    required this.color,
+  });
+
+  final String titulo;
+  final int total;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(titulo, style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$total',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
