@@ -1,6 +1,7 @@
 // lib/features/operador/presentation/operador_page.dart
-import 'dart:io';
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
@@ -176,6 +177,12 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
   late final VoidCallback _osSyncListener;
   late final VoidCallback _partSyncListener;
   late final VoidCallback _opSyncListener;
+  Timer? _amostragemMonitorTimer;
+  SharedSearchFormState? _activeAmostragemFlow;
+  bool _amostragemCheckInProgress = false;
+  bool _amostragemReminderDialogOpen = false;
+  DateTime? _lastAmostragem;
+  DateTime? _lastReminderShownAt;
 
   @override
   void initState() {
@@ -203,6 +210,175 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     _partCtrl.addListener(_partSyncListener);
     _opCtrl.addListener(_opSyncListener);
     _carregarMaquinas();
+
+    ref.listen<SharedSearchFormState>(
+      sharedSearchFormProvider,
+      (previous, next) {
+        _handleFlowStateChange(previous, next);
+      },
+    );
+    _handleFlowStateChange(null, shared);
+  }
+
+  void _handleFlowStateChange(
+    SharedSearchFormState? previous,
+    SharedSearchFormState next,
+  ) {
+    if (!next.isActive ||
+        next.effectiveProcess != SearchFlowProcess.amostragem) {
+      _activeAmostragemFlow = null;
+      _cancelAmostragemMonitor();
+      return;
+    }
+
+    final wasActive = previous != null &&
+        previous.isActive &&
+        previous.effectiveProcess == SearchFlowProcess.amostragem;
+
+    final previousFlow = _activeAmostragemFlow;
+    _activeAmostragemFlow = next;
+    if (!wasActive || previousFlow == null || !next.matches(previousFlow)) {
+      _resetAmostragemReminderState();
+    }
+    _ensureAmostragemMonitorRunning();
+  }
+
+  void _resetAmostragemReminderState() {
+    _lastAmostragem = null;
+    _lastReminderShownAt = null;
+  }
+
+  void _ensureAmostragemMonitorRunning() {
+    if (_amostragemMonitorTimer != null) {
+      return;
+    }
+    unawaited(_checkAmostragemRecente());
+    _amostragemMonitorTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => unawaited(_checkAmostragemRecente()),
+    );
+  }
+
+  void _cancelAmostragemMonitor() {
+    _amostragemMonitorTimer?.cancel();
+    _amostragemMonitorTimer = null;
+    _amostragemCheckInProgress = false;
+  }
+
+  Future<void> _checkAmostragemRecente() async {
+    if (_amostragemCheckInProgress) return;
+    final flow = _activeAmostragemFlow;
+    if (flow == null ||
+        !flow.isActive ||
+        flow.effectiveProcess != SearchFlowProcess.amostragem) {
+      return;
+    }
+
+    final os = flow.os.trim();
+    if (os.isEmpty) return;
+
+    final part = flow.partNumber.trim();
+    final op = flow.operacao.trim();
+    final query = <String, dynamic>{
+      'os': os,
+      if (part.isNotEmpty) 'partnumber': part,
+      if (op.isNotEmpty) 'operacao': op,
+    };
+
+    _amostragemCheckInProgress = true;
+    try {
+      final uri = buildApiUri('/operador/amostragens', query);
+      final resp = await http
+          .get(uri)
+          .timeout(const Duration(seconds: 15));
+      if (resp.statusCode == 200) {
+        DateTime? ultimaAmostragem;
+        try {
+          final data = jsonDecode(resp.body);
+          if (data is List && data.isNotEmpty) {
+            final first = data.first;
+            if (first is Map && first['created_at'] != null) {
+              final raw = first['created_at'].toString();
+              ultimaAmostragem = DateTime.tryParse(raw)?.toLocal();
+              if (ultimaAmostragem == null) {
+                ultimaAmostragem = DateTime.tryParse(raw.replaceFirst(' ', 'T'))
+                    ?.toLocal();
+              }
+            }
+          }
+        } catch (_) {}
+        _handleAmostragemRecente(flow, ultimaAmostragem);
+      }
+    } catch (_) {
+      // Ignora falhas momentâneas; nova checagem ocorrerá em seguida.
+    } finally {
+      _amostragemCheckInProgress = false;
+    }
+  }
+
+  void _handleAmostragemRecente(
+    SharedSearchFormState flow,
+    DateTime? ultimaAmostragem,
+  ) {
+    if (!mounted) return;
+    if (ultimaAmostragem != null) {
+      _lastAmostragem = ultimaAmostragem;
+    }
+
+    final now = DateTime.now();
+    final last = _lastAmostragem;
+    final bool precisaAlertar;
+    if (last == null) {
+      precisaAlertar = true;
+    } else {
+      final diff = now.difference(last);
+      precisaAlertar = diff >= const Duration(minutes: 20);
+      if (!precisaAlertar) {
+        _lastReminderShownAt = null;
+      }
+    }
+
+    if (precisaAlertar && _shouldShowAmostragemReminder(now)) {
+      _showAmostragemReminder(flow);
+    }
+  }
+
+  bool _shouldShowAmostragemReminder(DateTime now) {
+    if (_amostragemReminderDialogOpen) return false;
+    final lastReminder = _lastReminderShownAt;
+    if (lastReminder == null) return true;
+    return now.difference(lastReminder) >= const Duration(minutes: 5);
+  }
+
+  Future<void> _showAmostragemReminder(SharedSearchFormState flow) async {
+    if (!mounted || _amostragemReminderDialogOpen) return;
+    _amostragemReminderDialogOpen = true;
+    _lastReminderShownAt = DateTime.now();
+    final os = flow.os.trim();
+    final mensagemBase =
+        'Nenhuma amostragem foi registrada nos últimos 20 minutos.';
+    final mensagem = os.isEmpty
+        ? mensagemBase
+        : '$mensagemBase\nO.S. atual: $os';
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Atenção'),
+        content: Text(mensagem),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Entendi'),
+          ),
+        ],
+      ),
+    );
+    _amostragemReminderDialogOpen = false;
+  }
+
+  void _registrarAmostragemLocal() {
+    _lastAmostragem = DateTime.now();
+    _lastReminderShownAt = null;
   }
 
   Future<void> _carregarMaquinas() async {
@@ -290,6 +466,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
 
   @override
   void dispose() {
+    _cancelAmostragemMonitor();
     _osCtrl.removeListener(_osSyncListener);
     _partCtrl.removeListener(_partSyncListener);
     _opCtrl.removeListener(_opSyncListener);
@@ -403,6 +580,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         ref
             .read(medidasOperadorControllerProvider.notifier)
             .aplicarSelecoesComoHistorico();
+        _registrarAmostragemLocal();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
