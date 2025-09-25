@@ -11,6 +11,7 @@ import 'package:admin/features/cadastro_preparadores/presentation/cadastro_prepa
 import 'package:admin/features/export_relatorios/presentation/export_relatorios_page.dart';
 import 'package:admin/features/export_relatorios/presentation/visualizar_relatorios_page.dart';
 import 'package:admin/features/export_relatorios/presentation/tempo_os_page.dart';
+import 'package:admin/features/export_relatorios/presentation/status_os_page.dart';
 import 'package:admin/features/cadastro_maquinas/presentation/cadastro_maquinas_page.dart';
 import 'package:admin/features/login/login_page.dart';
 import 'package:admin/features/users/users_page.dart';
@@ -119,6 +120,11 @@ class SideMenu extends ConsumerWidget {
           title: 'Tempo por OS',
           svgSrc: 'assets/icons/menu_doc.svg',
           press: () => _navigate(context, ref, const TempoOsPage()),
+        ),
+        DrawerListTile(
+          title: 'Status das OS',
+          svgSrc: 'assets/icons/menu_doc.svg',
+          press: () => _navigate(context, ref, const StatusOsPage()),
         ),
       ]);
     }
