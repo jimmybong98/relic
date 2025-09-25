@@ -198,6 +198,47 @@ class _MeasurementTileState extends State<MeasurementTile> {
     return false;
   }
 
+  bool _tokenLooksLikeAngleRange(
+    String token,
+    ({double? min, double? max})? range,
+  ) {
+    final normalized = token.replaceAll(',', '.').trim();
+    if (normalized.isEmpty) return false;
+
+    final pieces = normalized.split(RegExp(r'\s*[-–—]\s*'));
+    final values = <double>[];
+
+    for (final piece in pieces) {
+      final trimmed = piece.trim();
+      if (trimmed.isEmpty) continue;
+      final parsed = double.tryParse(trimmed);
+      if (parsed == null) {
+        return false;
+      }
+      values.add(parsed);
+    }
+
+    if (values.isEmpty) return false;
+    if (!values.every((value) => value >= 0 && value <= 180)) {
+      return false;
+    }
+
+    if (range == null) return true;
+
+    var candidateMin = values.first;
+    var candidateMax = values.first;
+    for (final value in values.skip(1)) {
+      if (value < candidateMin) candidateMin = value;
+      if (value > candidateMax) candidateMax = value;
+    }
+
+    final min = range.min;
+    final max = range.max;
+    if (min != null && candidateMax < min) return false;
+    if (max != null && candidateMin > max) return false;
+    return true;
+  }
+
   bool _valueMatchesAngleRange(
     String token,
     ({double? min, double? max})? range,
@@ -348,8 +389,33 @@ class _MeasurementTileState extends State<MeasurementTile> {
         (angleRange.min != null || angleRange.max != null);
     if (!hasAngleRange) return false;
 
+    final hasAngleHint = _hasAngleHint(context, angleRange);
+    if (!hasAngleHint) return false;
+
     final hasMedida = item.minimo != null || item.maximo != null;
     return hasMedida;
+  }
+
+  bool _hasAngleHint(String context, ({double? min, double? max})? angleRange) {
+    if (RegExp(r'(\bangulo\b|\bang\.\b|graus?|[°º])').hasMatch(context)) {
+      return true;
+    }
+    if (angleRange == null) return false;
+
+    final separatorPattern = RegExp(
+      r'(\d+(?:[.,]\d+)?(?:\s*[-–—]\s*\d+(?:[.,]\d+)?)?)\s*[x×]\s*'
+      r'(\d+(?:[.,]\d+)?(?:\s*[-–—]\s*\d+(?:[.,]\d+)?)?)',
+    );
+
+    for (final match in separatorPattern.allMatches(context)) {
+      final angleToken = match.group(2);
+      if (angleToken == null) continue;
+      if (_tokenLooksLikeAngleRange(angleToken, angleRange)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   bool _isRepetirTresPontos(MedidaItem item) {
@@ -1094,16 +1160,4 @@ class _MeasurementTileState extends State<MeasurementTile> {
     }
     return _buildAutomaticEntry(context);
   }
-}
-
-double? _parseManualValue(String txt) {
-  final normalized = txt.replaceAll(',', '.').trim();
-  if (normalized.isEmpty) return null;
-  return double.tryParse(normalized);
-}
-
-double? _parseAngleInput(String txt) {
-  final sanitized = txt.replaceAll(RegExp("[°º'’′\"″”]"), '').trim();
-  if (sanitized.isEmpty) return null;
-  return _parseManualValue(sanitized);
 }
