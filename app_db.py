@@ -1415,6 +1415,24 @@ def resultado_preparador():
                         ),
                     )
 
+                status_geral_lower = (status_geral or "").strip().lower()
+                if status_geral_lower in (
+                        "liberada",
+                        "liberado",
+                        "ok",
+                        "aprovada",
+                        "aprovado",
+                ):
+                    cur.execute(
+                        """
+                        UPDATE ordem_servico
+                           SET status='aberta'
+                         WHERE os=%s
+                           AND LOWER(COALESCE(status,'')) IN ('', 'pausada')
+                        """,
+                        (os_num,),
+                    )
+
                 if contexto_tipo == "troca_ferramenta":
                     cur.execute(
                         """
