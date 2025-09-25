@@ -1492,11 +1492,13 @@ def resultado_preparador():
                     )
 
                 if _status_liberacao_final(status_geral):
+
                     cur.execute(
                         """
                         UPDATE ordem_servico
                            SET status='aberta'
                          WHERE os=%s
+
                            AND LOWER(TRIM(COALESCE(status,''))) IN ('', 'pausada')
                         """,
                         (os_num,),
@@ -2518,6 +2520,20 @@ def relatorio_status_os():
             with c.cursor() as cur:
                 cur.execute(
                     """
+                    SELECT codigo, categoria
+                      FROM maquinas
+                     WHERE codigo IS NOT NULL AND codigo <> ''
+                    """,
+                )
+                categorias_por_maquina = {}
+                for row in cur.fetchall():
+                    codigo = _norm(row.get("codigo"))
+                    if not codigo:
+                        continue
+                    categorias_por_maquina[codigo] = _norm(row.get("categoria"))
+
+                cur.execute(
+                    """
                     SELECT os, status
                       FROM ordem_servico
                      ORDER BY os
@@ -2537,13 +2553,16 @@ def relatorio_status_os():
                         "ok": 0,
                         "alerta_acima": 0,
                         "reprovada_acima": 0,
+                        "maquinas": [],
+                        "categorias": [],
+                        "partnumbers": [],
                     }
                     registros.append(dados)
                     por_os[os_num] = dados
 
                 cur.execute(
                     """
-                    SELECT a.os, i.escolha
+                    SELECT a.os, a.partnumber, a.maquina, i.escolha
                       FROM operador_amostragem a
                       JOIN operador_amostragem_item i ON i.amostragem_id = a.id
                     """,
@@ -2562,9 +2581,27 @@ def relatorio_status_os():
                             "ok": 0,
                             "alerta_acima": 0,
                             "reprovada_acima": 0,
+                            "maquinas": [],
+                            "categorias": [],
+                            "partnumbers": [],
                         }
                         por_os[os_num] = dados
                         registros.append(dados)
+                    partnumber = _norm(row.get("partnumber"))
+                    if partnumber:
+                        lista_part = dados.setdefault("partnumbers", [])
+                        if partnumber not in lista_part:
+                            lista_part.append(partnumber)
+                    maquina = _norm(row.get("maquina"))
+                    if maquina:
+                        lista_maquinas = dados.setdefault("maquinas", [])
+                        if maquina not in lista_maquinas:
+                            lista_maquinas.append(maquina)
+                        categoria = categorias_por_maquina.get(maquina)
+                        if categoria:
+                            lista_cat = dados.setdefault("categorias", [])
+                            if categoria not in lista_cat:
+                                lista_cat.append(categoria)
                     escolha = row.get("escolha") or ""
                     for parte in _split_choices(escolha):
                         chave = _classificar_escolha(parte)
@@ -2579,6 +2616,10 @@ def relatorio_status_os():
                 return (0, int(normalizado))
             return (1, normalizado)
 
+        for item in registros:
+            item["maquinas"] = sorted(item.get("maquinas", []))
+            item["categorias"] = sorted(item.get("categorias", []))
+            item["partnumbers"] = sorted(item.get("partnumbers", []))
         registros.sort(key=_ordenar)
         return jsonify(registros)
     except Exception as e:
