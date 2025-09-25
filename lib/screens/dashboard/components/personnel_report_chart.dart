@@ -83,7 +83,7 @@ class _ColumnFilterDialogState extends State<_ColumnFilterDialog> {
   Widget build(BuildContext context) {
     final allSelected =
         widget.values.isNotEmpty &&
-            _tempSelected.length == widget.values.length;
+        _tempSelected.length == widget.values.length;
     final listHeight = math.min(320.0, 36.0 * widget.values.length + 12);
     return AlertDialog(
       title: Text('Filtrar ${widget.label}'),
@@ -160,12 +160,12 @@ class _ColumnFilterDialogState extends State<_ColumnFilterDialog> {
           onPressed: _tempSelected.isEmpty
               ? null
               : () {
-            Navigator.of(context).pop(
-              _FilterDialogResult(
-                selectedValues: Set<String>.from(_tempSelected),
-              ),
-            );
-          },
+                  Navigator.of(context).pop(
+                    _FilterDialogResult(
+                      selectedValues: Set<String>.from(_tempSelected),
+                    ),
+                  );
+                },
           child: const Text('Aplicar'),
         ),
       ],
@@ -287,8 +287,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   List<Map<String, dynamic>> _withGroupHeaders(
-      List<Map<String, dynamic>> rows,
-      ) {
+    List<Map<String, dynamic>> rows,
+  ) {
     final result = <Map<String, dynamic>>[];
     var index = 0;
     while (index < rows.length) {
@@ -397,9 +397,9 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   List<Map<String, dynamic>> _applyFiltersToRows(
-      List<Map<String, dynamic>> rows,
-      Map<String, Set<String>> filters,
-      ) {
+    List<Map<String, dynamic>> rows,
+    Map<String, Set<String>> filters,
+  ) {
     if (rows.isEmpty || filters.isEmpty) {
       return List<Map<String, dynamic>>.from(rows);
     }
@@ -462,8 +462,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   List<Map<String, dynamic>> _applyActiveFilters(
-      List<Map<String, dynamic>> rows,
-      ) {
+    List<Map<String, dynamic>> rows,
+  ) {
     final filters = _columnFilters[_tipo];
     if (filters == null || filters.isEmpty) {
       return List<Map<String, dynamic>>.from(rows);
@@ -472,11 +472,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Future<void> _showColumnFilterSheet(
-      BuildContext context,
-      String columnKey,
-      String label,
-      List<Map<String, dynamic>> sourceRows,
-      ) async {
+    BuildContext context,
+    String columnKey,
+    String label,
+    List<Map<String, dynamic>> sourceRows,
+  ) async {
     final filters = _columnFilters[_tipo]!;
     final otherFilters = <String, Set<String>>{};
     filters.forEach((key, value) {
@@ -507,7 +507,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final currentSelection = filters[columnKey];
     final initialSelection =
-    (currentSelection == null || currentSelection.isEmpty)
+        (currentSelection == null || currentSelection.isEmpty)
         ? sortedValues.toSet()
         : currentSelection.where(values.contains).toSet();
 
@@ -554,11 +554,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final hidden = _hiddenColumns.putIfAbsent(_tipo, () => <String>{});
     final overrides = _columnWidthOverrides.putIfAbsent(
       _tipo,
-          () => <String, double>{},
+      () => <String, double>{},
     );
     final filters = _columnFilters.putIfAbsent(
       _tipo,
-          () => <String, Set<String>>{},
+      () => <String, Set<String>>{},
     );
     order.removeWhere((key) => !allowedSet.contains(key));
     hidden.removeWhere((key) => !allowedSet.contains(key));
@@ -680,16 +680,16 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   _TableMetrics _computeTableMetrics(
-      BuildContext context,
-      Map<String, String> headerMap,
-      List<String> visibleColumns,
-      List<Map<String, dynamic>> rows,
-      ) {
+    BuildContext context,
+    Map<String, String> headerMap,
+    List<String> visibleColumns,
+    List<Map<String, dynamic>> rows,
+  ) {
     final direction = Directionality.of(context);
     final theme = Theme.of(context);
     final headerStyle =
         theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600) ??
-            const TextStyle(fontSize: 12, fontWeight: FontWeight.w600);
+        const TextStyle(fontSize: 12, fontWeight: FontWeight.w600);
     const dataStyle = TextStyle(fontSize: 12);
     final painter = TextPainter(
       textDirection: direction,
@@ -733,7 +733,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final spacing = _columnSpacing * spacingCount;
     final totalWidth = widths.fold<double>(
       spacing,
-          (value, element) => value + element,
+      (value, element) => value + element,
     );
     final appliedSpacing = spacingCount == 0 ? 0.0 : _columnSpacing;
     return _TableMetrics(
@@ -766,11 +766,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   _TableMetrics _fitColumnsToViewport(
-      _TableMetrics metrics,
-      int columnCount,
-      double viewportWidth, {
-        Set<int> lockedColumns = const <int>{},
-      }) {
+    _TableMetrics metrics,
+    int columnCount,
+    double viewportWidth, {
+    Set<int> lockedColumns = const <int>{},
+  }) {
     if (columnCount <= 0 || metrics.columnWidths.isEmpty) {
       return _TableMetrics(
         columnWidths: List<double>.from(metrics.columnWidths),
@@ -873,13 +873,13 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildColumnChip(
-      BuildContext context,
-      String columnKey,
-      String label, {
-        VoidCallback? onPressed,
-        bool enableTooltip = true,
-        bool showDelete = true,
-      }) {
+    BuildContext context,
+    String columnKey,
+    String label, {
+    VoidCallback? onPressed,
+    bool enableTooltip = true,
+    bool showDelete = true,
+  }) {
     final chip = InputChip(
       avatar: const Icon(Icons.drag_indicator, size: 18),
       label: Text(label, overflow: TextOverflow.ellipsis),
@@ -902,10 +902,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildReorderableChip(
-      BuildContext context,
-      Map<String, String> headerMap,
-      String columnKey,
-      ) {
+    BuildContext context,
+    Map<String, String> headerMap,
+    String columnKey,
+  ) {
     final label = headerMap[columnKey] ?? columnKey;
     Widget wrapPointer(Widget child) {
       return MouseRegion(cursor: SystemMouseCursors.grab, child: child);
@@ -977,8 +977,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             color: isActive
                 ? theme.colorScheme.primary.withValues(alpha: 0.18)
                 : theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.08,
-            ),
+                    alpha: 0.08,
+                  ),
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: isActive
@@ -992,13 +992,13 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildHeaderLabel(
-      BuildContext context,
-      String columnKey,
-      String label,
-      VoidCallback onHide,
-      VoidCallback onFilter,
-      bool filterActive,
-      ) {
+    BuildContext context,
+    String columnKey,
+    String label,
+    VoidCallback onHide,
+    VoidCallback onFilter,
+    bool filterActive,
+  ) {
     final theme = Theme.of(context);
     final iconColor = filterActive
         ? theme.colorScheme.primary
@@ -1044,7 +1044,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         );
 
         final resolvedHeight =
-        constraints.maxHeight.isFinite && constraints.maxHeight > 0
+            constraints.maxHeight.isFinite && constraints.maxHeight > 0
             ? constraints.maxHeight
             : _headerRowMinHeight;
         return SizedBox(
@@ -1111,10 +1111,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildResizeHandle(
-      BuildContext context,
-      String columnKey,
-      double currentWidth,
-      ) {
+    BuildContext context,
+    String columnKey,
+    double currentWidth,
+  ) {
     final theme = Theme.of(context);
     final isActive = _activeResizeColumn == columnKey;
     final indicatorColor = isActive
@@ -1123,7 +1123,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final overrides = _columnWidthOverrides[_tipo];
     return Tooltip(
       message:
-      'Arraste para redimensionar. Toque duas vezes para restaurar o tamanho automático.',
+          'Arraste para redimensionar. Toque duas vezes para restaurar o tamanho automático.',
       child: MouseRegion(
         cursor: SystemMouseCursors.resizeColumn,
         child: GestureDetector(
@@ -1179,11 +1179,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildColumnManager(
-      BuildContext context,
-      Map<String, String> headerMap,
-      List<String> visibleColumns,
-      List<String> hiddenColumns,
-      ) {
+    BuildContext context,
+    Map<String, String> headerMap,
+    List<String> visibleColumns,
+    List<String> hiddenColumns,
+  ) {
     if (headerMap.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -1255,10 +1255,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget? _buildActiveFilterSummary(
-      BuildContext context,
-      Map<String, String> headerMap,
-      List<Map<String, dynamic>> sourceRows,
-      ) {
+    BuildContext context,
+    Map<String, String> headerMap,
+    List<Map<String, dynamic>> sourceRows,
+  ) {
     final filters = _columnFilters[_tipo];
     if (filters == null || filters.isEmpty) {
       return null;
@@ -1306,15 +1306,15 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildTableHeaderRow(
-      BuildContext context,
-      Map<String, String> headerMap,
-      List<String> visibleColumns,
-      List<double> columnWidths,
-      List<int> columnFlexes,
-      double totalWidth,
-      double columnSpacing,
-      List<Map<String, dynamic>> sourceRows,
-      ) {
+    BuildContext context,
+    Map<String, String> headerMap,
+    List<String> visibleColumns,
+    List<double> columnWidths,
+    List<int> columnFlexes,
+    double totalWidth,
+    double columnSpacing,
+    List<Map<String, dynamic>> sourceRows,
+  ) {
     final theme = Theme.of(context);
     final background = theme.colorScheme.surfaceContainerHighest.withValues(
       alpha: 0.4,
@@ -1353,14 +1353,14 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                         padding: const EdgeInsetsDirectional.only(
                           start: _cellHorizontalPadding,
                           end:
-                          _cellHorizontalPadding + _resizeHandleHitWidth,
+                              _cellHorizontalPadding + _resizeHandleHitWidth,
                         ),
                         child: _buildHeaderLabel(
                           context,
                           columnKey,
                           headerMap[columnKey] ?? columnKey,
-                              () => _hideColumn(columnKey),
-                              () => _showColumnFilterSheet(
+                          () => _hideColumn(columnKey),
+                          () => _showColumnFilterSheet(
                             context,
                             columnKey,
                             headerMap[columnKey] ?? columnKey,
@@ -1372,7 +1372,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                       Align(
                         alignment: AlignmentDirectional.centerEnd,
                         child:
-                        _buildResizeHandle(context, columnKey, maxWidth),
+                            _buildResizeHandle(context, columnKey, maxWidth),
                       ),
                     ],
                   );
@@ -1414,11 +1414,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildGroupHeaderRow(
-      BuildContext context,
-      Map<String, dynamic> row,
-      double totalWidth,
-      Color groupColor,
-      ) {
+    BuildContext context,
+    Map<String, dynamic> row,
+    double totalWidth,
+    Color groupColor,
+  ) {
     final theme = Theme.of(context);
     final textStyle = theme.textTheme.labelLarge?.copyWith(
       fontWeight: FontWeight.bold,
@@ -1441,15 +1441,15 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildDataRowWidget(
-      BuildContext context,
-      Map<String, dynamic> row,
-      List<String> visibleColumns,
-      List<double> columnWidths,
-      List<int> columnFlexes,
-      double totalWidth,
-      double columnSpacing,
-      Color pauseColor,
-      ) {
+    BuildContext context,
+    Map<String, dynamic> row,
+    List<String> visibleColumns,
+    List<double> columnWidths,
+    List<int> columnFlexes,
+    double totalWidth,
+    double columnSpacing,
+    Color pauseColor,
+  ) {
     final theme = Theme.of(context);
     final isPause = row['evento'] == 'pausa_jornada';
     final background = isPause ? pauseColor : null;
@@ -1544,9 +1544,9 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             }
 
             Map<String, dynamic>? findMatch(
-                List<Map<String, dynamic>> source,
-                String key,
-                ) {
+              List<Map<String, dynamic>> source,
+              String key,
+            ) {
               for (final row in source) {
                 if (row['__matchKey'] != key) continue;
                 final createdFinal = row['created_at_final'];
@@ -1555,8 +1555,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                 final hasFinalizacao =
                     (createdFinal != null &&
                         createdFinal.toString().isNotEmpty) ||
-                        (medFinal != null && medFinal.toString().isNotEmpty) ||
-                        (reFinal != null && reFinal.toString().isNotEmpty);
+                    (medFinal != null && medFinal.toString().isNotEmpty) ||
+                    (reFinal != null && reFinal.toString().isNotEmpty);
                 if (!hasFinalizacao) return row;
               }
               return null;
@@ -1925,7 +1925,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                       );
                       final overrides =
                           _columnWidthOverrides[_tipo] ??
-                              const <String, double>{};
+                          const <String, double>{};
                       final lockedIndices = <int>{};
                       final overrideAdjusted = List<double>.from(
                         metrics.columnWidths,
@@ -1963,9 +1963,9 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                           : (mediaWidth ?? manualMetrics.totalWidth);
                       final availableViewportWidth = rawViewportWidth.isFinite
                           ? math.max(
-                        0.0,
-                        rawViewportWidth - (_horizontalMargin * 2),
-                      )
+                              0.0,
+                              rawViewportWidth - (_horizontalMargin * 2),
+                            )
                           : rawViewportWidth;
                       final fittedMetrics = _fitColumnsToViewport(
                         manualMetrics,
@@ -1981,7 +1981,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                       final spacingWidth = columnSpacing * spacingCount;
                       final naturalTableWidth = adjustedColumns.fold<double>(
                         spacingWidth,
-                            (sum, width) => sum + width,
+                        (sum, width) => sum + width,
                       );
                       final viewportBaseline = availableViewportWidth.isFinite
                           ? availableViewportWidth
@@ -2051,7 +2051,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                         thumbVisibility: needsHorizontalScroll,
                         trackVisibility: needsHorizontalScroll,
                         notificationPredicate: (notification) =>
-                        notification.metrics.axis == Axis.horizontal,
+                            notification.metrics.axis == Axis.horizontal,
                         child: tableView,
                       );
                     },

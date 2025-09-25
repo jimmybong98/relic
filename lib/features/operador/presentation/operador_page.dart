@@ -23,12 +23,12 @@ import 'package:admin/models/machine.dart';
 import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
 
 final medidasOperadorControllerProvider =
-StateNotifierProvider.autoDispose<
-    MedidasOperadorController,
-    AsyncValue<List<MedidaItem>>
->((ref) {
-  return MedidasOperadorController(ref);
-});
+    StateNotifierProvider.autoDispose<
+      MedidasOperadorController,
+      AsyncValue<List<MedidaItem>>
+    >((ref) {
+      return MedidasOperadorController(ref);
+    });
 
 class MedidasOperadorController
     extends StateNotifier<AsyncValue<List<MedidaItem>>> {
@@ -211,13 +211,19 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     _opCtrl.addListener(_opSyncListener);
     _carregarMaquinas();
 
+    ref.listen<SharedSearchFormState>(
+      sharedSearchFormProvider,
+      (previous, next) {
+        _handleFlowStateChange(previous, next);
+      },
+    );
     _handleFlowStateChange(null, shared);
   }
 
   void _handleFlowStateChange(
-      SharedSearchFormState? previous,
-      SharedSearchFormState next,
-      ) {
+    SharedSearchFormState? previous,
+    SharedSearchFormState next,
+  ) {
     if (!next.isActive ||
         next.effectiveProcess != SearchFlowProcess.amostragem) {
       _activeAmostragemFlow = null;
@@ -225,10 +231,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       return;
     }
 
-    final wasActive =
-        previous != null &&
-            previous.isActive &&
-            previous.effectiveProcess == SearchFlowProcess.amostragem;
+    final wasActive = previous != null &&
+        previous.isActive &&
+        previous.effectiveProcess == SearchFlowProcess.amostragem;
 
     final previousFlow = _activeAmostragemFlow;
     _activeAmostragemFlow = next;
@@ -250,7 +255,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     unawaited(_checkAmostragemRecente());
     _amostragemMonitorTimer = Timer.periodic(
       const Duration(minutes: 1),
-          (_) => unawaited(_checkAmostragemRecente()),
+      (_) => unawaited(_checkAmostragemRecente()),
     );
   }
 
@@ -283,7 +288,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     _amostragemCheckInProgress = true;
     try {
       final uri = buildApiUri('/operador/amostragens', query);
-      final resp = await http.get(uri).timeout(const Duration(seconds: 15));
+      final resp = await http
+          .get(uri)
+          .timeout(const Duration(seconds: 15));
       if (resp.statusCode == 200) {
         DateTime? ultimaAmostragem;
         try {
@@ -294,9 +301,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
               final raw = first['created_at'].toString();
               ultimaAmostragem = DateTime.tryParse(raw)?.toLocal();
               if (ultimaAmostragem == null) {
-                ultimaAmostragem = DateTime.tryParse(
-                  raw.replaceFirst(' ', 'T'),
-                )?.toLocal();
+                ultimaAmostragem = DateTime.tryParse(raw.replaceFirst(' ', 'T'))
+                    ?.toLocal();
               }
             }
           }
@@ -311,9 +317,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
   }
 
   void _handleAmostragemRecente(
-      SharedSearchFormState flow,
-      DateTime? ultimaAmostragem,
-      ) {
+    SharedSearchFormState flow,
+    DateTime? ultimaAmostragem,
+  ) {
     if (!mounted) return;
     if (ultimaAmostragem != null) {
       _lastAmostragem = ultimaAmostragem;
@@ -321,20 +327,19 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
 
     final now = DateTime.now();
     final last = _lastAmostragem;
-    final reminderInterval = _resolveAmostragemReminderInterval(flow);
     final bool precisaAlertar;
     if (last == null) {
       precisaAlertar = true;
     } else {
       final diff = now.difference(last);
-      precisaAlertar = diff >= reminderInterval;
+      precisaAlertar = diff >= const Duration(minutes: 20);
       if (!precisaAlertar) {
         _lastReminderShownAt = null;
       }
     }
 
     if (precisaAlertar && _shouldShowAmostragemReminder(now)) {
-      _showAmostragemReminder(flow, reminderInterval);
+      _showAmostragemReminder(flow);
     }
   }
 
@@ -345,42 +350,13 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     return now.difference(lastReminder) >= const Duration(minutes: 5);
   }
 
-  Duration _resolveAmostragemReminderInterval(SharedSearchFormState flow) {
-    final categoria = flow.categoria?.toLowerCase().trim();
-    if (categoria == 'cnc alimentador') {
-      return const Duration(minutes: 20);
-    }
-    if (categoria == 'centro de usinagem') {
-      return const Duration(minutes: 15);
-    }
-    if (categoria == 'tornos com placa') {
-      return const Duration(minutes: 40);
-    }
-    return const Duration(hours: 2);
-  }
-
-  String _formatReminderDuration(Duration duration) {
-    final minutes = duration.inMinutes;
-    if (minutes >= 60 && minutes % 60 == 0) {
-      final hours = minutes ~/ 60;
-      final suffix = hours == 1 ? 'hora' : 'horas';
-      return '$hours $suffix';
-    }
-    final suffix = minutes == 1 ? 'minuto' : 'minutos';
-    return '$minutes $suffix';
-  }
-
-  Future<void> _showAmostragemReminder(
-      SharedSearchFormState flow,
-      Duration reminderInterval,
-      ) async {
+  Future<void> _showAmostragemReminder(SharedSearchFormState flow) async {
     if (!mounted || _amostragemReminderDialogOpen) return;
     _amostragemReminderDialogOpen = true;
     _lastReminderShownAt = DateTime.now();
     final os = flow.os.trim();
-    final intervaloFormatado = _formatReminderDuration(reminderInterval);
     final mensagemBase =
-        'Nenhuma amostragem foi registrada nos últimos $intervaloFormatado.';
+        'Nenhuma amostragem foi registrada nos últimos 20 minutos.';
     final mensagem = os.isEmpty
         ? mensagemBase
         : '$mensagemBase\nO.S. atual: $os';
@@ -427,7 +403,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
 
           if (_categoriaSel != null) {
             final possuiMaquina = _maquinas.any(
-                  (m) => m.categoria == _categoriaSel && m.codigo == _maquinaSel,
+              (m) => m.categoria == _categoriaSel && m.codigo == _maquinaSel,
             );
             if (!possuiMaquina && _maquinaSel != null) {
               _maquinaSel = null;
@@ -453,7 +429,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     final maquina = _maquinaSel;
     if (categoria == null || maquina == null) return false;
     return _maquinas.any(
-          (m) => m.categoria == categoria && m.codigo == maquina,
+      (m) => m.categoria == categoria && m.codigo == maquina,
     );
   }
 
@@ -653,11 +629,6 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Jornada pausada. Motivo: $motivo')),
         );
-        if (motivo == 'Fim do Turno') {
-          setState(() {
-            _reCtrl.clear();
-          });
-        }
         return true;
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -794,13 +765,13 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                 children: motivos
                     .map(
                       (m) => RadioListTile<String>(
-                    title: Text(m),
-                    value: m,
-                    groupValue: selecionado,
-                    onChanged: (value) =>
-                        setState(() => selecionado = value),
-                  ),
-                )
+                        title: Text(m),
+                        value: m,
+                        groupValue: selecionado,
+                        onChanged: (value) =>
+                            setState(() => selecionado = value),
+                      ),
+                    )
                     .toList(),
               ),
             ),
@@ -912,7 +883,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         title: const Text('Troca de O.S.'),
         content: const Text(
           'Deseja pausar a O.S. atual e liberar o fluxo para iniciar outra? '
-              'Será necessária nova liberação para retomar a produção desta O.S.',
+          'Será necessária nova liberação para retomar a produção desta O.S.',
         ),
         actions: [
           TextButton(
@@ -963,13 +934,6 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<SharedSearchFormState>(sharedSearchFormProvider, (
-        previous,
-        next,
-        ) {
-      _handleFlowStateChange(previous, next);
-    });
-
     final medidasAsync = ref.watch(medidasOperadorControllerProvider);
     final medidas = medidasAsync.value ?? [];
     final flowState = ref.watch(sharedSearchFormProvider);
@@ -981,43 +945,43 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     final reOk = _reCtrl.text.trim().isNotEmpty;
     final osOk = _osCtrl.text.trim().isNotEmpty;
     final categoriaValue =
-    (_categoriaSel != null && _categorias.contains(_categoriaSel))
+        (_categoriaSel != null && _categorias.contains(_categoriaSel))
         ? _categoriaSel
         : null;
     final maquinasDisponiveis = _maquinas
         .where((m) => m.categoria == categoriaValue)
         .toList();
     final maquinaValue =
-    (_maquinaSel != null &&
-        maquinasDisponiveis.any((m) => m.codigo == _maquinaSel))
+        (_maquinaSel != null &&
+            maquinasDisponiveis.any((m) => m.codigo == _maquinaSel))
         ? _maquinaSel
         : null;
     final maquinaOk = (maquinaValue ?? '').isNotEmpty;
     final formMatchesFlow =
         !flowLocked ||
-            flowState.matchesValues(
-              os: _osCtrl.text,
-              partNumber: _partCtrl.text,
-              operacao: _opCtrl.text,
-              categoria: categoriaValue,
-              maquina: maquinaValue,
-            );
+        flowState.matchesValues(
+          os: _osCtrl.text,
+          partNumber: _partCtrl.text,
+          operacao: _opCtrl.text,
+          categoria: categoriaValue,
+          maquina: maquinaValue,
+        );
 
     // todas respondidas?
     final todasRespondidas =
         medidas.isNotEmpty &&
-            medidas.every(
-                  (m) =>
+        medidas.every(
+          (m) =>
               m.status != StatusMedida.pendente && (m.medicao ?? '').isNotEmpty,
-            );
+        );
 
     final podeRegistrar =
         formMatchesFlow &&
-            reOk &&
-            osOk &&
-            maquinaOk &&
-            todasRespondidas &&
-            !_registrando;
+        reOk &&
+        osOk &&
+        maquinaOk &&
+        todasRespondidas &&
+        !_registrando;
 
     return Scaffold(
       appBar: WindowBar(
@@ -1117,7 +1081,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                     ],
                                     decoration: const InputDecoration(
                                       labelText:
-                                      'R.E. do Preparador', // ajuste o texto se for Operador
+                                          'R.E. do Preparador', // ajuste o texto se for Operador
                                       border: OutlineInputBorder(),
                                     ),
                                     validator: (v) {
@@ -1171,25 +1135,25 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                     items: _categorias
                                         .map(
                                           (c) => DropdownMenuItem(
-                                        value: c,
-                                        child: Text(c),
-                                      ),
-                                    )
+                                            value: c,
+                                            child: Text(c),
+                                          ),
+                                        )
                                         .toList(),
                                     onChanged: flowLocked
                                         ? null
                                         : (v) {
-                                      ref
-                                          .read(
-                                        sharedSearchFormProvider
-                                            .notifier,
-                                      )
-                                          .setCategoria(v);
-                                      setState(() {
-                                        _categoriaSel = v;
-                                        _maquinaSel = null;
-                                      });
-                                    },
+                                            ref
+                                                .read(
+                                                  sharedSearchFormProvider
+                                                      .notifier,
+                                                )
+                                                .setCategoria(v);
+                                            setState(() {
+                                              _categoriaSel = v;
+                                              _maquinaSel = null;
+                                            });
+                                          },
                                     validator: (v) => (v == null || v.isEmpty)
                                         ? 'Obrigatório'
                                         : null,
@@ -1206,22 +1170,22 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                     items: maquinasDisponiveis
                                         .map(
                                           (m) => DropdownMenuItem(
-                                        value: m.codigo,
-                                        child: Text(m.codigo),
-                                      ),
-                                    )
+                                            value: m.codigo,
+                                            child: Text(m.codigo),
+                                          ),
+                                        )
                                         .toList(),
                                     onChanged: flowLocked
                                         ? null
                                         : (v) {
-                                      ref
-                                          .read(
-                                        sharedSearchFormProvider
-                                            .notifier,
-                                      )
-                                          .setMaquina(v);
-                                      setState(() => _maquinaSel = v);
-                                    },
+                                            ref
+                                                .read(
+                                                  sharedSearchFormProvider
+                                                      .notifier,
+                                                )
+                                                .setMaquina(v);
+                                            setState(() => _maquinaSel = v);
+                                          },
                                     validator: (v) => (v == null || v.isEmpty)
                                         ? 'Obrigatório'
                                         : null,
@@ -1244,7 +1208,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                       border: OutlineInputBorder(),
                                     ),
                                     validator: (v) =>
-                                    (v == null || v.trim().isEmpty)
+                                        (v == null || v.trim().isEmpty)
                                         ? 'Obrigatório'
                                         : null,
                                   ),
@@ -1286,16 +1250,16 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                     FocusScope.of(context).unfocus();
                                     await ref
                                         .read(
-                                      medidasOperadorControllerProvider
-                                          .notifier,
-                                    )
+                                          medidasOperadorControllerProvider
+                                              .notifier,
+                                        )
                                         .carregar(
-                                      os: _osCtrl.text.trim(),
-                                      partnumber: normalizeCode(
-                                        _partCtrl.text,
-                                      ),
-                                      operacao: normalizeCode(_opCtrl.text),
-                                    );
+                                          os: _osCtrl.text.trim(),
+                                          partnumber: normalizeCode(
+                                            _partCtrl.text,
+                                          ),
+                                          operacao: normalizeCode(_opCtrl.text),
+                                        );
                                     if (mounted) {
                                       setState(() => _mostrarResumo = true);
                                     }
@@ -1347,7 +1311,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                               ),
                               PopupMenuItem(
                                 value: 'fim',
-                                child: Text('Pausa de Jornada'),
+                                child: Text('Fim de Jornada'),
                               ),
                               PopupMenuItem(
                                 value: 'troca',
@@ -1369,12 +1333,12 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                 : null,
                             icon: _registrando
                                 ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            )
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
                                 : const Icon(Icons.save_outlined),
                             label: const Text('Registrar amostragem'),
                           ),

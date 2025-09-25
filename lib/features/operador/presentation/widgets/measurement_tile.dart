@@ -141,10 +141,10 @@ class _MeasurementTileState extends State<MeasurementTile> {
       final segundo = rawParts[1];
       final primeiroEhAngulo =
           _looksLikeAngleToken(primeiro) ||
-              _valueMatchesAngleRange(primeiro, faixa);
+          _valueMatchesAngleRange(primeiro, faixa);
       final segundoEhAngulo =
           _looksLikeAngleToken(segundo) ||
-              _valueMatchesAngleRange(segundo, faixa);
+          _valueMatchesAngleRange(segundo, faixa);
 
       if (!primeiroEhAngulo && segundoEhAngulo) {
         medida = primeiro;
@@ -198,51 +198,10 @@ class _MeasurementTileState extends State<MeasurementTile> {
     return false;
   }
 
-  bool _tokenLooksLikeAngleRange(
-      String token,
-      ({double? min, double? max})? range,
-      ) {
-    final normalized = token.replaceAll(',', '.').trim();
-    if (normalized.isEmpty) return false;
-
-    final pieces = normalized.split(RegExp(r'\s*[-–—]\s*'));
-    final values = <double>[];
-
-    for (final piece in pieces) {
-      final trimmed = piece.trim();
-      if (trimmed.isEmpty) continue;
-      final parsed = double.tryParse(trimmed);
-      if (parsed == null) {
-        return false;
-      }
-      values.add(parsed);
-    }
-
-    if (values.isEmpty) return false;
-    if (!values.every((value) => value >= 0 && value <= 180)) {
-      return false;
-    }
-
-    if (range == null) return true;
-
-    var candidateMin = values.first;
-    var candidateMax = values.first;
-    for (final value in values.skip(1)) {
-      if (value < candidateMin) candidateMin = value;
-      if (value > candidateMax) candidateMax = value;
-    }
-
-    final min = range.min;
-    final max = range.max;
-    if (min != null && candidateMax < min) return false;
-    if (max != null && candidateMin > max) return false;
-    return true;
-  }
-
   bool _valueMatchesAngleRange(
-      String token,
-      ({double? min, double? max})? range,
-      ) {
+    String token,
+    ({double? min, double? max})? range,
+  ) {
     if (range == null) return false;
     final value = _parseAngleInput(token);
     if (value == null) return false;
@@ -308,16 +267,16 @@ class _MeasurementTileState extends State<MeasurementTile> {
     final t = _norm(item.titulo);
     final inst = _norm(item.instrumento);
     return _containsAny(t, [
-      'visual',
-      'rug',
-      'paralelismo',
-      'anel de rosca',
-      'anel rosca',
-      'anel de rosca passa',
-      'cqf',
-      'simetria',
-      'concentricidade',
-    ]) ||
+          'visual',
+          'rug',
+          'paralelismo',
+          'anel de rosca',
+          'anel rosca',
+          'anel de rosca passa',
+          'cqf',
+          'simetria',
+          'concentricidade',
+        ]) ||
         _containsAny(inst, [
           'visual',
           'rug',
@@ -366,16 +325,16 @@ class _MeasurementTileState extends State<MeasurementTile> {
 
     final mentionsChanfro =
         _containsAny(t, ['chanfro']) ||
-            _containsAny(faixa, ['chanfro']) ||
-            _containsAny(inst, ['chanfro']) ||
-            _containsAny(obs, ['chanfro']);
+        _containsAny(faixa, ['chanfro']) ||
+        _containsAny(inst, ['chanfro']) ||
+        _containsAny(obs, ['chanfro']);
     if (mentionsChanfro) return true;
 
     final mentionsCantosVivos =
         _containsAny(t, cantoTokens) ||
-            _containsAny(faixa, cantoTokens) ||
-            _containsAny(inst, cantoTokens) ||
-            _containsAny(obs, cantoTokens);
+        _containsAny(faixa, cantoTokens) ||
+        _containsAny(inst, cantoTokens) ||
+        _containsAny(obs, cantoTokens);
     if (!mentionsCantosVivos) return false;
 
     final context = _nfd('$t $faixa $inst $obs'.toLowerCase());
@@ -386,36 +345,15 @@ class _MeasurementTileState extends State<MeasurementTile> {
     final angleRange = _resolveItemAngleRange(item);
     final hasAngleRange =
         angleRange != null &&
-            (angleRange.min != null || angleRange.max != null);
+        (angleRange.min != null || angleRange.max != null);
     if (!hasAngleRange) return false;
 
-    final hasAngleHint = _hasAngleHint(context, angleRange);
+    final hasAngleHint = RegExp(r'(\bangulo\b|\bang\.\b|graus?|[°º])')
+        .hasMatch(context);
     if (!hasAngleHint) return false;
 
     final hasMedida = item.minimo != null || item.maximo != null;
     return hasMedida;
-  }
-
-  bool _hasAngleHint(String context, ({double? min, double? max})? angleRange) {
-    if (RegExp(r'(\bangulo\b|\bang\.\b|graus?|[°º])').hasMatch(context)) {
-      return true;
-    }
-    if (angleRange == null) return false;
-
-    final separatorPattern = RegExp(
-      r'(\d+(?:[.,]\d+)?(?:\s*[-–—]\s*\d+(?:[.,]\d+)?)?)\s*[x×]\s*'
-      r'(\d+(?:[.,]\d+)?(?:\s*[-–—]\s*\d+(?:[.,]\d+)?)?)',
-    );
-
-    for (final match in separatorPattern.allMatches(context)) {
-      final angleToken = match.group(2);
-      if (angleToken == null) continue;
-      if (_tokenLooksLikeAngleRange(angleToken, angleRange)) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   bool _isRepetirTresPontos(MedidaItem item) {
@@ -457,8 +395,8 @@ class _MeasurementTileState extends State<MeasurementTile> {
 
   Color _fgOn(Color bg) =>
       ThemeData.estimateBrightnessForColor(bg) == Brightness.dark
-          ? Colors.white
-          : Colors.black87;
+      ? Colors.white
+      : Colors.black87;
 
   Widget _pill({
     required String text,
@@ -487,12 +425,12 @@ class _MeasurementTileState extends State<MeasurementTile> {
           border: Border.all(color: effectiveBorder, width: selected ? 2 : 1),
           boxShadow: selected
               ? [
-            BoxShadow(
-              color: border.withValues(alpha: 0.35),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ]
+                  BoxShadow(
+                    color: border.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
               : null,
         ),
         child: Text.rich(
@@ -732,14 +670,14 @@ class _MeasurementTileState extends State<MeasurementTile> {
         ? _roscaHelper(status)
         : isChanfro
         ? _chanfroHelper(
-      status: status,
-      hasAngle: hasAngle,
-      hasMedida: hasMedida,
-      medidaValida: medidaValida,
-      anguloValido: anguloValido,
-      medidaStatus: medidaStatus,
-      anguloStatus: anguloStatus,
-    )
+            status: status,
+            hasAngle: hasAngle,
+            hasMedida: hasMedida,
+            medidaValida: medidaValida,
+            anguloValido: anguloValido,
+            medidaStatus: medidaStatus,
+            anguloStatus: anguloStatus,
+          )
         : isRepetir3
         ? _repetirHelper(status)
         : _statusHelper(status);
@@ -864,14 +802,14 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     border: Colors.green.shade600,
                     fg: Colors.green.shade900,
                     selected:
-                    item.status == StatusMedida.ok &&
+                        item.status == StatusMedida.ok &&
                         (item.medicao ?? '').trim().toLowerCase() == 'ok',
                     count: _countFor('OK'),
                     onTap: () {
                       FocusScope.of(context).unfocus();
                       final alreadyOk =
                           item.status == StatusMedida.ok &&
-                              (item.medicao ?? '').trim().toLowerCase() == 'ok';
+                          (item.medicao ?? '').trim().toLowerCase() == 'ok';
                       widget.onSelect(
                         alreadyOk ? StatusMedida.pendente : StatusMedida.ok,
                         alreadyOk ? null : 'OK',
@@ -988,7 +926,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     border: Colors.green.shade600,
                     fg: Colors.green.shade900,
                     selected:
-                    item.medicao == 'Aprovado' &&
+                        item.medicao == 'Aprovado' &&
                         item.status == StatusMedida.ok,
                     count: _countFor('Aprovado'),
                     onTap: () => widget.onSelect(StatusMedida.ok, 'Aprovado'),
@@ -998,7 +936,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     bg: Colors.red.shade100,
                     border: Colors.red.shade400,
                     selected:
-                    item.medicao == 'Reprovado' &&
+                        item.medicao == 'Reprovado' &&
                         item.status == StatusMedida.reprovadaAcima,
                     count: _countFor('Reprovado'),
                     onTap: () => widget.onSelect(
@@ -1136,7 +1074,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                       border: Colors.green.shade600,
                       fg: Colors.green.shade900,
                       selected:
-                      item.medicao == 'OK' &&
+                          item.medicao == 'OK' &&
                           item.status == StatusMedida.ok,
                       count: _countFor('OK'),
                       onTap: () => widget.onSelect(StatusMedida.ok, 'OK'),
@@ -1160,4 +1098,16 @@ class _MeasurementTileState extends State<MeasurementTile> {
     }
     return _buildAutomaticEntry(context);
   }
+}
+
+double? _parseManualValue(String txt) {
+  final normalized = txt.replaceAll(',', '.').trim();
+  if (normalized.isEmpty) return null;
+  return double.tryParse(normalized);
+}
+
+double? _parseAngleInput(String txt) {
+  final sanitized = txt.replaceAll(RegExp("[°º'’′\"″”]"), '').trim();
+  if (sanitized.isEmpty) return null;
+  return _parseManualValue(sanitized);
 }
