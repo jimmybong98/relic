@@ -348,6 +348,10 @@ class _MeasurementTileState extends State<MeasurementTile> {
         (angleRange.min != null || angleRange.max != null);
     if (!hasAngleRange) return false;
 
+    final hasAngleHint = RegExp(r'(\bangulo\b|\bang\.\b|graus?|[°º])')
+        .hasMatch(context);
+    if (!hasAngleHint) return false;
+
     final hasMedida = item.minimo != null || item.maximo != null;
     return hasMedida;
   }
