@@ -127,6 +127,21 @@ class ReportService {
     return null;
   }
 
+  /// Fetch an overview listing all OS with their status and sampling counts.
+  Future<List<Map<String, dynamic>>> fetchOsStatusOverview() async {
+    try {
+      final uri = Uri.parse(_baseUrl).resolve('reports/os_status');
+      final response = await _client.get(uri);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) {
+          return data.whereType<Map<String, dynamic>>().toList(growable: false);
+        }
+      }
+    } catch (_) {}
+    return [];
+  }
+
   /// Downloads the Excel report for a given OS and type.
   /// Returns `true` if the file was saved successfully.
   Future<bool> exportToExcel({required String os, required String tipo}) async {
