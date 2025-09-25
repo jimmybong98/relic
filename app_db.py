@@ -2,7 +2,7 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 from collections import defaultdict
 import os
 import re
@@ -2394,6 +2394,148 @@ def relatorio_os():
     except Exception as e:
         app.logger.exception("Falha ao gerar relatório")
         return jsonify({"error": f"Falha ao gerar relatório: {e}"}), 500
+
+
+@app.route("/reports/os_status")
+def relatorio_status_os():
+    def _status_label(raw_status: Optional[str]) -> str:
+        normalized = _normalize_text(raw_status or "")
+        if normalized in {"encerrada", "finalizada", "finalizado"}:
+            return "Finalizada"
+        return "Aberta"
+
+    def _classificar_escolha(texto: str) -> Optional[str]:
+        if not texto:
+            return None
+        base = _normalize_text(_strip_side_prefix(texto))
+        if not base:
+            return None
+        if "reprov" in base:
+            if "abaix" in base:
+                return "reprovada_abaixo"
+            return "reprovada_acima"
+        if "alerta" in base:
+            if "abaix" in base:
+                return "alerta_abaixo"
+            return "alerta_acima"
+        if base in {"ok", "aprovado", "aprovada", "conforme"}:
+            return "ok"
+        return None
+
+    def _split_choices(escolha: str) -> List[str]:
+        partes = re.split(r"[|/]+", escolha)
+        return [p.strip() for p in partes if p and p.strip()]
+
+    try:
+        with _conn_db(DB_NAME) as c:
+            with c.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT codigo, categoria
+                      FROM maquinas
+                     WHERE codigo IS NOT NULL AND codigo <> ''
+                    """,
+                )
+                categorias_por_maquina = {}
+                for row in cur.fetchall():
+                    codigo = _norm(row.get("codigo"))
+                    if not codigo:
+                        continue
+                    categorias_por_maquina[codigo] = _norm(row.get("categoria"))
+
+                cur.execute(
+                    """
+                    SELECT os, status
+                      FROM ordem_servico
+                     ORDER BY os
+                    """,
+                )
+                registros = []
+                por_os = {}
+                for row in cur.fetchall():
+                    os_num = row.get("os")
+                    if not os_num:
+                        continue
+                    dados = {
+                        "os": os_num,
+                        "status": _status_label(row.get("status")),
+                        "reprovada_abaixo": 0,
+                        "alerta_abaixo": 0,
+                        "ok": 0,
+                        "alerta_acima": 0,
+                        "reprovada_acima": 0,
+                        "maquinas": [],
+                        "categorias": [],
+                        "partnumbers": [],
+                    }
+                    registros.append(dados)
+                    por_os[os_num] = dados
+
+                cur.execute(
+                    """
+                    SELECT a.os, a.partnumber, a.maquina, i.escolha
+                      FROM operador_amostragem a
+                      JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+                    """,
+                )
+                for row in cur.fetchall():
+                    os_num = row.get("os")
+                    if not os_num:
+                        continue
+                    dados = por_os.get(os_num)
+                    if dados is None:
+                        dados = {
+                            "os": os_num,
+                            "status": "Aberta",
+                            "reprovada_abaixo": 0,
+                            "alerta_abaixo": 0,
+                            "ok": 0,
+                            "alerta_acima": 0,
+                            "reprovada_acima": 0,
+                            "maquinas": [],
+                            "categorias": [],
+                            "partnumbers": [],
+                        }
+                        por_os[os_num] = dados
+                        registros.append(dados)
+                    partnumber = _norm(row.get("partnumber"))
+                    if partnumber:
+                        lista_part = dados.setdefault("partnumbers", [])
+                        if partnumber not in lista_part:
+                            lista_part.append(partnumber)
+                    maquina = _norm(row.get("maquina"))
+                    if maquina:
+                        lista_maquinas = dados.setdefault("maquinas", [])
+                        if maquina not in lista_maquinas:
+                            lista_maquinas.append(maquina)
+                        categoria = categorias_por_maquina.get(maquina)
+                        if categoria:
+                            lista_cat = dados.setdefault("categorias", [])
+                            if categoria not in lista_cat:
+                                lista_cat.append(categoria)
+                    escolha = row.get("escolha") or ""
+                    for parte in _split_choices(escolha):
+                        chave = _classificar_escolha(parte)
+                        if chave is None:
+                            continue
+                        dados[chave] = dados.get(chave, 0) + 1
+
+        def _ordenar(item):
+            os_valor = str(item.get("os", ""))
+            normalizado = _strip_leading_zeros(os_valor)
+            if normalizado.isdigit():
+                return (0, int(normalizado))
+            return (1, normalizado)
+
+        for item in registros:
+            item["maquinas"] = sorted(item.get("maquinas", []))
+            item["categorias"] = sorted(item.get("categorias", []))
+            item["partnumbers"] = sorted(item.get("partnumbers", []))
+        registros.sort(key=_ordenar)
+        return jsonify(registros)
+    except Exception as e:
+        app.logger.exception("Falha ao gerar resumo de status das OS")
+        return jsonify({"error": f"Falha ao gerar resumo: {e}"}), 500
 
 
 @app.route("/reports/export")
