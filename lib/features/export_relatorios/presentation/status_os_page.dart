@@ -72,7 +72,6 @@ class _StatusOsPageState extends State<StatusOsPage> {
     setState(() => _loading = true);
     final data = await ReportService().fetchOsStatusOverview();
     if (!mounted) return;
-
     final parsed = data
         .map<Map<String, dynamic>>((raw) {
           final mapa = Map<String, dynamic>.from(raw);
