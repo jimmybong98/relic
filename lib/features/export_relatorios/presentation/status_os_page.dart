@@ -1,6 +1,5 @@
 import 'dart:collection';
 
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import 'package:admin/widgets/window_bar.dart';
@@ -30,14 +29,6 @@ const List<String> _statusKeys = [
   'alerta_acima',
   'reprovada_acima',
 ];
-
-const Map<String, Color> _statusColors = {
-  'reprovada_abaixo': Color(0xFFef5350),
-  'alerta_abaixo': Color(0xFFffb74d),
-  'ok': Color(0xFF66bb6a),
-  'alerta_acima': Color(0xFFffa726),
-  'reprovada_acima': Color(0xFFd32f2f),
-};
 
 /// Page that lists all OS with their general status and sampling counts.
 class StatusOsPage extends StatefulWidget {
@@ -369,28 +360,58 @@ class _StatusOsPageState extends State<StatusOsPage> {
   }
 
   Widget _buildGraficos() {
+    final abertas = _contarOsPorStatus('Aberta');
+    final finalizadas = _contarOsPorStatus('Finalizada');
     final totaisAbertas = _totaisPorStatus('Aberta');
     final totaisFinalizadas = _totaisPorStatus('Finalizada');
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final isStacked = constraints.maxWidth < 720;
+        final cards = [
+          _StatusCountCard(
+            titulo: 'OS abertas',
+            total: abertas,
+            icon: Icons.folder_open_outlined,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          _StatusCountCard(
+            titulo: 'OS finalizadas',
+            total: finalizadas,
+            icon: Icons.task_alt_outlined,
+            color: Theme.of(context).colorScheme.secondary,
+          ),
+        ];
         final charts = [
           _StatusPieCard(titulo: 'OS abertas', totais: totaisAbertas),
           _StatusPieCard(titulo: 'OS finalizadas', totais: totaisFinalizadas),
         ];
 
-        if (constraints.maxWidth < 720) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [charts[0], const SizedBox(height: 16), charts[1]],
-          );
-        }
-
-        return Row(
+        return Column(
+          crossAxisAlignment:
+              isStacked ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
           children: [
-            Expanded(child: charts[0]),
-            const SizedBox(width: 16),
-            Expanded(child: charts[1]),
+            if (isStacked)
+              ...[cards[0], const SizedBox(height: 16), cards[1]]
+            else
+              Row(
+                children: [
+                  Expanded(child: cards[0]),
+                  const SizedBox(width: 16),
+                  Expanded(child: cards[1]),
+                ],
+              ),
+            const SizedBox(height: 16),
+            if (isStacked)
+              ...[charts[0], const SizedBox(height: 16), charts[1]]
+            else
+              Row(
+                children: [
+                  Expanded(child: charts[0]),
+                  const SizedBox(width: 16),
+                  Expanded(child: charts[1]),
+                ],
+              ),
           ],
         );
       },
@@ -592,66 +613,44 @@ class _StatusPieCard extends StatelessWidget {
   const _StatusPieCard({required this.titulo, required this.totais});
 
   final String titulo;
-  final Map<String, int> totais;
+  final int total;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final total = totais.values.fold<int>(0, (acc, value) => acc + value);
-    final sections = _statusKeys
-        .map((key) => MapEntry(key, totais[key] ?? 0))
-        .where((entry) => entry.value > 0)
-        .map(
-          (entry) => PieChartSectionData(
-            color: _statusColors[entry.key],
-            value: entry.value.toDouble(),
-            showTitle: false,
-            radius: 80,
-          ),
-        )
-        .toList();
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+        padding: const EdgeInsets.all(20),
+        child: Row(
           children: [
-            Text(titulo, style: theme.textTheme.titleMedium),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 240,
-              child: sections.isEmpty
-                  ? const Center(child: Text('Sem dados para exibir.'))
-                  : Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        PieChart(
-                          PieChartData(
-                            sections: sections,
-                            sectionsSpace: 2,
-                            centerSpaceRadius: 70,
-                            startDegreeOffset: -90,
-                          ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '$total',
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const Text('amostragens'),
-                          ],
-                        ),
-                      ],
-                    ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
             ),
-            const SizedBox(height: 12),
-            _StatusLegend(totais: totais),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(titulo, style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$total',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -659,54 +658,51 @@ class _StatusPieCard extends StatelessWidget {
   }
 }
 
-class _StatusLegend extends StatelessWidget {
-  const _StatusLegend({required this.totais});
+class _StatusPieCard extends StatelessWidget {
+  const _StatusPieCard({required this.titulo, required this.totais});
 
-  final Map<String, int> totais;
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = _statusKeys
-        .map((key) => MapEntry(key, totais[key] ?? 0))
-        .toList(growable: false);
-
-    return Wrap(
-      spacing: 12,
-      runSpacing: 8,
-      children: entries
-          .map(
-            (entry) => _LegendEntry(
-              color: _statusColors[entry.key]!,
-              label: '${_headerMap[entry.key]}: ${entry.value}',
-            ),
-          )
-          .toList(),
-    );
-  }
-}
-
-class _LegendEntry extends StatelessWidget {
-  const _LegendEntry({required this.color, required this.label});
-
+  final String titulo;
+  final int total;
+  final IconData icon;
   final Color color;
-  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(titulo, style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$total',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 6),
-        Text(label),
-      ],
+      ),
     );
   }
 }
