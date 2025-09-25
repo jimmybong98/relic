@@ -321,19 +321,20 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
 
     final now = DateTime.now();
     final last = _lastAmostragem;
+    final reminderInterval = _resolveAmostragemReminderInterval(flow);
     final bool precisaAlertar;
     if (last == null) {
       precisaAlertar = true;
     } else {
       final diff = now.difference(last);
-      precisaAlertar = diff >= const Duration(minutes: 20);
+      precisaAlertar = diff >= reminderInterval;
       if (!precisaAlertar) {
         _lastReminderShownAt = null;
       }
     }
 
     if (precisaAlertar && _shouldShowAmostragemReminder(now)) {
-      _showAmostragemReminder(flow);
+      _showAmostragemReminder(flow, reminderInterval);
     }
   }
 
@@ -344,13 +345,39 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     return now.difference(lastReminder) >= const Duration(minutes: 5);
   }
 
-  Future<void> _showAmostragemReminder(SharedSearchFormState flow) async {
+  Duration _resolveAmostragemReminderInterval(SharedSearchFormState flow) {
+    final categoria = flow.categoria?.toLowerCase().trim();
+    if (categoria == 'cnc alimentador') {
+      return const Duration(minutes: 20);
+    }
+    if (categoria == 'tornos com placa') {
+      return const Duration(minutes: 40);
+    }
+    return const Duration(hours: 2);
+  }
+
+  String _formatReminderDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    if (minutes >= 60 && minutes % 60 == 0) {
+      final hours = minutes ~/ 60;
+      final suffix = hours == 1 ? 'hora' : 'horas';
+      return '$hours $suffix';
+    }
+    final suffix = minutes == 1 ? 'minuto' : 'minutos';
+    return '$minutes $suffix';
+  }
+
+  Future<void> _showAmostragemReminder(
+    SharedSearchFormState flow,
+    Duration reminderInterval,
+  ) async {
     if (!mounted || _amostragemReminderDialogOpen) return;
     _amostragemReminderDialogOpen = true;
     _lastReminderShownAt = DateTime.now();
     final os = flow.os.trim();
+    final intervaloFormatado = _formatReminderDuration(reminderInterval);
     final mensagemBase =
-        'Nenhuma amostragem foi registrada nos últimos 20 minutos.';
+        'Nenhuma amostragem foi registrada nos últimos $intervaloFormatado.';
     final mensagem = os.isEmpty
         ? mensagemBase
         : '$mensagemBase\nO.S. atual: $os';
