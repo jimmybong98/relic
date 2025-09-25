@@ -211,12 +211,6 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     _opCtrl.addListener(_opSyncListener);
     _carregarMaquinas();
 
-    ref.listen<SharedSearchFormState>(
-      sharedSearchFormProvider,
-      (previous, next) {
-        _handleFlowStateChange(previous, next);
-      },
-    );
     _handleFlowStateChange(null, shared);
   }
 
@@ -231,7 +225,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       return;
     }
 
-    final wasActive = previous != null &&
+    final wasActive =
+        previous != null &&
         previous.isActive &&
         previous.effectiveProcess == SearchFlowProcess.amostragem;
 
@@ -288,9 +283,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     _amostragemCheckInProgress = true;
     try {
       final uri = buildApiUri('/operador/amostragens', query);
-      final resp = await http
-          .get(uri)
-          .timeout(const Duration(seconds: 15));
+      final resp = await http.get(uri).timeout(const Duration(seconds: 15));
       if (resp.statusCode == 200) {
         DateTime? ultimaAmostragem;
         try {
@@ -301,8 +294,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
               final raw = first['created_at'].toString();
               ultimaAmostragem = DateTime.tryParse(raw)?.toLocal();
               if (ultimaAmostragem == null) {
-                ultimaAmostragem = DateTime.tryParse(raw.replaceFirst(' ', 'T'))
-                    ?.toLocal();
+                ultimaAmostragem = DateTime.tryParse(
+                  raw.replaceFirst(' ', 'T'),
+                )?.toLocal();
               }
             }
           }
@@ -934,6 +928,13 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<SharedSearchFormState>(sharedSearchFormProvider, (
+      previous,
+      next,
+    ) {
+      _handleFlowStateChange(previous, next);
+    });
+
     final medidasAsync = ref.watch(medidasOperadorControllerProvider);
     final medidas = medidasAsync.value ?? [];
     final flowState = ref.watch(sharedSearchFormProvider);
