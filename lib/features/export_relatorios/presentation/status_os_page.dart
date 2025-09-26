@@ -575,6 +575,20 @@ class _OsInteractivePie extends StatefulWidget {
 class _OsInteractivePieState extends State<_OsInteractivePie> {
   int _touchedIndex = -1;
 
+  @override
+  void didUpdateWidget(covariant _OsInteractivePie oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final shouldResetIndex = _touchedIndex >= widget.slices.length ||
+        (_touchedIndex >= 0 && _touchedIndex < oldWidget.slices.length &&
+            oldWidget.slices[_touchedIndex].label !=
+                widget.slices[_touchedIndex].label);
+
+    if (shouldResetIndex) {
+      setState(() => _touchedIndex = -1);
+    }
+  }
+
   void _handleTouch(FlTouchEvent event, PieTouchResponse? response) {
     final newIndex =
         event.isInterestedForInteractions && response?.touchedSection != null
@@ -612,7 +626,8 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
       );
     }
 
-    final hoveredLabel = _touchedIndex >= 0
+    final hoveredLabel = (_touchedIndex >= 0 &&
+            _touchedIndex < widget.slices.length)
         ? widget.slices[_touchedIndex].label
         : null;
     final labelStyle = theme.textTheme.bodyMedium?.copyWith(
