@@ -665,7 +665,6 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
             child: hoveredLabel == null
                 ? const SizedBox.shrink()
                 : Center(
-                    key: ValueKey(hoveredLabel),
                     child: Text(
                       hoveredLabel,
                       textAlign: TextAlign.center,
@@ -910,7 +909,9 @@ class _LegendEntry extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: theme.textTheme.bodySmall,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.8),
+              ),
               overflow: TextOverflow.ellipsis,
               maxLines: 2,
             ),
