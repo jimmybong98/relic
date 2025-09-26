@@ -2566,7 +2566,13 @@ def relatorio_status_os():
 
                 cur.execute(
                     """
-                    SELECT a.os, a.partnumber, a.maquina, i.status, i.escolha
+                    SELECT a.id AS amostragem_id,
+                           a.os,
+                           a.partnumber,
+                           a.maquina,
+                           a.re_operador,
+                           i.status,
+                           i.escolha
                       FROM operador_amostragem a
                       JOIN operador_amostragem_item i ON i.amostragem_id = a.id
                     """,
@@ -2606,6 +2612,15 @@ def relatorio_status_os():
                             lista_cat = dados.setdefault("categorias", [])
                             if categoria not in lista_cat:
                                 lista_cat.append(categoria)
+                    re_operador = _norm(row.get("re_operador"))
+                    amostragem_id = row.get("amostragem_id")
+                    if re_operador and amostragem_id:
+                        vistos = dados.setdefault("_seen_amostragens", set())
+                        chave = (re_operador, amostragem_id)
+                        if chave not in vistos:
+                            vistos.add(chave)
+                            por_re = dados.setdefault("amostragens_por_re", {})
+                            por_re[re_operador] = por_re.get(re_operador, 0) + 1
                     status_bruto = row.get("status") or ""
                     partes_status = _split_choices(status_bruto)
                     if not partes_status:
@@ -2628,6 +2643,18 @@ def relatorio_status_os():
             item["maquinas"] = sorted(item.get("maquinas", []))
             item["categorias"] = sorted(item.get("categorias", []))
             item["partnumbers"] = sorted(item.get("partnumbers", []))
+            contagens_re = item.get("amostragens_por_re") or {}
+            if isinstance(contagens_re, dict):
+                ordenado = sorted(
+                    contagens_re.items(),
+                    key=lambda par: (-par[1], par[0]),
+                )
+                item["amostragens_por_re"] = [
+                    {"re": chave, "total": valor} for chave, valor in ordenado
+                ]
+            else:
+                item["amostragens_por_re"] = []
+            item.pop("_seen_amostragens", None)
         registros.sort(key=_ordenar)
         return jsonify(registros)
     except Exception as e:

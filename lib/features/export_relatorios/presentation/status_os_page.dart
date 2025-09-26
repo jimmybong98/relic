@@ -87,6 +87,22 @@ class _StatusOsPageState extends State<StatusOsPage> {
             (mapa['partnumbers'] as List?)?.whereType<String>() ??
                 const <String>[],
           ).toList(growable: false);
+          final amostragensPorRe =
+              (mapa['amostragens_por_re'] as List?)?.whereType<Map>() ??
+              const <Map<dynamic, dynamic>>[];
+          mapa['amostragens_por_re'] = amostragensPorRe
+              .map<Map<String, dynamic>>((item) {
+                final re = (item['re'] ?? '').toString().trim();
+                final total = item['total'];
+                final quantidade = total is num ? total.toInt() : 0;
+                return {'re': re, 'total': quantidade};
+              })
+              .where(
+                (item) =>
+                    (item['re'] as String).isNotEmpty &&
+                    (item['total'] as int) > 0,
+              )
+              .toList(growable: false);
           mapa['status'] = (mapa['status'] ?? '').toString();
           mapa['os'] = (mapa['os'] ?? '').toString();
           return mapa;
@@ -216,6 +232,28 @@ class _StatusOsPageState extends State<StatusOsPage> {
     return totais;
   }
 
+  List<MapEntry<String, int>> _totaisAmostragensPorRe() {
+    final totais = <String, int>{};
+    for (final row in _rows) {
+      final lista = (row['amostragens_por_re'] as List?)
+          ?.whereType<Map<String, dynamic>>();
+      if (lista == null) continue;
+      for (final item in lista) {
+        final re = (item['re'] ?? '').toString();
+        final total = item['total'];
+        if (re.isEmpty || total is! num) continue;
+        totais[re] = (totais[re] ?? 0) + total.toInt();
+      }
+    }
+    final entries = totais.entries.toList(growable: false);
+    entries.sort((a, b) {
+      final compareTotal = b.value.compareTo(a.value);
+      if (compareTotal != 0) return compareTotal;
+      return a.key.compareTo(b.key);
+    });
+    return entries;
+  }
+
   String _formatarValor(Map<String, dynamic> row, String key) {
     final value = row[key];
     if (value == null) return '';
@@ -326,26 +364,30 @@ class _StatusOsPageState extends State<StatusOsPage> {
         .where((os) => os.isNotEmpty)
         .toList(growable: false);
     final totaisAmostragens = _totaisGeraisAmostragens();
+    final totaisPorRe = _totaisAmostragensPorRe();
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final charts = [
-          _OsPieCard(
-            key: const ValueKey('status_pie_abertas'),
-            titulo: 'OS abertas',
-            ordens: abertas,
-          ),
-          _OsPieCard(
-            key: const ValueKey('status_pie_finalizadas'),
-            titulo: 'OS finalizadas',
-            ordens: finalizadas,
-          ),
-          _SamplingPieCard(
-            key: const ValueKey('status_pie_amostragem'),
-            titulo: 'Distribuição das amostragens',
-            totais: totaisAmostragens,
-          ),
-        ];
+        final abertasCard = _OsPieCard(
+          key: const ValueKey('status_pie_abertas'),
+          titulo: 'OS abertas',
+          ordens: abertas,
+        );
+        final finalizadasCard = _OsPieCard(
+          key: const ValueKey('status_pie_finalizadas'),
+          titulo: 'OS finalizadas',
+          ordens: finalizadas,
+        );
+        final distribuicaoCard = _SamplingPieCard(
+          key: const ValueKey('status_pie_amostragem'),
+          titulo: 'Distribuição das amostragens',
+          totais: totaisAmostragens,
+        );
+        final amostragensPorReCard = _ReSamplingListCard(
+          key: const ValueKey('status_lista_amostragem_re'),
+          titulo: 'Amostragens por RE',
+          totais: totaisPorRe,
+        );
 
         final isCompact = constraints.maxWidth < 900;
 
@@ -353,11 +395,13 @@ class _StatusOsPageState extends State<StatusOsPage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              charts[0],
+              abertasCard,
               const SizedBox(height: 16),
-              charts[1],
+              finalizadasCard,
               const SizedBox(height: 16),
-              charts[2],
+              distribuicaoCard,
+              const SizedBox(height: 16),
+              amostragensPorReCard,
             ],
           );
         }
@@ -367,13 +411,20 @@ class _StatusOsPageState extends State<StatusOsPage> {
           children: [
             Row(
               children: [
-                Expanded(child: charts[0]),
+                Expanded(child: abertasCard),
                 const SizedBox(width: 16),
-                Expanded(child: charts[1]),
+                Expanded(child: finalizadasCard),
               ],
             ),
             const SizedBox(height: 16),
-            charts[2],
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: distribuicaoCard),
+                const SizedBox(width: 16),
+                Expanded(child: amostragensPorReCard),
+              ],
+            ),
           ],
         );
       },
@@ -587,8 +638,10 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
   void didUpdateWidget(covariant _OsInteractivePie oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final shouldResetIndex = _touchedIndex >= widget.slices.length ||
-        (_touchedIndex >= 0 && _touchedIndex < oldWidget.slices.length &&
+    final shouldResetIndex =
+        _touchedIndex >= widget.slices.length ||
+        (_touchedIndex >= 0 &&
+            _touchedIndex < oldWidget.slices.length &&
             oldWidget.slices[_touchedIndex].label !=
                 widget.slices[_touchedIndex].label);
 
@@ -634,8 +687,8 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
       );
     }
 
-    final hoveredLabel = (_touchedIndex >= 0 &&
-            _touchedIndex < widget.slices.length)
+    final hoveredLabel =
+        (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
         ? widget.slices[_touchedIndex].label
         : null;
     final labelStyle = theme.textTheme.bodyMedium?.copyWith(
@@ -806,6 +859,79 @@ class _SamplingPieCard extends StatelessWidget {
   }
 }
 
+class _ReSamplingListCard extends StatelessWidget {
+  const _ReSamplingListCard({
+    super.key,
+    required this.titulo,
+    required this.totais,
+  });
+
+  final String titulo;
+  final List<MapEntry<String, int>> totais;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final totalAmostragens = totais.fold<int>(
+      0,
+      (acc, item) => acc + item.value,
+    );
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(titulo, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            if (totalAmostragens == 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'Nenhum registro de amostragem encontrado para os filtros.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              )
+            else ...[
+              Text(
+                'Total de amostragens: $totalAmostragens',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...totais.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          entry.key,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        '${entry.value} '
+                        '${entry.value == 1 ? 'amostragem' : 'amostragens'}',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _InteractivePieWithLegend extends StatefulWidget {
   const _InteractivePieWithLegend({
     required this.slices,
@@ -829,7 +955,8 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
   void didUpdateWidget(covariant _InteractivePieWithLegend oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final shouldResetIndex = _touchedIndex >= widget.slices.length ||
+    final shouldResetIndex =
+        _touchedIndex >= widget.slices.length ||
         (_touchedIndex >= 0 &&
             _touchedIndex < oldWidget.slices.length &&
             oldWidget.slices[_touchedIndex].label !=
@@ -843,8 +970,8 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
   void _handleTouch(FlTouchEvent event, PieTouchResponse? response) {
     final newIndex =
         event.isInterestedForInteractions && response?.touchedSection != null
-            ? response!.touchedSection!.touchedSectionIndex
-            : -1;
+        ? response!.touchedSection!.touchedSectionIndex
+        : -1;
     if (newIndex != _touchedIndex) {
       setState(() => _touchedIndex = newIndex);
     }
@@ -858,8 +985,8 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
     final sectionsSpace = widget.slices.length >= 20
         ? 0.6
         : isDense
-            ? 1.2
-            : 2.0;
+        ? 1.2
+        : 2.0;
     final baseRadius = isDense ? 52.0 : 56.0;
 
     final sections = <PieChartSectionData>[];
@@ -884,16 +1011,12 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
         ),
       );
       legendEntries.add(
-        _LegendEntry(
-          color: color,
-          label: slice.label,
-          highlighted: isTouched,
-        ),
+        _LegendEntry(color: color, label: slice.label, highlighted: isTouched),
       );
     }
 
-    final hoveredLabel = (_touchedIndex >= 0 &&
-            _touchedIndex < widget.slices.length)
+    final hoveredLabel =
+        (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
         ? widget.slices[_touchedIndex].label
         : null;
     final hoveredStyle = theme.textTheme.bodyMedium?.copyWith(
@@ -980,11 +1103,7 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: [
-                  chart,
-                  const SizedBox(height: 12),
-                  hoveredIndicator,
-                ],
+                children: [chart, const SizedBox(height: 12), hoveredIndicator],
               ),
             ),
             const SizedBox(width: 16),
@@ -1016,8 +1135,7 @@ class _LegendEntry extends StatelessWidget {
           )
         : Colors.transparent;
     final textStyle = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onSurface
-          .withOpacity(highlighted ? 0.92 : 0.8),
+      color: theme.colorScheme.onSurface.withOpacity(highlighted ? 0.92 : 0.8),
       fontWeight: highlighted ? FontWeight.w600 : FontWeight.w500,
     );
 
