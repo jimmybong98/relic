@@ -557,6 +557,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
               osList: osSet.toList(growable: false),
               showSearchControls: false,
               withContainer: false,
+              reFilter: _reSelecionado,
             ),
           ),
         ],
