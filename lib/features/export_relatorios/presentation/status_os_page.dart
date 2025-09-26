@@ -309,11 +309,15 @@ class _StatusOsPageState extends State<StatusOsPage> {
 
   Map<String, int> _totaisGeraisAmostragensPorRe() {
     final totais = <String, int>{};
+    final filtroRe = _reSelecionado?.trim();
     for (final row in _rows) {
       final lista = row['amostragens_por_re'];
       if (lista is! List<_ReSamplingCount>) continue;
       for (final item in lista) {
         if (item.total <= 0) continue;
+        if (filtroRe != null && filtroRe.isNotEmpty && item.re != filtroRe) {
+          continue;
+        }
         totais[item.re] = (totais[item.re] ?? 0) + item.total;
       }
     }
