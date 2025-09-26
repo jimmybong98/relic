@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import 'package:admin/widgets/window_bar.dart';
 
@@ -202,16 +203,9 @@ class _StatusOsPageState extends State<StatusOsPage> {
     });
   }
 
-  int _contarOsPorStatus(String status) {
-    return _rows.where((row) => (row['status'] ?? '') == status).length;
-  }
-
-  Map<String, int> _totaisPorStatus(String status) {
+  Map<String, int> _totaisGeraisAmostragens() {
     final totais = {for (final key in _statusKeys) key: 0};
     for (final row in _rows) {
-      if ((row['status'] ?? '') != status) {
-        continue;
-      }
       for (final key in _statusKeys) {
         final valor = row[key];
         if (valor is num) {
@@ -320,137 +314,66 @@ class _StatusOsPageState extends State<StatusOsPage> {
     );
   }
 
-  Widget _buildResumoStatus() {
-    final abertas = _contarOsPorStatus('Aberta');
-    final finalizadas = _contarOsPorStatus('Finalizada');
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cards = [
-          _StatusCountCard(
-            key: const ValueKey('status_card_abertas'),
-            titulo: 'OS abertas',
-            total: abertas,
-            icon: Icons.folder_open_outlined,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          _StatusCountCard(
-            key: const ValueKey('status_card_finalizadas'),
-            titulo: 'OS finalizadas',
-            total: finalizadas,
-            icon: Icons.task_alt_outlined,
-            color: Theme.of(context).colorScheme.secondary,
-          ),
-        ];
-
-        if (constraints.maxWidth < 720) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [cards[0], const SizedBox(height: 16), cards[1]],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(child: cards[0]),
-            const SizedBox(width: 16),
-            Expanded(child: cards[1]),
-          ],
-        );
-      },
-    );
-  }
-
   Widget _buildGraficos() {
-    final totaisAbertas = _totaisPorStatus('Aberta');
-    final totaisFinalizadas = _totaisPorStatus('Finalizada');
+    final abertas = _rows
+        .where((row) => (row['status'] ?? '') == 'Aberta')
+        .map((row) => row['os']?.toString() ?? '')
+        .where((os) => os.isNotEmpty)
+        .toList(growable: false);
+    final finalizadas = _rows
+        .where((row) => (row['status'] ?? '') == 'Finalizada')
+        .map((row) => row['os']?.toString() ?? '')
+        .where((os) => os.isNotEmpty)
+        .toList(growable: false);
+    final totaisAmostragens = _totaisGeraisAmostragens();
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final charts = [
-          _StatusPieCard(
+          _OsPieCard(
             key: const ValueKey('status_pie_abertas'),
             titulo: 'OS abertas',
-            totais: totaisAbertas,
+            ordens: abertas,
           ),
-          _StatusPieCard(
+          _OsPieCard(
             key: const ValueKey('status_pie_finalizadas'),
             titulo: 'OS finalizadas',
-            totais: totaisFinalizadas,
+            ordens: finalizadas,
+          ),
+          _SamplingPieCard(
+            key: const ValueKey('status_pie_amostragem'),
+            titulo: 'Distribuição das amostragens',
+            totais: totaisAmostragens,
           ),
         ];
 
-        if (constraints.maxWidth < 720) {
+        final isCompact = constraints.maxWidth < 900;
+
+        if (isCompact) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [cards[0], const SizedBox(height: 16), cards[1]],
+            children: [
+              charts[0],
+              const SizedBox(height: 16),
+              charts[1],
+              const SizedBox(height: 16),
+              charts[2],
+            ],
           );
         }
 
-        return Row(
-          children: [
-            Expanded(child: cards[0]),
-            const SizedBox(width: 16),
-            Expanded(child: cards[1]),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildGraficos() {
-    final abertas = _contarOsPorStatus('Aberta');
-    final finalizadas = _contarOsPorStatus('Finalizada');
-    final totaisAbertas = _totaisPorStatus('Aberta');
-    final totaisFinalizadas = _totaisPorStatus('Finalizada');
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isStacked = constraints.maxWidth < 720;
-        final cards = [
-          _StatusCountCard(
-            titulo: 'OS abertas',
-            total: abertas,
-            icon: Icons.folder_open_outlined,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          _StatusCountCard(
-            titulo: 'OS finalizadas',
-            total: finalizadas,
-            icon: Icons.task_alt_outlined,
-            color: Theme.of(context).colorScheme.secondary,
-          ),
-        ];
-        final charts = [
-          _StatusPieCard(titulo: 'OS abertas', totais: totaisAbertas),
-          _StatusPieCard(titulo: 'OS finalizadas', totais: totaisFinalizadas),
-        ];
-
         return Column(
-          crossAxisAlignment:
-              isStacked ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (isStacked)
-              ...[cards[0], const SizedBox(height: 16), cards[1]]
-            else
-              Row(
-                children: [
-                  Expanded(child: cards[0]),
-                  const SizedBox(width: 16),
-                  Expanded(child: cards[1]),
-                ],
-              ),
+            Row(
+              children: [
+                Expanded(child: charts[0]),
+                const SizedBox(width: 16),
+                Expanded(child: charts[1]),
+              ],
+            ),
             const SizedBox(height: 16),
-            if (isStacked)
-              ...[charts[0], const SizedBox(height: 16), charts[1]]
-            else
-              Row(
-                children: [
-                  Expanded(child: charts[0]),
-                  const SizedBox(width: 16),
-                  Expanded(child: charts[1]),
-                ],
-              ),
+            charts[2],
           ],
         );
       },
@@ -496,48 +419,46 @@ class _StatusOsPageState extends State<StatusOsPage> {
             ),
           ),
           const Divider(height: 1),
-          Expanded(
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
             child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SingleChildScrollView(
-                child: DataTable(
-                  headingRowColor: MaterialStateColor.resolveWith(
-                    (states) => Theme.of(
-                      context,
-                    ).colorScheme.surfaceVariant.withOpacity(0.4),
-                  ),
-                  columns: headers
-                      .map(
-                        (h) => DataColumn(
-                          label: Text(
-                            _headerMap[h] ?? h,
-                            style: const TextStyle(fontSize: 12),
-                          ),
+              child: DataTable(
+                headingRowColor: MaterialStateColor.resolveWith(
+                  (states) => Theme.of(
+                    context,
+                  ).colorScheme.surfaceVariant.withOpacity(0.4),
+                ),
+                columns: headers
+                    .map(
+                      (h) => DataColumn(
+                        label: Text(
+                          _headerMap[h] ?? h,
+                          style: const TextStyle(fontSize: 12),
                         ),
-                      )
-                      .toList(),
-                  rows: _rows
-                      .map(
-                        (row) => DataRow(
-                          cells: headers
-                              .map(
-                                (h) => DataCell(
-                                  ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 200,
-                                    ),
-                                    child: Text(
-                                      _formatarValor(row, h),
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
+                      ),
+                    )
+                    .toList(),
+                rows: _rows
+                    .map(
+                      (row) => DataRow(
+                        cells: headers
+                            .map(
+                              (h) => DataCell(
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 200,
+                                  ),
+                                  child: Text(
+                                    _formatarValor(row, h),
+                                    style: const TextStyle(fontSize: 12),
                                   ),
                                 ),
-                              )
-                              .toList(),
-                        ),
-                      )
-                      .toList(),
-                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    )
+                    .toList(),
               ),
             ),
           ),
@@ -554,39 +475,274 @@ class _StatusOsPageState extends State<StatusOsPage> {
       appBar: const WindowBar(title: 'Status das OS', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  FilledButton.icon(
-                    onPressed: _loading ? null : _carregar,
-                    icon: const Icon(Icons.refresh),
-                    label: _loading
-                        ? const Text('Atualizando...')
-                        : const Text('Atualizar'),
-                  ),
-                  if (_loading) ...[
-                    const SizedBox(width: 16),
-                    const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2.2),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: constraints.maxWidth,
+                  minHeight: constraints.maxHeight,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        FilledButton.icon(
+                          onPressed: _loading ? null : _carregar,
+                          icon: const Icon(Icons.refresh),
+                          label: _loading
+                              ? const Text('Atualizando...')
+                              : const Text('Atualizar'),
+                        ),
+                        if (_loading) ...[
+                          const SizedBox(width: 16),
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2.2),
+                          ),
+                        ],
+                      ],
                     ),
+                    const SizedBox(height: 16),
+                    _buildFiltros(),
+                    const SizedBox(height: 16),
+                    _buildGraficos(),
+                    const SizedBox(height: 16),
+                    _buildTabela(headers),
                   ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _OsPieCard extends StatelessWidget {
+  const _OsPieCard({super.key, required this.titulo, required this.ordens});
+
+  final String titulo;
+  final List<String> ordens;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final total = ordens.length;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(titulo, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            if (ordens.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'Nenhuma OS encontrada para este status.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              )
+            else
+              _OsInteractivePie(
+                centerLabel: '$total',
+                centerDescription: total == 1 ? 'ordem' : 'ordens',
+                slices: [
+                  for (final os in ordens) _PieSlice(label: 'OS $os', value: 1),
                 ],
               ),
-              const SizedBox(height: 16),
-              _buildFiltros(),
-              const SizedBox(height: 16),
-              _buildResumoStatus(),
-              const SizedBox(height: 16),
-              _buildGraficos(),
-              const SizedBox(height: 16),
-              Expanded(child: _buildTabela(headers)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OsInteractivePie extends StatefulWidget {
+  const _OsInteractivePie({
+    required this.slices,
+    required this.centerLabel,
+    required this.centerDescription,
+  });
+
+  final List<_PieSlice> slices;
+  final String centerLabel;
+  final String centerDescription;
+
+  @override
+  State<_OsInteractivePie> createState() => _OsInteractivePieState();
+}
+
+class _OsInteractivePieState extends State<_OsInteractivePie> {
+  int _touchedIndex = -1;
+
+  @override
+  void didUpdateWidget(covariant _OsInteractivePie oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final shouldResetIndex = _touchedIndex >= widget.slices.length ||
+        (_touchedIndex >= 0 && _touchedIndex < oldWidget.slices.length &&
+            oldWidget.slices[_touchedIndex].label !=
+                widget.slices[_touchedIndex].label);
+
+    if (shouldResetIndex) {
+      setState(() => _touchedIndex = -1);
+    }
+  }
+
+  void _handleTouch(FlTouchEvent event, PieTouchResponse? response) {
+    final newIndex =
+        event.isInterestedForInteractions && response?.touchedSection != null
+        ? response!.touchedSection!.touchedSectionIndex
+        : -1;
+    if (newIndex != _touchedIndex) {
+      setState(() => _touchedIndex = newIndex);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = _buildPalette(theme, widget.slices.length);
+    final sectionsSpace = widget.slices.length >= 32
+        ? 0.5
+        : widget.slices.length >= 18
+        ? 1.0
+        : 2.0;
+
+    final sections = <PieChartSectionData>[];
+    for (var i = 0; i < widget.slices.length; i++) {
+      final slice = widget.slices[i];
+      final color = slice.colorOverride ?? colors[i];
+      final isTouched = i == _touchedIndex;
+      sections.add(
+        PieChartSectionData(
+          color: color,
+          value: slice.value,
+          showTitle: false,
+          radius: isTouched ? 62 : 56,
+          badgeWidget: _OsSliceBadge(label: slice.label, visible: isTouched),
+          badgePositionPercentageOffset: 1.18,
+        ),
+      );
+    }
+
+    final hoveredLabel = (_touchedIndex >= 0 &&
+            _touchedIndex < widget.slices.length)
+        ? widget.slices[_touchedIndex].label
+        : null;
+    final labelStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurface.withOpacity(0.8),
+      fontWeight: FontWeight.w600,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 240,
+          child: Stack(
+            children: [
+              PieChart(
+                PieChartData(
+                  sections: sections,
+                  sectionsSpace: sectionsSpace,
+                  centerSpaceRadius: 58,
+                  startDegreeOffset: -90,
+                  pieTouchData: PieTouchData(touchCallback: _handleTouch),
+                ),
+              ),
+              Positioned.fill(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      widget.centerLabel,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.centerDescription,
+                      style: theme.textTheme.labelMedium,
+                    ),
+                  ],
+                ),
+              ),
             ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 28,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: hoveredLabel == null
+                ? const SizedBox.shrink()
+                : Center(
+                    child: Text(
+                      hoveredLabel,
+                      textAlign: TextAlign.center,
+                      style: labelStyle,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OsSliceBadge extends StatelessWidget {
+  const _OsSliceBadge({required this.label, required this.visible});
+
+  final String label;
+  final bool visible;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final surface = theme.colorScheme.surface.withOpacity(0.94);
+    final outline = theme.colorScheme.outline.withOpacity(0.5);
+
+    return IgnorePointer(
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 120),
+        opacity: visible ? 1 : 0,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: outline, width: 0.7),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.16),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 180),
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -594,104 +750,313 @@ class _StatusOsPageState extends State<StatusOsPage> {
   }
 }
 
-class _StatusCountCard extends StatelessWidget {
-  const _StatusCountCard({
-    super.key,
-    required this.titulo,
-    required this.total,
-    required this.icon,
-    required this.color,
-  });
-  final String titulo;
-  final int total;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(titulo, style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$total',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusPieCard extends StatelessWidget {
-  const _StatusPieCard({
+class _SamplingPieCard extends StatelessWidget {
+  const _SamplingPieCard({
     super.key,
     required this.titulo,
     required this.totais,
   });
 
   final String titulo;
-  final int total;
-  final IconData icon;
-  final Color color;
+  final Map<String, int> totais;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final entries = _statusKeys
+        .map((key) => MapEntry(key, totais[key] ?? 0))
+        .where((entry) => entry.value > 0)
+        .toList(growable: false);
+    final total = entries.fold<int>(0, (acc, item) => acc + item.value);
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
+            Text(titulo, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            if (total == 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'Nenhuma amostragem encontrada.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              )
+            else
+              _InteractivePieWithLegend(
+                centerLabel: '$total',
+                centerDescription: total == 1 ? 'amostragem' : 'amostragens',
+                slices: [
+                  for (final entry in entries)
+                    _PieSlice(
+                      label:
+                          '${_headerMap[entry.key] ?? entry.key}: ${entry.value}',
+                      value: entry.value.toDouble(),
+                      colorOverride: _statusColor(entry.key, theme),
+                    ),
+                ],
               ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(titulo, style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$total',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InteractivePieWithLegend extends StatefulWidget {
+  const _InteractivePieWithLegend({
+    required this.slices,
+    required this.centerLabel,
+    required this.centerDescription,
+  });
+
+  final List<_PieSlice> slices;
+  final String centerLabel;
+  final String centerDescription;
+
+  @override
+  State<_InteractivePieWithLegend> createState() =>
+      _InteractivePieWithLegendState();
+}
+
+class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
+  int _touchedIndex = -1;
+
+  @override
+  void didUpdateWidget(covariant _InteractivePieWithLegend oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final shouldResetIndex = _touchedIndex >= widget.slices.length ||
+        (_touchedIndex >= 0 &&
+            _touchedIndex < oldWidget.slices.length &&
+            oldWidget.slices[_touchedIndex].label !=
+                widget.slices[_touchedIndex].label);
+
+    if (shouldResetIndex) {
+      setState(() => _touchedIndex = -1);
+    }
+  }
+
+  void _handleTouch(FlTouchEvent event, PieTouchResponse? response) {
+    final newIndex =
+        event.isInterestedForInteractions && response?.touchedSection != null
+            ? response!.touchedSection!.touchedSectionIndex
+            : -1;
+    if (newIndex != _touchedIndex) {
+      setState(() => _touchedIndex = newIndex);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = _buildPalette(theme, widget.slices.length);
+    final isDense = widget.slices.length > 8;
+    final sectionsSpace = widget.slices.length >= 20
+        ? 0.6
+        : isDense
+            ? 1.2
+            : 2.0;
+    final baseRadius = isDense ? 52.0 : 56.0;
+
+    final sections = <PieChartSectionData>[];
+    final legendEntries = <Widget>[];
+
+    for (var i = 0; i < widget.slices.length; i++) {
+      final slice = widget.slices[i];
+      final color = slice.colorOverride ?? colors[i];
+      final isTouched = i == _touchedIndex;
+      sections.add(
+        PieChartSectionData(
+          color: color,
+          value: slice.value,
+          showTitle: false,
+          radius: isTouched ? baseRadius + 6 : baseRadius,
+          borderSide: isTouched
+              ? BorderSide(
+                  color: theme.colorScheme.onSurface.withOpacity(0.18),
+                  width: 1.4,
+                )
+              : const BorderSide(color: Colors.transparent),
+        ),
+      );
+      legendEntries.add(
+        _LegendEntry(
+          color: color,
+          label: slice.label,
+          highlighted: isTouched,
+        ),
+      );
+    }
+
+    final hoveredLabel = (_touchedIndex >= 0 &&
+            _touchedIndex < widget.slices.length)
+        ? widget.slices[_touchedIndex].label
+        : null;
+    final hoveredStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurface.withOpacity(0.82),
+      fontWeight: FontWeight.w600,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isVertical = constraints.maxWidth < 480;
+        final chart = SizedBox(
+          height: 220,
+          child: Stack(
+            children: [
+              PieChart(
+                PieChartData(
+                  sections: sections,
+                  sectionsSpace: sectionsSpace,
+                  centerSpaceRadius: 58,
+                  startDegreeOffset: -90,
+                  pieTouchData: PieTouchData(touchCallback: _handleTouch),
+                ),
+              ),
+              Positioned.fill(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      widget.centerLabel,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.centerDescription,
+                      style: theme.textTheme.labelMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+
+        final hoveredIndicator = SizedBox(
+          height: 28,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: hoveredLabel == null
+                ? const SizedBox.shrink()
+                : Center(
+                    child: Text(
+                      hoveredLabel,
+                      textAlign: TextAlign.center,
+                      style: hoveredStyle,
                     ),
                   ),
+          ),
+        );
+
+        final legend = Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: legendEntries,
+        );
+
+        if (isVertical) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              chart,
+              const SizedBox(height: 12),
+              hoveredIndicator,
+              const SizedBox(height: 8),
+              legend,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  chart,
+                  const SizedBox(height: 12),
+                  hoveredIndicator,
                 ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(child: legend),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LegendEntry extends StatelessWidget {
+  const _LegendEntry({
+    required this.color,
+    required this.label,
+    this.highlighted = false,
+  });
+
+  final Color color;
+  final String label;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final background = highlighted
+        ? theme.colorScheme.surfaceVariant.withOpacity(
+            theme.brightness == Brightness.dark ? 0.45 : 0.6,
+          )
+        : Colors.transparent;
+    final textStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurface
+          .withOpacity(highlighted ? 0.92 : 0.8),
+      fontWeight: highlighted ? FontWeight.w600 : FontWeight.w500,
+    );
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 120, maxWidth: 260),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(4),
+                boxShadow: highlighted
+                    ? [
+                        BoxShadow(
+                          color: color.withOpacity(0.36),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: textStyle,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ),
           ],
@@ -701,100 +1066,77 @@ class _StatusPieCard extends StatelessWidget {
   }
 }
 
-class _StatusPieCard extends StatelessWidget {
-  const _StatusPieCard({required this.titulo, required this.totais});
+class _PieSlice {
+  const _PieSlice({
+    required this.label,
+    required this.value,
+    this.colorOverride,
+  });
 
-  final String titulo;
-  final int total;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(titulo, style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$total',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  final String label;
+  final double value;
+  final Color? colorOverride;
 }
 
-class _StatusPieCard extends StatelessWidget {
-  const _StatusPieCard({required this.titulo, required this.totais});
+List<Color> _buildPalette(ThemeData theme, int count) {
+  final candidates = <Color>[
+    theme.colorScheme.primary,
+    theme.colorScheme.secondary,
+    theme.colorScheme.tertiary,
+    theme.colorScheme.error,
+    Colors.teal,
+    Colors.deepOrange,
+    Colors.indigo,
+    Colors.pink,
+    Colors.blueGrey,
+    Colors.amber,
+    Colors.cyan.shade700,
+    Colors.deepPurple,
+    Colors.lightGreen.shade700,
+    Colors.brown,
+  ].whereType<Color>().toList();
 
-  final String titulo;
-  final int total;
-  final IconData icon;
-  final Color color;
+  if (candidates.isEmpty) {
+    candidates.add(Colors.blue);
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  if (count <= candidates.length) {
+    return candidates.take(count).toList(growable: false);
+  }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(titulo, style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$total',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  final colors = <Color>[]..addAll(candidates);
+  const goldenRatio = 0.6180339887498949;
+  var hue = 0.0;
+
+  while (colors.length < count) {
+    hue = (hue + goldenRatio) % 1.0;
+    final saturation = 0.55 + ((colors.length) % 3) * 0.1;
+    final value = 0.65 - ((colors.length ~/ 3) % 2) * 0.08;
+    final color = HSVColor.fromAHSV(
+      1,
+      hue * 360,
+      saturation.clamp(0.4, 0.85),
+      value.clamp(0.45, 0.85),
+    ).toColor();
+    colors.add(color);
+  }
+
+  return colors.take(count).toList(growable: false);
+}
+
+Color _statusColor(String key, ThemeData theme) {
+  switch (key) {
+    case 'reprovada_abaixo':
+      return Colors.red.shade400;
+    case 'alerta_abaixo':
+      return Colors.amber.shade400;
+    case 'ok':
+      return Colors.green.shade600;
+    case 'alerta_acima':
+      return Colors.amber.shade700;
+    case 'reprovada_acima':
+      return Colors.red.shade700;
+    default:
+      return theme.colorScheme.secondary;
   }
 }
