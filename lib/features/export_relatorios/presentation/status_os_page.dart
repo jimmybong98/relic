@@ -203,10 +203,6 @@ class _StatusOsPageState extends State<StatusOsPage> {
     });
   }
 
-  int _contarOsPorStatus(String status) {
-    return _rows.where((row) => (row['status'] ?? '') == status).length;
-  }
-
   Map<String, int> _totaisGeraisAmostragens() {
     final totais = {for (final key in _statusKeys) key: 0};
     for (final row in _rows) {
@@ -315,47 +311,6 @@ class _StatusOsPageState extends State<StatusOsPage> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildResumoStatus() {
-    final abertas = _contarOsPorStatus('Aberta');
-    final finalizadas = _contarOsPorStatus('Finalizada');
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cards = [
-          _StatusCountCard(
-            key: const ValueKey('status_card_abertas'),
-            titulo: 'OS abertas',
-            total: abertas,
-            icon: Icons.folder_open_outlined,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          _StatusCountCard(
-            key: const ValueKey('status_card_finalizadas'),
-            titulo: 'OS finalizadas',
-            total: finalizadas,
-            icon: Icons.task_alt_outlined,
-            color: Theme.of(context).colorScheme.secondary,
-          ),
-        ];
-
-        if (constraints.maxWidth < 720) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [cards[0], const SizedBox(height: 16), cards[1]],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(child: cards[0]),
-            const SizedBox(width: 16),
-            Expanded(child: cards[1]),
-          ],
-        );
-      },
     );
   }
 
@@ -549,67 +504,11 @@ class _StatusOsPageState extends State<StatusOsPage> {
               const SizedBox(height: 16),
               _buildFiltros(),
               const SizedBox(height: 16),
-              _buildResumoStatus(),
-              const SizedBox(height: 16),
               _buildGraficos(),
               const SizedBox(height: 16),
               Expanded(child: _buildTabela(headers)),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusCountCard extends StatelessWidget {
-  const _StatusCountCard({
-    super.key,
-    required this.titulo,
-    required this.total,
-    required this.icon,
-    required this.color,
-  });
-  final String titulo;
-  final int total;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(titulo, style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$total',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -644,15 +543,185 @@ class _OsPieCard extends StatelessWidget {
                 ),
               )
             else
-              _PieChartWithLegend(
+              _OsInteractivePie(
                 centerLabel: '$total',
                 centerDescription: total == 1 ? 'ordem' : 'ordens',
                 slices: [
-                  for (var i = 0; i < ordens.length; i++)
-                    _PieSlice(label: 'OS ${ordens[i]}', value: 1),
+                  for (final os in ordens) _PieSlice(label: 'OS $os', value: 1),
                 ],
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OsInteractivePie extends StatefulWidget {
+  const _OsInteractivePie({
+    required this.slices,
+    required this.centerLabel,
+    required this.centerDescription,
+  });
+
+  final List<_PieSlice> slices;
+  final String centerLabel;
+  final String centerDescription;
+
+  @override
+  State<_OsInteractivePie> createState() => _OsInteractivePieState();
+}
+
+class _OsInteractivePieState extends State<_OsInteractivePie> {
+  int _touchedIndex = -1;
+
+  void _handleTouch(FlTouchEvent event, PieTouchResponse? response) {
+    final newIndex =
+        event.isInterestedForInteractions && response?.touchedSection != null
+        ? response!.touchedSection!.touchedSectionIndex
+        : -1;
+    if (newIndex != _touchedIndex) {
+      setState(() => _touchedIndex = newIndex);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = _buildPalette(theme, widget.slices.length);
+    final sectionsSpace = widget.slices.length >= 32
+        ? 0.5
+        : widget.slices.length >= 18
+        ? 1.0
+        : 2.0;
+
+    final sections = <PieChartSectionData>[];
+    for (var i = 0; i < widget.slices.length; i++) {
+      final slice = widget.slices[i];
+      final color = slice.colorOverride ?? colors[i];
+      final isTouched = i == _touchedIndex;
+      sections.add(
+        PieChartSectionData(
+          color: color,
+          value: slice.value,
+          showTitle: false,
+          radius: isTouched ? 62 : 56,
+          badgeWidget: _OsSliceBadge(label: slice.label, visible: isTouched),
+          badgePositionPercentageOffset: 1.18,
+        ),
+      );
+    }
+
+    final hoveredLabel = _touchedIndex >= 0
+        ? widget.slices[_touchedIndex].label
+        : null;
+    final labelStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurface.withOpacity(0.8),
+      fontWeight: FontWeight.w600,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 240,
+          child: Stack(
+            children: [
+              PieChart(
+                PieChartData(
+                  sections: sections,
+                  sectionsSpace: sectionsSpace,
+                  centerSpaceRadius: 58,
+                  startDegreeOffset: -90,
+                  pieTouchData: PieTouchData(touchCallback: _handleTouch),
+                ),
+              ),
+              Positioned.fill(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      widget.centerLabel,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.centerDescription,
+                      style: theme.textTheme.labelMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 28,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: hoveredLabel == null
+                ? const SizedBox.shrink()
+                : Center(
+                    key: ValueKey(hoveredLabel),
+                    child: Text(
+                      hoveredLabel,
+                      textAlign: TextAlign.center,
+                      style: labelStyle,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OsSliceBadge extends StatelessWidget {
+  const _OsSliceBadge({required this.label, required this.visible});
+
+  final String label;
+  final bool visible;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final surface = theme.colorScheme.surface.withOpacity(0.94);
+    final outline = theme.colorScheme.outline.withOpacity(0.5);
+
+    return IgnorePointer(
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 120),
+        opacity: visible ? 1 : 0,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: outline, width: 0.7),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.16),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 180),
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -732,6 +801,13 @@ class _PieChartWithLegend extends StatelessWidget {
     final colors = _buildPalette(theme, slices.length);
     final sections = <PieChartSectionData>[];
     final legendEntries = <Widget>[];
+    final isDense = slices.length > 8;
+    final sectionsSpace = slices.length >= 20
+        ? 0.6
+        : isDense
+        ? 1.2
+        : 2.0;
+    final sectionRadius = isDense ? 52.0 : 56.0;
 
     for (var i = 0; i < slices.length; i++) {
       final slice = slices[i];
@@ -741,7 +817,7 @@ class _PieChartWithLegend extends StatelessWidget {
           color: color,
           value: slice.value,
           showTitle: false,
-          radius: 56,
+          radius: sectionRadius,
         ),
       );
       legendEntries.add(_LegendEntry(color: color, label: slice.label));
@@ -757,7 +833,7 @@ class _PieChartWithLegend extends StatelessWidget {
               PieChart(
                 PieChartData(
                   sections: sections,
-                  sectionsSpace: 2,
+                  sectionsSpace: sectionsSpace,
                   centerSpaceRadius: 58,
                   startDegreeOffset: -90,
                 ),
@@ -869,28 +945,50 @@ List<Color> _buildPalette(ThemeData theme, int count) {
     Colors.pink,
     Colors.blueGrey,
     Colors.amber,
+    Colors.cyan.shade700,
+    Colors.deepPurple,
+    Colors.lightGreen.shade700,
+    Colors.brown,
   ].whereType<Color>().toList();
 
   if (candidates.isEmpty) {
     candidates.add(Colors.blue);
   }
 
-  return List<Color>.generate(
-    count,
-    (index) => candidates[index % candidates.length],
-  );
+  if (count <= candidates.length) {
+    return candidates.take(count).toList(growable: false);
+  }
+
+  final colors = <Color>[]..addAll(candidates);
+  const goldenRatio = 0.6180339887498949;
+  var hue = 0.0;
+
+  while (colors.length < count) {
+    hue = (hue + goldenRatio) % 1.0;
+    final saturation = 0.55 + ((colors.length) % 3) * 0.1;
+    final value = 0.65 - ((colors.length ~/ 3) % 2) * 0.08;
+    final color = HSVColor.fromAHSV(
+      1,
+      hue * 360,
+      saturation.clamp(0.4, 0.85),
+      value.clamp(0.45, 0.85),
+    ).toColor();
+    colors.add(color);
+  }
+
+  return colors.take(count).toList(growable: false);
 }
 
 Color _statusColor(String key, ThemeData theme) {
   switch (key) {
-    case 'ok':
-      return theme.colorScheme.primary;
-    case 'alerta_abaixo':
-      return Colors.orange;
-    case 'alerta_acima':
-      return Colors.deepOrange;
     case 'reprovada_abaixo':
-      return theme.colorScheme.error;
+      return Colors.red.shade400;
+    case 'alerta_abaixo':
+      return Colors.amber.shade400;
+    case 'ok':
+      return Colors.green.shade600;
+    case 'alerta_acima':
+      return Colors.amber.shade700;
     case 'reprovada_acima':
       return Colors.red.shade700;
     default:
