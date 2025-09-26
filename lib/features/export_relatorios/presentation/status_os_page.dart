@@ -419,48 +419,46 @@ class _StatusOsPageState extends State<StatusOsPage> {
             ),
           ),
           const Divider(height: 1),
-          Expanded(
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
             child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SingleChildScrollView(
-                child: DataTable(
-                  headingRowColor: MaterialStateColor.resolveWith(
-                    (states) => Theme.of(
-                      context,
-                    ).colorScheme.surfaceVariant.withOpacity(0.4),
-                  ),
-                  columns: headers
-                      .map(
-                        (h) => DataColumn(
-                          label: Text(
-                            _headerMap[h] ?? h,
-                            style: const TextStyle(fontSize: 12),
-                          ),
+              child: DataTable(
+                headingRowColor: MaterialStateColor.resolveWith(
+                  (states) => Theme.of(
+                    context,
+                  ).colorScheme.surfaceVariant.withOpacity(0.4),
+                ),
+                columns: headers
+                    .map(
+                      (h) => DataColumn(
+                        label: Text(
+                          _headerMap[h] ?? h,
+                          style: const TextStyle(fontSize: 12),
                         ),
-                      )
-                      .toList(),
-                  rows: _rows
-                      .map(
-                        (row) => DataRow(
-                          cells: headers
-                              .map(
-                                (h) => DataCell(
-                                  ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 200,
-                                    ),
-                                    child: Text(
-                                      _formatarValor(row, h),
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
+                      ),
+                    )
+                    .toList(),
+                rows: _rows
+                    .map(
+                      (row) => DataRow(
+                        cells: headers
+                            .map(
+                              (h) => DataCell(
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 200,
+                                  ),
+                                  child: Text(
+                                    _formatarValor(row, h),
+                                    style: const TextStyle(fontSize: 12),
                                   ),
                                 ),
-                              )
-                              .toList(),
-                        ),
-                      )
-                      .toList(),
-                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    )
+                    .toList(),
               ),
             ),
           ),
@@ -477,38 +475,48 @@ class _StatusOsPageState extends State<StatusOsPage> {
       appBar: const WindowBar(title: 'Status das OS', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  FilledButton.icon(
-                    onPressed: _loading ? null : _carregar,
-                    icon: const Icon(Icons.refresh),
-                    label: _loading
-                        ? const Text('Atualizando...')
-                        : const Text('Atualizar'),
-                  ),
-                  if (_loading) ...[
-                    const SizedBox(width: 16),
-                    const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2.2),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: constraints.maxWidth,
+                  minHeight: constraints.maxHeight,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        FilledButton.icon(
+                          onPressed: _loading ? null : _carregar,
+                          icon: const Icon(Icons.refresh),
+                          label: _loading
+                              ? const Text('Atualizando...')
+                              : const Text('Atualizar'),
+                        ),
+                        if (_loading) ...[
+                          const SizedBox(width: 16),
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2.2),
+                          ),
+                        ],
+                      ],
                     ),
+                    const SizedBox(height: 16),
+                    _buildFiltros(),
+                    const SizedBox(height: 16),
+                    _buildGraficos(),
+                    const SizedBox(height: 16),
+                    _buildTabela(headers),
                   ],
-                ],
+                ),
               ),
-              const SizedBox(height: 16),
-              _buildFiltros(),
-              const SizedBox(height: 16),
-              _buildGraficos(),
-              const SizedBox(height: 16),
-              Expanded(child: _buildTabela(headers)),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -778,7 +786,7 @@ class _SamplingPieCard extends StatelessWidget {
                 ),
               )
             else
-              _PieChartWithLegend(
+              _InteractivePieWithLegend(
                 centerLabel: '$total',
                 centerDescription: total == 1 ? 'amostragem' : 'amostragens',
                 slices: [
@@ -798,8 +806,8 @@ class _SamplingPieCard extends StatelessWidget {
   }
 }
 
-class _PieChartWithLegend extends StatelessWidget {
-  const _PieChartWithLegend({
+class _InteractivePieWithLegend extends StatefulWidget {
+  const _InteractivePieWithLegend({
     required this.slices,
     required this.centerLabel,
     required this.centerDescription,
@@ -810,36 +818,92 @@ class _PieChartWithLegend extends StatelessWidget {
   final String centerDescription;
 
   @override
+  State<_InteractivePieWithLegend> createState() =>
+      _InteractivePieWithLegendState();
+}
+
+class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
+  int _touchedIndex = -1;
+
+  @override
+  void didUpdateWidget(covariant _InteractivePieWithLegend oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final shouldResetIndex = _touchedIndex >= widget.slices.length ||
+        (_touchedIndex >= 0 &&
+            _touchedIndex < oldWidget.slices.length &&
+            oldWidget.slices[_touchedIndex].label !=
+                widget.slices[_touchedIndex].label);
+
+    if (shouldResetIndex) {
+      setState(() => _touchedIndex = -1);
+    }
+  }
+
+  void _handleTouch(FlTouchEvent event, PieTouchResponse? response) {
+    final newIndex =
+        event.isInterestedForInteractions && response?.touchedSection != null
+            ? response!.touchedSection!.touchedSectionIndex
+            : -1;
+    if (newIndex != _touchedIndex) {
+      setState(() => _touchedIndex = newIndex);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = _buildPalette(theme, slices.length);
-    final sections = <PieChartSectionData>[];
-    final legendEntries = <Widget>[];
-    final isDense = slices.length > 8;
-    final sectionsSpace = slices.length >= 20
+    final colors = _buildPalette(theme, widget.slices.length);
+    final isDense = widget.slices.length > 8;
+    final sectionsSpace = widget.slices.length >= 20
         ? 0.6
         : isDense
-        ? 1.2
-        : 2.0;
-    final sectionRadius = isDense ? 52.0 : 56.0;
+            ? 1.2
+            : 2.0;
+    final baseRadius = isDense ? 52.0 : 56.0;
 
-    for (var i = 0; i < slices.length; i++) {
-      final slice = slices[i];
+    final sections = <PieChartSectionData>[];
+    final legendEntries = <Widget>[];
+
+    for (var i = 0; i < widget.slices.length; i++) {
+      final slice = widget.slices[i];
       final color = slice.colorOverride ?? colors[i];
+      final isTouched = i == _touchedIndex;
       sections.add(
         PieChartSectionData(
           color: color,
           value: slice.value,
           showTitle: false,
-          radius: sectionRadius,
+          radius: isTouched ? baseRadius + 6 : baseRadius,
+          borderSide: isTouched
+              ? BorderSide(
+                  color: theme.colorScheme.onSurface.withOpacity(0.18),
+                  width: 1.4,
+                )
+              : const BorderSide(color: Colors.transparent),
         ),
       );
-      legendEntries.add(_LegendEntry(color: color, label: slice.label));
+      legendEntries.add(
+        _LegendEntry(
+          color: color,
+          label: slice.label,
+          highlighted: isTouched,
+        ),
+      );
     }
+
+    final hoveredLabel = (_touchedIndex >= 0 &&
+            _touchedIndex < widget.slices.length)
+        ? widget.slices[_touchedIndex].label
+        : null;
+    final hoveredStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurface.withOpacity(0.82),
+      fontWeight: FontWeight.w600,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isVertical = constraints.maxWidth < 420;
+        final isVertical = constraints.maxWidth < 480;
         final chart = SizedBox(
           height: 220,
           child: Stack(
@@ -850,6 +914,7 @@ class _PieChartWithLegend extends StatelessWidget {
                   sectionsSpace: sectionsSpace,
                   centerSpaceRadius: 58,
                   startDegreeOffset: -90,
+                  pieTouchData: PieTouchData(touchCallback: _handleTouch),
                 ),
               ),
               Positioned.fill(
@@ -857,17 +922,36 @@ class _PieChartWithLegend extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      centerLabel,
+                      widget.centerLabel,
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(centerDescription, style: theme.textTheme.labelMedium),
+                    Text(
+                      widget.centerDescription,
+                      style: theme.textTheme.labelMedium,
+                    ),
                   ],
                 ),
               ),
             ],
+          ),
+        );
+
+        final hoveredIndicator = SizedBox(
+          height: 28,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: hoveredLabel == null
+                ? const SizedBox.shrink()
+                : Center(
+                    child: Text(
+                      hoveredLabel,
+                      textAlign: TextAlign.center,
+                      style: hoveredStyle,
+                    ),
+                  ),
           ),
         );
 
@@ -880,14 +964,29 @@ class _PieChartWithLegend extends StatelessWidget {
         if (isVertical) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [chart, const SizedBox(height: 16), legend],
+            children: [
+              chart,
+              const SizedBox(height: 12),
+              hoveredIndicator,
+              const SizedBox(height: 8),
+              legend,
+            ],
           );
         }
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: chart),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  chart,
+                  const SizedBox(height: 12),
+                  hoveredIndicator,
+                ],
+              ),
+            ),
             const SizedBox(width: 16),
             Expanded(child: legend),
           ],
@@ -898,40 +997,70 @@ class _PieChartWithLegend extends StatelessWidget {
 }
 
 class _LegendEntry extends StatelessWidget {
-  const _LegendEntry({required this.color, required this.label});
+  const _LegendEntry({
+    required this.color,
+    required this.label,
+    this.highlighted = false,
+  });
 
   final Color color;
   final String label;
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final background = highlighted
+        ? theme.colorScheme.surfaceVariant.withOpacity(
+            theme.brightness == Brightness.dark ? 0.45 : 0.6,
+          )
+        : Colors.transparent;
+    final textStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurface
+          .withOpacity(highlighted ? 0.92 : 0.8),
+      fontWeight: highlighted ? FontWeight.w600 : FontWeight.w500,
+    );
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 120),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.8),
+      constraints: const BoxConstraints(minWidth: 120, maxWidth: 260),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(4),
+                boxShadow: highlighted
+                    ? [
+                        BoxShadow(
+                          color: color.withOpacity(0.36),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: textStyle,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
