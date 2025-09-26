@@ -50,16 +50,39 @@ class _StatusOsPageState extends State<StatusOsPage> {
   List<String> _maquinas = const <String>[];
   List<String> _partnumbers = const <String>[];
   List<String> _osOptions = const <String>[];
+  List<String> _resOptions = const <String>[];
 
   String? _categoriaSelecionada;
   String? _maquinaSelecionada;
   String? _partnumberSelecionado;
   String? _osSelecionada;
+  String? _reSelecionado;
+
+  late final TextEditingController _categoriaController;
+  late final TextEditingController _maquinaController;
+  late final TextEditingController _partnumberController;
+  late final TextEditingController _osController;
+  late final TextEditingController _reController;
 
   @override
   void initState() {
     super.initState();
+    _categoriaController = TextEditingController();
+    _maquinaController = TextEditingController();
+    _partnumberController = TextEditingController();
+    _osController = TextEditingController();
+    _reController = TextEditingController();
     Future.microtask(_carregar);
+  }
+
+  @override
+  void dispose() {
+    _categoriaController.dispose();
+    _maquinaController.dispose();
+    _partnumberController.dispose();
+    _osController.dispose();
+    _reController.dispose();
+    super.dispose();
   }
 
   Future<void> _carregar() async {
@@ -68,69 +91,76 @@ class _StatusOsPageState extends State<StatusOsPage> {
     if (!mounted) return;
     final parsed = data
         .map<Map<String, dynamic>>((raw) {
-      final mapa = Map<String, dynamic>.from(raw);
-      for (final key in _statusKeys) {
-        final valor = mapa[key];
-        if (valor is num) {
-          mapa[key] = valor.toInt();
-        } else {
-          mapa[key] = 0;
-        }
-      }
-      mapa['categorias'] = SplayTreeSet<String>.from(
-        (mapa['categorias'] as List?)?.whereType<String>() ??
-            const <String>[],
-      ).toList(growable: false);
-      mapa['maquinas'] = SplayTreeSet<String>.from(
-        (mapa['maquinas'] as List?)?.whereType<String>() ??
-            const <String>[],
-      ).toList(growable: false);
-      mapa['partnumbers'] = SplayTreeSet<String>.from(
-        (mapa['partnumbers'] as List?)?.whereType<String>() ??
-            const <String>[],
-      ).toList(growable: false);
-      mapa['status'] = (mapa['status'] ?? '').toString();
-      mapa['os'] = (mapa['os'] ?? '').toString();
-      final reCounts = <_ReSamplingCount>[];
-      final amostragensPorRe = mapa['amostragens_por_re'];
-      if (amostragensPorRe is List) {
-        for (final entry in amostragensPorRe) {
-          if (entry is! Map) continue;
-          final re = (entry['re'] ?? '').toString().trim();
-          if (re.isEmpty) continue;
-          final totalRaw = entry['total'];
-          final total = totalRaw is num
-              ? totalRaw.toInt()
-              : int.tryParse(totalRaw?.toString() ?? '') ?? 0;
-          if (total <= 0) continue;
-          reCounts.add(_ReSamplingCount(re: re, total: total));
-        }
-      } else if (amostragensPorRe is Map) {
-        amostragensPorRe.forEach((key, value) {
-          final re = (key ?? '').toString().trim();
-          if (re.isEmpty) return;
-          final total = value is num
-              ? value.toInt()
-              : int.tryParse(value?.toString() ?? '') ?? 0;
-          if (total <= 0) return;
-          reCounts.add(_ReSamplingCount(re: re, total: total));
-        });
-      }
-      mapa['amostragens_por_re'] = reCounts;
-      return mapa;
-    })
+          final mapa = Map<String, dynamic>.from(raw);
+          for (final key in _statusKeys) {
+            final valor = mapa[key];
+            if (valor is num) {
+              mapa[key] = valor.toInt();
+            } else {
+              mapa[key] = 0;
+            }
+          }
+          mapa['categorias'] = SplayTreeSet<String>.from(
+            (mapa['categorias'] as List?)?.whereType<String>() ??
+                const <String>[],
+          ).toList(growable: false);
+          mapa['maquinas'] = SplayTreeSet<String>.from(
+            (mapa['maquinas'] as List?)?.whereType<String>() ??
+                const <String>[],
+          ).toList(growable: false);
+          mapa['partnumbers'] = SplayTreeSet<String>.from(
+            (mapa['partnumbers'] as List?)?.whereType<String>() ??
+                const <String>[],
+          ).toList(growable: false);
+          mapa['status'] = (mapa['status'] ?? '').toString();
+          mapa['os'] = (mapa['os'] ?? '').toString();
+          final reCounts = <_ReSamplingCount>[];
+          final amostragensPorRe = mapa['amostragens_por_re'];
+          if (amostragensPorRe is List) {
+            for (final entry in amostragensPorRe) {
+              if (entry is! Map) continue;
+              final re = (entry['re'] ?? '').toString().trim();
+              if (re.isEmpty) continue;
+              final totalRaw = entry['total'];
+              final total = totalRaw is num
+                  ? totalRaw.toInt()
+                  : int.tryParse(totalRaw?.toString() ?? '') ?? 0;
+              if (total <= 0) continue;
+              reCounts.add(_ReSamplingCount(re: re, total: total));
+            }
+          } else if (amostragensPorRe is Map) {
+            amostragensPorRe.forEach((key, value) {
+              final re = (key ?? '').toString().trim();
+              if (re.isEmpty) return;
+              final total = value is num
+                  ? value.toInt()
+                  : int.tryParse(value?.toString() ?? '') ?? 0;
+              if (total <= 0) return;
+              reCounts.add(_ReSamplingCount(re: re, total: total));
+            });
+          }
+          mapa['amostragens_por_re'] = reCounts;
+          return mapa;
+        })
         .toList(growable: false);
 
     final categorias = SplayTreeSet<String>();
     final maquinas = SplayTreeSet<String>();
     final partnumbers = SplayTreeSet<String>();
     final ordens = SplayTreeSet<String>();
+    final res = SplayTreeSet<String>();
 
     for (final row in parsed) {
       categorias.addAll(row['categorias'].cast<String>());
       maquinas.addAll(row['maquinas'].cast<String>());
       partnumbers.addAll(row['partnumbers'].cast<String>());
       ordens.add(row['os'] as String);
+      final amostragens = row['amostragens_por_re'];
+      if (amostragens is List<_ReSamplingCount>) {
+        for (final item in amostragens) {
+          res.add(item.re);
+        }
+      }
     }
 
     var categoriaSelecionada = _categoriaSelecionada;
@@ -151,6 +181,10 @@ class _StatusOsPageState extends State<StatusOsPage> {
     if (osSelecionada != null && !ordens.contains(osSelecionada)) {
       osSelecionada = null;
     }
+    var reSelecionado = _reSelecionado;
+    if (reSelecionado != null && !res.contains(reSelecionado)) {
+      reSelecionado = null;
+    }
 
     final filtrado = _filtrarLista(
       parsed,
@@ -158,6 +192,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
       maquina: maquinaSelecionada,
       partnumber: partnumberSelecionado,
       os: osSelecionada,
+      re: reSelecionado,
     );
 
     setState(() {
@@ -167,54 +202,71 @@ class _StatusOsPageState extends State<StatusOsPage> {
       _maquinas = maquinas.toList(growable: false);
       _partnumbers = partnumbers.toList(growable: false);
       _osOptions = ordens.toList(growable: false);
+      _resOptions = res.toList(growable: false);
       _categoriaSelecionada = categoriaSelecionada;
       _maquinaSelecionada = maquinaSelecionada;
       _partnumberSelecionado = partnumberSelecionado;
       _osSelecionada = osSelecionada;
+      _reSelecionado = reSelecionado;
+      _atualizarTextoDropdown(_categoriaController, categoriaSelecionada);
+      _atualizarTextoDropdown(_maquinaController, maquinaSelecionada);
+      _atualizarTextoDropdown(_partnumberController, partnumberSelecionado);
+      _atualizarTextoDropdown(_osController, osSelecionada);
+      _atualizarTextoDropdown(_reController, reSelecionado);
       _loading = false;
     });
   }
 
   List<Map<String, dynamic>> _filtrarLista(
-      List<Map<String, dynamic>> base, {
-        String? categoria,
-        String? maquina,
-        String? partnumber,
-        String? os,
-      }) {
+    List<Map<String, dynamic>> base, {
+    String? categoria,
+    String? maquina,
+    String? partnumber,
+    String? os,
+    String? re,
+  }) {
     return base
         .where((row) {
-      final categorias =
-          (row['categorias'] as List?)?.whereType<String>().toList() ??
+          final categorias =
+              (row['categorias'] as List?)?.whereType<String>().toList() ??
               const [];
-      final maquinas =
-          (row['maquinas'] as List?)?.whereType<String>().toList() ??
+          final maquinas =
+              (row['maquinas'] as List?)?.whereType<String>().toList() ??
               const [];
-      final partnumbers =
-          (row['partnumbers'] as List?)?.whereType<String>().toList() ??
+          final partnumbers =
+              (row['partnumbers'] as List?)?.whereType<String>().toList() ??
               const [];
-      final osValor = row['os']?.toString() ?? '';
+          final osValor = row['os']?.toString() ?? '';
+          final reAmostragens = row['amostragens_por_re'];
 
-      if (categoria != null &&
-          categoria.isNotEmpty &&
-          !categorias.contains(categoria)) {
-        return false;
-      }
-      if (maquina != null &&
-          maquina.isNotEmpty &&
-          !maquinas.contains(maquina)) {
-        return false;
-      }
-      if (partnumber != null &&
-          partnumber.isNotEmpty &&
-          !partnumbers.contains(partnumber)) {
-        return false;
-      }
-      if (os != null && os.isNotEmpty && osValor != os) {
-        return false;
-      }
-      return true;
-    })
+          if (categoria != null &&
+              categoria.isNotEmpty &&
+              !categorias.contains(categoria)) {
+            return false;
+          }
+          if (maquina != null &&
+              maquina.isNotEmpty &&
+              !maquinas.contains(maquina)) {
+            return false;
+          }
+          if (partnumber != null &&
+              partnumber.isNotEmpty &&
+              !partnumbers.contains(partnumber)) {
+            return false;
+          }
+          if (os != null && os.isNotEmpty && osValor != os) {
+            return false;
+          }
+          if (re != null && re.isNotEmpty) {
+            final contemRe =
+                reAmostragens is List<_ReSamplingCount> &&
+                reAmostragens.any((item) => item.re == re);
+            if (!contemRe) {
+              return false;
+            }
+          }
+          return true;
+        })
         .toList(growable: false);
   }
 
@@ -227,8 +279,19 @@ class _StatusOsPageState extends State<StatusOsPage> {
         maquina: _maquinaSelecionada,
         partnumber: _partnumberSelecionado,
         os: _osSelecionada,
+        re: _reSelecionado,
       );
     });
+  }
+
+  void _atualizarTextoDropdown(
+    TextEditingController controller,
+    String? valorSelecionado,
+  ) {
+    final texto = valorSelecionado ?? '';
+    if (controller.text != texto) {
+      controller.text = texto;
+    }
   }
 
   Map<String, int> _totaisGeraisAmostragens() {
@@ -262,19 +325,26 @@ class _StatusOsPageState extends State<StatusOsPage> {
     required List<String> opcoes,
     required String? valor,
     required ValueChanged<String?> onChanged,
+    required TextEditingController controller,
   }) {
-    final items = <DropdownMenuItem<String>>[
-      const DropdownMenuItem<String>(value: _todos, child: Text('Todos')),
+    _atualizarTextoDropdown(controller, valor);
+
+    final entries = <DropdownMenuEntry<String>>[
+      const DropdownMenuEntry<String>(value: _todos, label: 'Todos'),
       ...opcoes.map(
-            (opcao) => DropdownMenuItem<String>(value: opcao, child: Text(opcao)),
+        (opcao) => DropdownMenuEntry<String>(value: opcao, label: opcao),
       ),
     ];
 
-    return DropdownButtonFormField<String>(
-      value: valor ?? _todos,
-      items: items,
-      decoration: InputDecoration(labelText: label),
-      onChanged: (selecionado) {
+    return DropdownMenu<String>(
+      controller: controller,
+      label: Text(label),
+      hintText: 'Todos',
+      dropdownMenuEntries: entries,
+      enableFilter: true,
+      requestFocusOnTap: true,
+      initialSelection: valor,
+      onSelected: (selecionado) {
         if (selecionado == null || selecionado == _todos) {
           onChanged(null);
         } else {
@@ -303,8 +373,14 @@ class _StatusOsPageState extends State<StatusOsPage> {
                     label: 'Categoria da máquina',
                     opcoes: _categorias,
                     valor: _categoriaSelecionada,
-                    onChanged: (valor) =>
-                        _atualizarFiltro(() => _categoriaSelecionada = valor),
+                    controller: _categoriaController,
+                    onChanged: (valor) => _atualizarFiltro(() {
+                      _categoriaSelecionada = valor;
+                      _atualizarTextoDropdown(
+                        _categoriaController,
+                        _categoriaSelecionada,
+                      );
+                    }),
                   ),
                 ),
                 SizedBox(
@@ -313,8 +389,14 @@ class _StatusOsPageState extends State<StatusOsPage> {
                     label: 'Máquina',
                     opcoes: _maquinas,
                     valor: _maquinaSelecionada,
-                    onChanged: (valor) =>
-                        _atualizarFiltro(() => _maquinaSelecionada = valor),
+                    controller: _maquinaController,
+                    onChanged: (valor) => _atualizarFiltro(() {
+                      _maquinaSelecionada = valor;
+                      _atualizarTextoDropdown(
+                        _maquinaController,
+                        _maquinaSelecionada,
+                      );
+                    }),
                   ),
                 ),
                 SizedBox(
@@ -323,8 +405,14 @@ class _StatusOsPageState extends State<StatusOsPage> {
                     label: 'Part number',
                     opcoes: _partnumbers,
                     valor: _partnumberSelecionado,
-                    onChanged: (valor) =>
-                        _atualizarFiltro(() => _partnumberSelecionado = valor),
+                    controller: _partnumberController,
+                    onChanged: (valor) => _atualizarFiltro(() {
+                      _partnumberSelecionado = valor;
+                      _atualizarTextoDropdown(
+                        _partnumberController,
+                        _partnumberSelecionado,
+                      );
+                    }),
                   ),
                 ),
                 SizedBox(
@@ -333,8 +421,24 @@ class _StatusOsPageState extends State<StatusOsPage> {
                     label: 'OS',
                     opcoes: _osOptions,
                     valor: _osSelecionada,
-                    onChanged: (valor) =>
-                        _atualizarFiltro(() => _osSelecionada = valor),
+                    controller: _osController,
+                    onChanged: (valor) => _atualizarFiltro(() {
+                      _osSelecionada = valor;
+                      _atualizarTextoDropdown(_osController, _osSelecionada);
+                    }),
+                  ),
+                ),
+                SizedBox(
+                  width: 180,
+                  child: _buildDropdown(
+                    label: 'RE',
+                    opcoes: _resOptions,
+                    valor: _reSelecionado,
+                    controller: _reController,
+                    onChanged: (valor) => _atualizarFiltro(() {
+                      _reSelecionado = valor;
+                      _atualizarTextoDropdown(_reController, _reSelecionado);
+                    }),
                   ),
                 ),
               ],
@@ -390,11 +494,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            osRow,
-            const SizedBox(height: 16),
-            charts[2],
-          ],
+          children: [osRow, const SizedBox(height: 16), charts[2]],
         );
       },
     );
@@ -580,10 +680,10 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
 
     final shouldResetIndex =
         _touchedIndex >= widget.slices.length ||
-            (_touchedIndex >= 0 &&
-                _touchedIndex < oldWidget.slices.length &&
-                oldWidget.slices[_touchedIndex].label !=
-                    widget.slices[_touchedIndex].label);
+        (_touchedIndex >= 0 &&
+            _touchedIndex < oldWidget.slices.length &&
+            oldWidget.slices[_touchedIndex].label !=
+                widget.slices[_touchedIndex].label);
 
     if (shouldResetIndex) {
       setState(() => _touchedIndex = -1);
@@ -592,7 +692,7 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
 
   void _handleTouch(FlTouchEvent event, PieTouchResponse? response) {
     final newIndex =
-    event.isInterestedForInteractions && response?.touchedSection != null
+        event.isInterestedForInteractions && response?.touchedSection != null
         ? response!.touchedSection!.touchedSectionIndex
         : -1;
     if (newIndex != _touchedIndex) {
@@ -628,7 +728,7 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
     }
 
     final hoveredLabel =
-    (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
+        (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
         ? widget.slices[_touchedIndex].label
         : null;
     final labelStyle = theme.textTheme.bodyMedium?.copyWith(
@@ -681,12 +781,12 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
             child: hoveredLabel == null
                 ? const SizedBox.shrink()
                 : Center(
-              child: Text(
-                hoveredLabel,
-                textAlign: TextAlign.center,
-                style: labelStyle,
-              ),
-            ),
+                    child: Text(
+                      hoveredLabel,
+                      textAlign: TextAlign.center,
+                      style: labelStyle,
+                    ),
+                  ),
           ),
         ),
       ],
@@ -764,14 +864,14 @@ class _SamplingPieCard extends StatelessWidget {
         .toList(growable: false);
     final total = entries.fold<int>(0, (acc, item) => acc + item.value);
     final reEntries =
-    totaisPorRe.entries
-        .where((entry) => entry.value > 0)
-        .toList(growable: false)
-      ..sort((a, b) {
-        final diff = b.value.compareTo(a.value);
-        if (diff != 0) return diff;
-        return a.key.compareTo(b.key);
-      });
+        totaisPorRe.entries
+            .where((entry) => entry.value > 0)
+            .toList(growable: false)
+          ..sort((a, b) {
+            final diff = b.value.compareTo(a.value);
+            if (diff != 0) return diff;
+            return a.key.compareTo(b.key);
+          });
 
     Widget buildChart() {
       if (total == 0) {
@@ -923,10 +1023,10 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
 
     final shouldResetIndex =
         _touchedIndex >= widget.slices.length ||
-            (_touchedIndex >= 0 &&
-                _touchedIndex < oldWidget.slices.length &&
-                oldWidget.slices[_touchedIndex].label !=
-                    widget.slices[_touchedIndex].label);
+        (_touchedIndex >= 0 &&
+            _touchedIndex < oldWidget.slices.length &&
+            oldWidget.slices[_touchedIndex].label !=
+                widget.slices[_touchedIndex].label);
 
     if (shouldResetIndex) {
       setState(() => _touchedIndex = -1);
@@ -935,7 +1035,7 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
 
   void _handleTouch(FlTouchEvent event, PieTouchResponse? response) {
     final newIndex =
-    event.isInterestedForInteractions && response?.touchedSection != null
+        event.isInterestedForInteractions && response?.touchedSection != null
         ? response!.touchedSection!.touchedSectionIndex
         : -1;
     if (newIndex != _touchedIndex) {
@@ -970,9 +1070,9 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
           radius: isTouched ? baseRadius + 6 : baseRadius,
           borderSide: isTouched
               ? BorderSide(
-            color: theme.colorScheme.onSurface.withOpacity(0.18),
-            width: 1.4,
-          )
+                  color: theme.colorScheme.onSurface.withOpacity(0.18),
+                  width: 1.4,
+                )
               : const BorderSide(color: Colors.transparent),
         ),
       );
@@ -982,7 +1082,7 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
     }
 
     final hoveredLabel =
-    (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
+        (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
         ? widget.slices[_touchedIndex].label
         : null;
     final hoveredStyle = theme.textTheme.bodyMedium?.copyWith(
@@ -1034,12 +1134,12 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
             child: hoveredLabel == null
                 ? const SizedBox.shrink()
                 : Center(
-              child: Text(
-                hoveredLabel,
-                textAlign: TextAlign.center,
-                style: hoveredStyle,
-              ),
-            ),
+                    child: Text(
+                      hoveredLabel,
+                      textAlign: TextAlign.center,
+                      style: hoveredStyle,
+                    ),
+                  ),
           ),
         );
 
@@ -1080,8 +1180,8 @@ class _LegendEntry extends StatelessWidget {
     final theme = Theme.of(context);
     final background = highlighted
         ? theme.colorScheme.surfaceVariant.withOpacity(
-      theme.brightness == Brightness.dark ? 0.45 : 0.6,
-    )
+            theme.brightness == Brightness.dark ? 0.45 : 0.6,
+          )
         : Colors.transparent;
     final textStyle = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurface.withOpacity(highlighted ? 0.92 : 0.8),
@@ -1108,12 +1208,12 @@ class _LegendEntry extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
                 boxShadow: highlighted
                     ? [
-                  BoxShadow(
-                    color: color.withOpacity(0.36),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
+                        BoxShadow(
+                          color: color.withOpacity(0.36),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
                     : null,
               ),
             ),
