@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -90,6 +91,32 @@ class _StatusOsPageState extends State<StatusOsPage> {
       ).toList(growable: false);
       mapa['status'] = (mapa['status'] ?? '').toString();
       mapa['os'] = (mapa['os'] ?? '').toString();
+      final reCounts = <_ReSamplingCount>[];
+      final amostragensPorRe = mapa['amostragens_por_re'];
+      if (amostragensPorRe is List) {
+        for (final entry in amostragensPorRe) {
+          if (entry is! Map) continue;
+          final re = (entry['re'] ?? '').toString().trim();
+          if (re.isEmpty) continue;
+          final totalRaw = entry['total'];
+          final total = totalRaw is num
+              ? totalRaw.toInt()
+              : int.tryParse(totalRaw?.toString() ?? '') ?? 0;
+          if (total <= 0) continue;
+          reCounts.add(_ReSamplingCount(re: re, total: total));
+        }
+      } else if (amostragensPorRe is Map) {
+        amostragensPorRe.forEach((key, value) {
+          final re = (key ?? '').toString().trim();
+          if (re.isEmpty) return;
+          final total = value is num
+              ? value.toInt()
+              : int.tryParse(value?.toString() ?? '') ?? 0;
+          if (total <= 0) return;
+          reCounts.add(_ReSamplingCount(re: re, total: total));
+        });
+      }
+      mapa['amostragens_por_re'] = reCounts;
       return mapa;
     })
         .toList(growable: false);
@@ -217,6 +244,19 @@ class _StatusOsPageState extends State<StatusOsPage> {
     return totais;
   }
 
+  Map<String, int> _totaisGeraisAmostragensPorRe() {
+    final totais = <String, int>{};
+    for (final row in _rows) {
+      final lista = row['amostragens_por_re'];
+      if (lista is! List<_ReSamplingCount>) continue;
+      for (final item in lista) {
+        if (item.total <= 0) continue;
+        totais[item.re] = (totais[item.re] ?? 0) + item.total;
+      }
+    }
+    return totais;
+  }
+
   Widget _buildDropdown({
     required String label,
     required List<String> opcoes,
@@ -317,6 +357,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
         .where((os) => os.isNotEmpty)
         .toList(growable: false);
     final totaisAmostragens = _totaisGeraisAmostragens();
+    final totaisAmostragensPorRe = _totaisGeraisAmostragensPorRe();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -335,34 +376,22 @@ class _StatusOsPageState extends State<StatusOsPage> {
             key: const ValueKey('status_pie_amostragem'),
             titulo: 'Distribuição das amostragens',
             totais: totaisAmostragens,
+            totaisPorRe: totaisAmostragensPorRe,
           ),
         ];
 
-        final isCompact = constraints.maxWidth < 900;
-
-        if (isCompact) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              charts[0],
-              const SizedBox(height: 16),
-              charts[1],
-              const SizedBox(height: 16),
-              charts[2],
-            ],
-          );
-        }
+        final osRow = Row(
+          children: [
+            Expanded(child: charts[0]),
+            const SizedBox(width: 16),
+            Expanded(child: charts[1]),
+          ],
+        );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(child: charts[0]),
-                const SizedBox(width: 16),
-                Expanded(child: charts[1]),
-              ],
-            ),
+            osRow,
             const SizedBox(height: 16),
             charts[2],
           ],
@@ -719,10 +748,12 @@ class _SamplingPieCard extends StatelessWidget {
     super.key,
     required this.titulo,
     required this.totais,
+    required this.totaisPorRe,
   });
 
   final String titulo;
   final Map<String, int> totais;
+  final Map<String, int> totaisPorRe;
 
   @override
   Widget build(BuildContext context) {
@@ -732,6 +763,97 @@ class _SamplingPieCard extends StatelessWidget {
         .where((entry) => entry.value > 0)
         .toList(growable: false);
     final total = entries.fold<int>(0, (acc, item) => acc + item.value);
+    final reEntries =
+    totaisPorRe.entries
+        .where((entry) => entry.value > 0)
+        .toList(growable: false)
+      ..sort((a, b) {
+        final diff = b.value.compareTo(a.value);
+        if (diff != 0) return diff;
+        return a.key.compareTo(b.key);
+      });
+
+    Widget buildChart() {
+      if (total == 0) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Text(
+            'Nenhuma amostragem encontrada.',
+            style: theme.textTheme.bodyMedium,
+          ),
+        );
+      }
+
+      return _InteractivePieWithLegend(
+        centerLabel: '$total',
+        centerDescription: total == 1 ? 'amostragem' : 'amostragens',
+        slices: [
+          for (final entry in entries)
+            _PieSlice(
+              label: '${_headerMap[entry.key] ?? entry.key}: ${entry.value}',
+              value: entry.value.toDouble(),
+              colorOverride: _statusColor(entry.key, theme),
+            ),
+        ],
+      );
+    }
+
+    Widget buildReList() {
+      final headerStyle = theme.textTheme.titleSmall?.copyWith(
+        fontWeight: FontWeight.w600,
+      );
+      final reStyle = theme.textTheme.bodyMedium?.copyWith(
+        fontWeight: FontWeight.w500,
+      );
+      final countStyle = theme.textTheme.bodyLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+      );
+      final captionStyle = theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurface.withOpacity(0.7),
+      );
+
+      if (reEntries.isEmpty) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Ciclo de amostragens por RE', style: headerStyle),
+            const SizedBox(height: 8),
+            Text('Nenhuma amostragem registrada.', style: captionStyle),
+          ],
+        );
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Ciclo de amostragens por RE', style: headerStyle),
+          const SizedBox(height: 8),
+          for (final entry in reEntries)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'RE ${entry.key}',
+                      style: reStyle,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('${entry.value}', style: countStyle),
+                  const SizedBox(width: 4),
+                  Text(
+                    entry.value == 1 ? 'amostragem' : 'amostragens',
+                    style: captionStyle,
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
+    }
 
     return Card(
       child: Padding(
@@ -741,28 +863,34 @@ class _SamplingPieCard extends StatelessWidget {
           children: [
             Text(titulo, style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
-            if (total == 0)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  'Nenhuma amostragem encontrada.',
-                  style: theme.textTheme.bodyMedium,
-                ),
-              )
-            else
-              _InteractivePieWithLegend(
-                centerLabel: '$total',
-                centerDescription: total == 1 ? 'amostragem' : 'amostragens',
-                slices: [
-                  for (final entry in entries)
-                    _PieSlice(
-                      label:
-                      '${_headerMap[entry.key] ?? entry.key}: ${entry.value}',
-                      value: entry.value.toDouble(),
-                      colorOverride: _statusColor(entry.key, theme),
-                    ),
-                ],
-              ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 680;
+                final chart = buildChart();
+                final reList = buildReList();
+
+                if (isCompact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [chart, const SizedBox(height: 16), reList],
+                  );
+                }
+
+                final listWidth = math.max(
+                  220.0,
+                  math.min(320.0, constraints.maxWidth * 0.45),
+                );
+
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: chart),
+                    const SizedBox(width: 24),
+                    SizedBox(width: listWidth, child: reList),
+                  ],
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -864,7 +992,6 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isVertical = constraints.maxWidth < 480;
         final chart = SizedBox(
           height: 220,
           child: Stack(
@@ -922,30 +1049,14 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
           children: legendEntries,
         );
 
-        if (isVertical) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              chart,
-              const SizedBox(height: 12),
-              hoveredIndicator,
-              const SizedBox(height: 8),
-              legend,
-            ],
-          );
-        }
-
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [chart, const SizedBox(height: 12), hoveredIndicator],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(child: legend),
+            chart,
+            const SizedBox(height: 12),
+            hoveredIndicator,
+            const SizedBox(height: 8),
+            Align(alignment: Alignment.centerLeft, child: legend),
           ],
         );
       },
@@ -978,7 +1089,7 @@ class _LegendEntry extends StatelessWidget {
     );
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 120, maxWidth: 260),
+      constraints: const BoxConstraints(minWidth: 70, maxWidth: 180),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -1006,7 +1117,7 @@ class _LegendEntry extends StatelessWidget {
                     : null,
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             Expanded(
               child: Text(
                 label,
@@ -1020,6 +1131,13 @@ class _LegendEntry extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ReSamplingCount {
+  const _ReSamplingCount({required this.re, required this.total});
+
+  final String re;
+  final int total;
 }
 
 class _PieSlice {
