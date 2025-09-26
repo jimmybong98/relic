@@ -15,11 +15,13 @@ class PersonnelReportChart extends StatefulWidget {
     this.osList,
     this.showSearchControls = true,
     this.withContainer = true,
+    this.reFilter,
   });
 
   final List<String>? osList;
   final bool showSearchControls;
   final bool withContainer;
+  final String? reFilter;
 
   @override
   State<PersonnelReportChart> createState() => _PersonnelReportChartState();
@@ -276,6 +278,12 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           _modo = 'os';
           _buscar();
         }
+      } else {
+        final novoRe = widget.reFilter?.trim() ?? '';
+        final antigoRe = oldWidget.reFilter?.trim() ?? '';
+        if (novoRe != antigoRe && current.isNotEmpty) {
+          _buscar();
+        }
       }
     }
   }
@@ -389,6 +397,38 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         ..addAll(otherRows);
     }
     return result;
+  }
+
+  void _aplicarFiltroPorRe(List<Map<String, dynamic>> rows) {
+    final filtro = widget.reFilter?.trim();
+    if (filtro == null || filtro.isEmpty) {
+      return;
+    }
+
+    String normalizar(dynamic value) => value?.toString().trim() ?? '';
+
+    bool corresponde(Map<String, dynamic> row) {
+      if (_tipo == 'operador') {
+        final valores = <String>{
+          normalizar(row['re_operador']),
+          normalizar(row['re']),
+        };
+        return valores.contains(filtro);
+      }
+      final valores = <String>{
+        normalizar(row['re_preparador']),
+        normalizar(row['re_liberacao']),
+        normalizar(row['re_finalizacao']),
+      };
+      return valores.contains(filtro);
+    }
+
+    rows.removeWhere((row) {
+      if (row['__isGroup'] == true) {
+        return false;
+      }
+      return !corresponde(row);
+    });
   }
 
   String _normalizeFilterValue(dynamic value) {
@@ -1724,6 +1764,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             }
           }
         }
+        _aplicarFiltroPorRe(rows);
         rows.sort(_compareByDate);
         return _withGroupHeaders(rows);
       }
@@ -1753,6 +1794,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         }
         rows.add(map);
       }
+      _aplicarFiltroPorRe(rows);
       rows.sort(_compareByDate);
       return _withGroupHeaders(rows);
     }
