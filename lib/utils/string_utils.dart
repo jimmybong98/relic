@@ -5,5 +5,6 @@
 String normalizeCode(String value) {
   final trimmed = value.trim();
   final normalized = trimmed.replaceFirst(RegExp(r'^0+'), '');
-  return normalized.isEmpty ? '0' : normalized;
+  final ensured = normalized.isEmpty ? '0' : normalized;
+  return ensured.toUpperCase();
 }
