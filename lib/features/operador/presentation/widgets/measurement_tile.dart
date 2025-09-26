@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:admin/features/preparacao/data/models.dart';
 
@@ -836,6 +837,9 @@ class _MeasurementTileState extends State<MeasurementTile> {
                   labelText: 'Ângulo (°)',
                   border: OutlineInputBorder(),
                 ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                ],
                 onChanged: (_) => _handleChanfroChanged(),
               ),
               const SizedBox(height: 10),
@@ -851,6 +855,9 @@ class _MeasurementTileState extends State<MeasurementTile> {
                   helperText: helper,
                   helperStyle: TextStyle(color: helperColor),
                 ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                ],
                 onChanged: (_) => _handleChanfroChanged(),
               ),
             ] else if (isRepetir3) ...[
@@ -896,6 +903,9 @@ class _MeasurementTileState extends State<MeasurementTile> {
                   helperText: helper,
                   helperStyle: TextStyle(color: helperColor),
                 ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                ],
                 onChanged: (txt) {
                   final v = _parseManualValue(txt);
                   final novoStatus = item.avaliarStatus(v);
