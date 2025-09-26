@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 
 import '../../../constants.dart';
@@ -9,7 +10,16 @@ import 'package:intl/intl.dart';
 /// Form that allows searching reports for either operators or preparers.
 /// The user can choose to search by OS or by Partnumber + Operação.
 class PersonnelReportChart extends StatefulWidget {
-  const PersonnelReportChart({super.key});
+  const PersonnelReportChart({
+    super.key,
+    this.osList,
+    this.showSearchControls = true,
+    this.withContainer = true,
+  });
+
+  final List<String>? osList;
+  final bool showSearchControls;
+  final bool withContainer;
 
   @override
   State<PersonnelReportChart> createState() => _PersonnelReportChartState();
@@ -83,7 +93,7 @@ class _ColumnFilterDialogState extends State<_ColumnFilterDialog> {
   Widget build(BuildContext context) {
     final allSelected =
         widget.values.isNotEmpty &&
-        _tempSelected.length == widget.values.length;
+            _tempSelected.length == widget.values.length;
     final listHeight = math.min(320.0, 36.0 * widget.values.length + 12);
     return AlertDialog(
       title: Text('Filtrar ${widget.label}'),
@@ -160,12 +170,12 @@ class _ColumnFilterDialogState extends State<_ColumnFilterDialog> {
           onPressed: _tempSelected.isEmpty
               ? null
               : () {
-                  Navigator.of(context).pop(
-                    _FilterDialogResult(
-                      selectedValues: Set<String>.from(_tempSelected),
-                    ),
-                  );
-                },
+            Navigator.of(context).pop(
+              _FilterDialogResult(
+                selectedValues: Set<String>.from(_tempSelected),
+              ),
+            );
+          },
           child: const Text('Aplicar'),
         ),
       ],
@@ -239,6 +249,37 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     },
   };
 
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.showSearchControls) {
+      _modo = 'os';
+      if (widget.osList != null && widget.osList!.isNotEmpty) {
+        Future.microtask(_buscar);
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant PersonnelReportChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.showSearchControls) {
+      final equality = const ListEquality<String>();
+      final current = widget.osList ?? const <String>[];
+      final previous = oldWidget.osList ?? const <String>[];
+      if (!equality.equals(current, previous)) {
+        if (current.isEmpty) {
+          setState(() {
+            _future = Future.value(const <Map<String, dynamic>>[]);
+          });
+        } else {
+          _modo = 'os';
+          _buscar();
+        }
+      }
+    }
+  }
+
   DateTime? _parseDateTime(dynamic value) {
     final raw = value?.toString().trim();
     if (raw == null || raw.isEmpty) return null;
@@ -287,8 +328,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   List<Map<String, dynamic>> _withGroupHeaders(
-    List<Map<String, dynamic>> rows,
-  ) {
+      List<Map<String, dynamic>> rows,
+      ) {
     final result = <Map<String, dynamic>>[];
     var index = 0;
     while (index < rows.length) {
@@ -397,9 +438,9 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   List<Map<String, dynamic>> _applyFiltersToRows(
-    List<Map<String, dynamic>> rows,
-    Map<String, Set<String>> filters,
-  ) {
+      List<Map<String, dynamic>> rows,
+      Map<String, Set<String>> filters,
+      ) {
     if (rows.isEmpty || filters.isEmpty) {
       return List<Map<String, dynamic>>.from(rows);
     }
@@ -462,8 +503,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   List<Map<String, dynamic>> _applyActiveFilters(
-    List<Map<String, dynamic>> rows,
-  ) {
+      List<Map<String, dynamic>> rows,
+      ) {
     final filters = _columnFilters[_tipo];
     if (filters == null || filters.isEmpty) {
       return List<Map<String, dynamic>>.from(rows);
@@ -472,11 +513,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Future<void> _showColumnFilterSheet(
-    BuildContext context,
-    String columnKey,
-    String label,
-    List<Map<String, dynamic>> sourceRows,
-  ) async {
+      BuildContext context,
+      String columnKey,
+      String label,
+      List<Map<String, dynamic>> sourceRows,
+      ) async {
     final filters = _columnFilters[_tipo]!;
     final otherFilters = <String, Set<String>>{};
     filters.forEach((key, value) {
@@ -507,7 +548,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final currentSelection = filters[columnKey];
     final initialSelection =
-        (currentSelection == null || currentSelection.isEmpty)
+    (currentSelection == null || currentSelection.isEmpty)
         ? sortedValues.toSet()
         : currentSelection.where(values.contains).toSet();
 
@@ -554,11 +595,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final hidden = _hiddenColumns.putIfAbsent(_tipo, () => <String>{});
     final overrides = _columnWidthOverrides.putIfAbsent(
       _tipo,
-      () => <String, double>{},
+          () => <String, double>{},
     );
     final filters = _columnFilters.putIfAbsent(
       _tipo,
-      () => <String, Set<String>>{},
+          () => <String, Set<String>>{},
     );
     order.removeWhere((key) => !allowedSet.contains(key));
     hidden.removeWhere((key) => !allowedSet.contains(key));
@@ -680,16 +721,16 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   _TableMetrics _computeTableMetrics(
-    BuildContext context,
-    Map<String, String> headerMap,
-    List<String> visibleColumns,
-    List<Map<String, dynamic>> rows,
-  ) {
+      BuildContext context,
+      Map<String, String> headerMap,
+      List<String> visibleColumns,
+      List<Map<String, dynamic>> rows,
+      ) {
     final direction = Directionality.of(context);
     final theme = Theme.of(context);
     final headerStyle =
         theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600) ??
-        const TextStyle(fontSize: 12, fontWeight: FontWeight.w600);
+            const TextStyle(fontSize: 12, fontWeight: FontWeight.w600);
     const dataStyle = TextStyle(fontSize: 12);
     final painter = TextPainter(
       textDirection: direction,
@@ -733,7 +774,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final spacing = _columnSpacing * spacingCount;
     final totalWidth = widths.fold<double>(
       spacing,
-      (value, element) => value + element,
+          (value, element) => value + element,
     );
     final appliedSpacing = spacingCount == 0 ? 0.0 : _columnSpacing;
     return _TableMetrics(
@@ -766,11 +807,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   _TableMetrics _fitColumnsToViewport(
-    _TableMetrics metrics,
-    int columnCount,
-    double viewportWidth, {
-    Set<int> lockedColumns = const <int>{},
-  }) {
+      _TableMetrics metrics,
+      int columnCount,
+      double viewportWidth, {
+        Set<int> lockedColumns = const <int>{},
+      }) {
     if (columnCount <= 0 || metrics.columnWidths.isEmpty) {
       return _TableMetrics(
         columnWidths: List<double>.from(metrics.columnWidths),
@@ -873,13 +914,13 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildColumnChip(
-    BuildContext context,
-    String columnKey,
-    String label, {
-    VoidCallback? onPressed,
-    bool enableTooltip = true,
-    bool showDelete = true,
-  }) {
+      BuildContext context,
+      String columnKey,
+      String label, {
+        VoidCallback? onPressed,
+        bool enableTooltip = true,
+        bool showDelete = true,
+      }) {
     final chip = InputChip(
       avatar: const Icon(Icons.drag_indicator, size: 18),
       label: Text(label, overflow: TextOverflow.ellipsis),
@@ -902,10 +943,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildReorderableChip(
-    BuildContext context,
-    Map<String, String> headerMap,
-    String columnKey,
-  ) {
+      BuildContext context,
+      Map<String, String> headerMap,
+      String columnKey,
+      ) {
     final label = headerMap[columnKey] ?? columnKey;
     Widget wrapPointer(Widget child) {
       return MouseRegion(cursor: SystemMouseCursors.grab, child: child);
@@ -977,8 +1018,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             color: isActive
                 ? theme.colorScheme.primary.withValues(alpha: 0.18)
                 : theme.colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.08,
-                  ),
+              alpha: 0.08,
+            ),
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: isActive
@@ -992,13 +1033,13 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildHeaderLabel(
-    BuildContext context,
-    String columnKey,
-    String label,
-    VoidCallback onHide,
-    VoidCallback onFilter,
-    bool filterActive,
-  ) {
+      BuildContext context,
+      String columnKey,
+      String label,
+      VoidCallback onHide,
+      VoidCallback onFilter,
+      bool filterActive,
+      ) {
     final theme = Theme.of(context);
     final iconColor = filterActive
         ? theme.colorScheme.primary
@@ -1044,7 +1085,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         );
 
         final resolvedHeight =
-            constraints.maxHeight.isFinite && constraints.maxHeight > 0
+        constraints.maxHeight.isFinite && constraints.maxHeight > 0
             ? constraints.maxHeight
             : _headerRowMinHeight;
         return SizedBox(
@@ -1111,10 +1152,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildResizeHandle(
-    BuildContext context,
-    String columnKey,
-    double currentWidth,
-  ) {
+      BuildContext context,
+      String columnKey,
+      double currentWidth,
+      ) {
     final theme = Theme.of(context);
     final isActive = _activeResizeColumn == columnKey;
     final indicatorColor = isActive
@@ -1123,7 +1164,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     final overrides = _columnWidthOverrides[_tipo];
     return Tooltip(
       message:
-          'Arraste para redimensionar. Toque duas vezes para restaurar o tamanho automático.',
+      'Arraste para redimensionar. Toque duas vezes para restaurar o tamanho automático.',
       child: MouseRegion(
         cursor: SystemMouseCursors.resizeColumn,
         child: GestureDetector(
@@ -1179,11 +1220,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildColumnManager(
-    BuildContext context,
-    Map<String, String> headerMap,
-    List<String> visibleColumns,
-    List<String> hiddenColumns,
-  ) {
+      BuildContext context,
+      Map<String, String> headerMap,
+      List<String> visibleColumns,
+      List<String> hiddenColumns,
+      ) {
     if (headerMap.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -1255,10 +1296,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget? _buildActiveFilterSummary(
-    BuildContext context,
-    Map<String, String> headerMap,
-    List<Map<String, dynamic>> sourceRows,
-  ) {
+      BuildContext context,
+      Map<String, String> headerMap,
+      List<Map<String, dynamic>> sourceRows,
+      ) {
     final filters = _columnFilters[_tipo];
     if (filters == null || filters.isEmpty) {
       return null;
@@ -1306,15 +1347,15 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildTableHeaderRow(
-    BuildContext context,
-    Map<String, String> headerMap,
-    List<String> visibleColumns,
-    List<double> columnWidths,
-    List<int> columnFlexes,
-    double totalWidth,
-    double columnSpacing,
-    List<Map<String, dynamic>> sourceRows,
-  ) {
+      BuildContext context,
+      Map<String, String> headerMap,
+      List<String> visibleColumns,
+      List<double> columnWidths,
+      List<int> columnFlexes,
+      double totalWidth,
+      double columnSpacing,
+      List<Map<String, dynamic>> sourceRows,
+      ) {
     final theme = Theme.of(context);
     final background = theme.colorScheme.surfaceContainerHighest.withValues(
       alpha: 0.4,
@@ -1352,15 +1393,14 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                       Padding(
                         padding: const EdgeInsetsDirectional.only(
                           start: _cellHorizontalPadding,
-                          end:
-                              _cellHorizontalPadding + _resizeHandleHitWidth,
+                          end: _cellHorizontalPadding + _resizeHandleHitWidth,
                         ),
                         child: _buildHeaderLabel(
                           context,
                           columnKey,
                           headerMap[columnKey] ?? columnKey,
-                          () => _hideColumn(columnKey),
-                          () => _showColumnFilterSheet(
+                              () => _hideColumn(columnKey),
+                              () => _showColumnFilterSheet(
                             context,
                             columnKey,
                             headerMap[columnKey] ?? columnKey,
@@ -1371,8 +1411,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                       ),
                       Align(
                         alignment: AlignmentDirectional.centerEnd,
-                        child:
-                            _buildResizeHandle(context, columnKey, maxWidth),
+                        child: _buildResizeHandle(context, columnKey, maxWidth),
                       ),
                     ],
                   );
@@ -1389,7 +1428,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
 
     final effectiveWidth = math.max(
       totalWidth,
-      resolvedWidths.fold<double>(0, (sum, width) => sum + width) + totalSpacing,
+      resolvedWidths.fold<double>(0, (sum, width) => sum + width) +
+          totalSpacing,
     );
     final contentRow = Row(
       mainAxisSize: MainAxisSize.max,
@@ -1405,20 +1445,17 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
       ),
       child: Padding(
         padding: EdgeInsets.zero,
-        child: SizedBox(
-          width: effectiveWidth,
-          child: contentRow,
-        ),
+        child: SizedBox(width: effectiveWidth, child: contentRow),
       ),
     );
   }
 
   Widget _buildGroupHeaderRow(
-    BuildContext context,
-    Map<String, dynamic> row,
-    double totalWidth,
-    Color groupColor,
-  ) {
+      BuildContext context,
+      Map<String, dynamic> row,
+      double totalWidth,
+      Color groupColor,
+      ) {
     final theme = Theme.of(context);
     final textStyle = theme.textTheme.labelLarge?.copyWith(
       fontWeight: FontWeight.bold,
@@ -1441,15 +1478,15 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   }
 
   Widget _buildDataRowWidget(
-    BuildContext context,
-    Map<String, dynamic> row,
-    List<String> visibleColumns,
-    List<double> columnWidths,
-    List<int> columnFlexes,
-    double totalWidth,
-    double columnSpacing,
-    Color pauseColor,
-  ) {
+      BuildContext context,
+      Map<String, dynamic> row,
+      List<String> visibleColumns,
+      List<double> columnWidths,
+      List<int> columnFlexes,
+      double totalWidth,
+      double columnSpacing,
+      Color pauseColor,
+      ) {
     final theme = Theme.of(context);
     final isPause = row['evento'] == 'pausa_jornada';
     final background = isPause ? pauseColor : null;
@@ -1511,10 +1548,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
           bottom: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
         ),
       ),
-      child: SizedBox(
-        width: effectiveWidth,
-        child: contentRow,
-      ),
+      child: SizedBox(width: effectiveWidth, child: contentRow),
     );
   }
 
@@ -1522,11 +1556,23 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
     Future<List<Map<String, dynamic>>> carregador() async {
       final service = ReportService();
       if (_modo == 'os') {
-        final os = _osCtrl.text.trim();
         final section = _tipo == 'preparador' ? 'full' : 'amostragem';
-        final data = await service.fetchOsReport(os, section: section);
+        final targets = widget.osList != null && !widget.showSearchControls
+            ? widget.osList!
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toList(growable: false)
+            : <String>[_osCtrl.text.trim()];
+        final osList = targets.where((value) => value.isNotEmpty).toList();
+        if (osList.isEmpty) {
+          return const <Map<String, dynamic>>[];
+        }
         final rows = <Map<String, dynamic>>[];
-        if (data != null) {
+        for (final os in osList) {
+          final data = await service.fetchOsReport(os, section: section);
+          if (data == null) {
+            continue;
+          }
           if (_tipo == 'preparador') {
             String buildKey(Map<String, dynamic> map) {
               String normalize(dynamic value) {
@@ -1544,9 +1590,9 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             }
 
             Map<String, dynamic>? findMatch(
-              List<Map<String, dynamic>> source,
-              String key,
-            ) {
+                List<Map<String, dynamic>> source,
+                String key,
+                ) {
               for (final row in source) {
                 if (row['__matchKey'] != key) continue;
                 final createdFinal = row['created_at_final'];
@@ -1555,8 +1601,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                 final hasFinalizacao =
                     (createdFinal != null &&
                         createdFinal.toString().isNotEmpty) ||
-                    (medFinal != null && medFinal.toString().isNotEmpty) ||
-                    (reFinal != null && reFinal.toString().isNotEmpty);
+                        (medFinal != null && medFinal.toString().isNotEmpty) ||
+                        (reFinal != null && reFinal.toString().isNotEmpty);
                 if (!hasFinalizacao) return row;
               }
               return null;
@@ -1569,7 +1615,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                 releaseRows.add({
                   '__dt': _parseDateTime(e['created_at']),
                   '__matchKey': buildKey(e),
-                  'os': e['os']?.toString() ?? '',
+                  'os': e['os']?.toString() ?? os,
                   're_liberacao': e['re_preparador']?.toString() ?? '',
                   're_finalizacao': '',
                   'created_at': createdAt,
@@ -1601,7 +1647,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                   releaseRows.add({
                     '__dt': _parseDateTime(e['created_at']),
                     '__matchKey': key,
-                    'os': e['os']?.toString() ?? '',
+                    'os': e['os']?.toString() ?? os,
                     're_liberacao': '',
                     're_finalizacao': e['re_preparador']?.toString() ?? '',
                     'created_at': '',
@@ -1620,6 +1666,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             }
             for (final row in releaseRows) {
               row.remove('__matchKey');
+              final osValue = row['os']?.toString() ?? '';
+              if (osValue.isEmpty) {
+                row['os'] = os;
+              }
             }
             rows.addAll(releaseRows);
           } else {
@@ -1630,7 +1680,9 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                   final createdAt = _formatDate(e['created_at']);
                   rows.add({
                     '__dt': _parseDateTime(e['created_at']),
-                    'os': e['os']?.toString() ?? '',
+                    'os': (e['os']?.toString() ?? '').isEmpty
+                        ? os
+                        : e['os']?.toString() ?? '',
                     're_operador': e['re_operador']?.toString() ?? '',
                     'created_at': createdAt,
                     'retorno_at': '',
@@ -1652,7 +1704,9 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
                 final inicioRaw = e['pausa_at'] ?? e['created_at'];
                 rows.add({
                   '__dt': _parseDateTime(inicioRaw),
-                  'os': e['os']?.toString() ?? '',
+                  'os': (e['os']?.toString() ?? '').isEmpty
+                      ? os
+                      : e['os']?.toString() ?? '',
                   're_operador': e['re_operador']?.toString() ?? '',
                   'created_at': _formatDate(inicioRaw),
                   'retorno_at': _formatDate(e['retorno_at']),
@@ -1672,36 +1726,35 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         }
         rows.sort(_compareByDate);
         return _withGroupHeaders(rows);
-      } else {
-        final part = _partCtrl.text.trim();
-        final op = _opCtrl.text.trim();
-        final data = await service.fetchReleases(
-          tipo: _tipo,
-          partnumber: part,
-          operacao: op,
-        );
-        final rows = <Map<String, dynamic>>[];
-        for (final Map<String, dynamic> e in data) {
-          final map = Map<String, dynamic>.from(e);
-          map['__dt'] = _parseDateTime(map['created_at']);
-          map['created_at'] = _formatDate(e['created_at']);
-          if (map.containsKey('retorno_at')) {
-            map['retorno_at'] = _formatDate(map['retorno_at']);
-          } else if (_tipo == 'operador') {
-            map['retorno_at'] = '';
-          }
-          if (map.containsKey('created_at_final')) {
-            map['created_at_final'] = _formatDate(e['created_at_final']);
-          }
-          if (_tipo == 'operador') {
-            map['evento'] = map['evento'] ?? 'amostragem';
-            map['motivo'] = map['motivo'] ?? '';
-          }
-          rows.add(map);
-        }
-        rows.sort(_compareByDate);
-        return _withGroupHeaders(rows);
       }
+      final part = _partCtrl.text.trim();
+      final op = _opCtrl.text.trim();
+      final data = await service.fetchReleases(
+        tipo: _tipo,
+        partnumber: part,
+        operacao: op,
+      );
+      final rows = <Map<String, dynamic>>[];
+      for (final Map<String, dynamic> e in data) {
+        final map = Map<String, dynamic>.from(e);
+        map['__dt'] = _parseDateTime(map['created_at']);
+        map['created_at'] = _formatDate(e['created_at']);
+        if (map.containsKey('retorno_at')) {
+          map['retorno_at'] = _formatDate(map['retorno_at']);
+        } else if (_tipo == 'operador') {
+          map['retorno_at'] = '';
+        }
+        if (map.containsKey('created_at_final')) {
+          map['created_at_final'] = _formatDate(e['created_at_final']);
+        }
+        if (_tipo == 'operador') {
+          map['evento'] = map['evento'] ?? 'amostragem';
+          map['motivo'] = map['motivo'] ?? '';
+        }
+        rows.add(map);
+      }
+      rows.sort(_compareByDate);
+      return _withGroupHeaders(rows);
     }
 
     setState(() {
@@ -1711,6 +1764,378 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
 
   @override
   Widget build(BuildContext context) {
+    final children = <Widget>[
+      Text('Histórico', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: defaultPadding),
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 600;
+          final tipoField = DropdownButtonFormField<String>(
+            value: _tipo,
+            decoration: const InputDecoration(
+              labelText: 'Tipo',
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: 'operador',
+                child: Text('Verificação do Processo'),
+              ),
+              DropdownMenuItem(
+                value: 'preparador',
+                child: Text('Liberação/Finalização'),
+              ),
+            ],
+            onChanged: (v) {
+              final newTipo = v ?? 'operador';
+              if (newTipo == _tipo) return;
+              setState(() => _tipo = newTipo);
+              if (!widget.showSearchControls) {
+                _buscar();
+              }
+            },
+          );
+
+          if (!widget.showSearchControls) {
+            return tipoField;
+          }
+
+          final modoField = DropdownButtonFormField<String>(
+            value: _modo,
+            decoration: const InputDecoration(
+              labelText: 'Pesquisar por',
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'os', child: Text('OS')),
+              DropdownMenuItem(
+                value: 'part',
+                child: Text('Partnumber + Operação'),
+              ),
+            ],
+            onChanged: (v) => setState(() => _modo = v ?? 'os'),
+          );
+
+          if (isNarrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                tipoField,
+                const SizedBox(height: defaultPadding),
+                modoField,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: tipoField),
+              const SizedBox(width: defaultPadding),
+              Expanded(child: modoField),
+            ],
+          );
+        },
+      ),
+    ];
+
+    if (widget.showSearchControls) {
+      children.addAll([
+        const SizedBox(height: defaultPadding),
+        if (_modo == 'os')
+          TextField(
+            controller: _osCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Número da OS',
+              border: OutlineInputBorder(),
+            ),
+          )
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 600;
+              final partField = TextField(
+                controller: _partCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Partnumber',
+                  border: OutlineInputBorder(),
+                ),
+              );
+              final opField = TextField(
+                controller: _opCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Operação',
+                  border: OutlineInputBorder(),
+                ),
+              );
+              if (isNarrow) {
+                return Column(
+                  children: [
+                    partField,
+                    const SizedBox(height: defaultPadding),
+                    opField,
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: partField),
+                  const SizedBox(width: defaultPadding),
+                  Expanded(child: opField),
+                ],
+              );
+            },
+          ),
+        const SizedBox(height: defaultPadding),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ElevatedButton(
+            onPressed: _buscar,
+            child: const Text('Buscar'),
+          ),
+        ),
+      ]);
+    }
+
+    children.addAll([
+      const SizedBox(height: defaultPadding),
+      FutureBuilder<List<Map<String, dynamic>>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (_future == null) {
+            if (widget.showSearchControls) {
+              return const Text(
+                'Realize a busca para visualizar os resultados.',
+              );
+            }
+            return const Text(
+              'Ajuste os filtros para visualizar os resultados.',
+            );
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final dados = snapshot.data ?? [];
+          if (dados.isEmpty) {
+            return const Text('Nenhum dado encontrado.');
+          }
+          final headerMap = _headerConfigs[_tipo] ?? const {};
+          _ensureColumnState(headerMap);
+          final hiddenSet = _hiddenColumns[_tipo] ?? <String>{};
+          final order = _columnOrders[_tipo] ?? <String>[];
+          final visibleColumns = [
+            for (final key in order)
+              if (!hiddenSet.contains(key)) key,
+          ];
+          final hiddenColumns = [
+            for (final key in order)
+              if (hiddenSet.contains(key)) key,
+          ];
+          final manager = _buildColumnManager(
+            context,
+            headerMap,
+            visibleColumns,
+            hiddenColumns,
+          );
+          final filterSummary = _buildActiveFilterSummary(
+            context,
+            headerMap,
+            dados,
+          );
+          final filteredRows = _applyActiveFilters(dados);
+          if (visibleColumns.isEmpty) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                manager,
+                if (filterSummary != null) ...[
+                  const SizedBox(height: 12),
+                  filterSummary,
+                ],
+                const SizedBox(height: 12),
+                const Text('Selecione ao menos uma coluna para exibir.'),
+              ],
+            );
+          }
+          if (filteredRows.isEmpty) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                manager,
+                if (filterSummary != null) ...[
+                  const SizedBox(height: 12),
+                  filterSummary,
+                ],
+                const SizedBox(height: 12),
+                Text(
+                  'Nenhum resultado com os filtros aplicados.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              manager,
+              if (filterSummary != null) ...[
+                const SizedBox(height: 12),
+                filterSummary,
+              ],
+              const SizedBox(height: 12),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final theme = Theme.of(context);
+                  final groupColor = theme.colorScheme.surfaceVariant
+                      .withOpacity(0.25);
+                  final pauseColor = Colors.orange.withOpacity(0.12);
+                  final metrics = _computeTableMetrics(
+                    context,
+                    headerMap,
+                    visibleColumns,
+                    filteredRows,
+                  );
+                  final overrides =
+                      _columnWidthOverrides[_tipo] ?? const <String, double>{};
+                  final lockedIndices = <int>{};
+                  final overrideAdjusted = List<double>.from(
+                    metrics.columnWidths,
+                  );
+                  double overrideContentWidth = 0;
+                  for (var i = 0; i < overrideAdjusted.length; i++) {
+                    final overrideWidth = overrides[visibleColumns[i]];
+                    if (overrideWidth != null) {
+                      final clamped = overrideWidth
+                          .clamp(_minColumnWidth, _maxColumnWidth)
+                          .toDouble();
+                      overrideAdjusted[i] = clamped;
+                      lockedIndices.add(i);
+                    }
+                    overrideContentWidth += overrideAdjusted[i];
+                  }
+                  final spacingCount = math.max(0, visibleColumns.length - 1);
+                  final baseSpacing = spacingCount == 0
+                      ? 0.0
+                      : metrics.columnSpacing;
+                  final manualSpacingWidth = baseSpacing * spacingCount;
+                  final manualMetrics = _TableMetrics(
+                    columnWidths: overrideAdjusted,
+                    totalWidth: overrideContentWidth + manualSpacingWidth,
+                    columnSpacing: baseSpacing,
+                  );
+                  final mediaWidth = MediaQuery.maybeOf(context)?.size.width;
+                  final rawViewportWidth = constraints.maxWidth.isFinite
+                      ? constraints.maxWidth
+                      : (mediaWidth ?? manualMetrics.totalWidth);
+                  final availableViewportWidth = rawViewportWidth.isFinite
+                      ? math.max(
+                    0.0,
+                    rawViewportWidth - (_horizontalMargin * 2),
+                  )
+                      : rawViewportWidth;
+                  final fittedMetrics = _fitColumnsToViewport(
+                    manualMetrics,
+                    visibleColumns.length,
+                    availableViewportWidth,
+                    lockedColumns: lockedIndices,
+                  );
+                  final adjustedColumns = fittedMetrics.columnWidths;
+                  final columnFlexes = _buildColumnFlexes(adjustedColumns);
+                  final columnSpacing = spacingCount == 0
+                      ? 0.0
+                      : fittedMetrics.columnSpacing;
+                  final spacingWidth = columnSpacing * spacingCount;
+                  final naturalTableWidth = adjustedColumns.fold<double>(
+                    spacingWidth,
+                        (sum, width) => sum + width,
+                  );
+                  final viewportBaseline = availableViewportWidth.isFinite
+                      ? availableViewportWidth
+                      : naturalTableWidth;
+                  final tableWidth = math.max(
+                    naturalTableWidth,
+                    viewportBaseline,
+                  );
+                  final rows = <Widget>[
+                    _buildTableHeaderRow(
+                      context,
+                      headerMap,
+                      visibleColumns,
+                      adjustedColumns,
+                      columnFlexes,
+                      tableWidth,
+                      columnSpacing,
+                      dados,
+                    ),
+                    const SizedBox(height: 8),
+                  ];
+                  for (final row in filteredRows) {
+                    if (row['__isGroup'] == true) {
+                      rows.add(
+                        _buildGroupHeaderRow(
+                          context,
+                          row,
+                          tableWidth,
+                          groupColor,
+                        ),
+                      );
+                    } else {
+                      rows.add(
+                        _buildDataRowWidget(
+                          context,
+                          row,
+                          visibleColumns,
+                          adjustedColumns,
+                          columnFlexes,
+                          tableWidth,
+                          columnSpacing,
+                          pauseColor,
+                        ),
+                      );
+                    }
+                  }
+                  final needsHorizontalScroll =
+                      naturalTableWidth - viewportBaseline > 0.5;
+                  final tableView = SingleChildScrollView(
+                    controller: _tableScrollController,
+                    scrollDirection: Axis.horizontal,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: _horizontalMargin,
+                      ),
+                      child: SizedBox(
+                        width: tableWidth,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: rows,
+                        ),
+                      ),
+                    ),
+                  );
+                  return Scrollbar(
+                    controller: _tableScrollController,
+                    thumbVisibility: needsHorizontalScroll,
+                    trackVisibility: needsHorizontalScroll,
+                    notificationPredicate: (notification) =>
+                    notification.metrics.axis == Axis.horizontal,
+                    child: tableView,
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    ]);
+
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+
+    if (!widget.withContainer) {
+      return content;
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(defaultPadding),
@@ -1718,350 +2143,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         color: secondaryColor,
         borderRadius: const BorderRadius.all(Radius.circular(10)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Histórico', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: defaultPadding),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 600;
-              final tipoField = DropdownButtonFormField<String>(
-                value: _tipo,
-                decoration: const InputDecoration(
-                  labelText: 'Tipo',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'operador',
-                    child: Text('Verificação do Processo'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'preparador',
-                    child: Text('Liberação/Finalização'),
-                  ),
-                ],
-                onChanged: (v) => setState(() => _tipo = v ?? 'operador'),
-              );
-              final modoField = DropdownButtonFormField<String>(
-                value: _modo,
-                decoration: const InputDecoration(
-                  labelText: 'Pesquisar por',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'os', child: Text('OS')),
-                  DropdownMenuItem(
-                    value: 'part',
-                    child: Text('Partnumber + Operação'),
-                  ),
-                ],
-                onChanged: (v) => setState(() => _modo = v ?? 'os'),
-              );
-              if (isNarrow) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    tipoField,
-                    const SizedBox(height: defaultPadding),
-                    modoField,
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(child: tipoField),
-                  const SizedBox(width: defaultPadding),
-                  Expanded(child: modoField),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: defaultPadding),
-          if (_modo == 'os')
-            TextField(
-              controller: _osCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Número da OS',
-                border: OutlineInputBorder(),
-              ),
-            )
-          else
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final isNarrow = constraints.maxWidth < 600;
-                final partField = TextField(
-                  controller: _partCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Partnumber',
-                    border: OutlineInputBorder(),
-                  ),
-                );
-                final opField = TextField(
-                  controller: _opCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Operação',
-                    border: OutlineInputBorder(),
-                  ),
-                );
-                if (isNarrow) {
-                  return Column(
-                    children: [
-                      partField,
-                      const SizedBox(height: defaultPadding),
-                      opField,
-                    ],
-                  );
-                }
-                return Row(
-                  children: [
-                    Expanded(child: partField),
-                    const SizedBox(width: defaultPadding),
-                    Expanded(child: opField),
-                  ],
-                );
-              },
-            ),
-          const SizedBox(height: defaultPadding),
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton(
-              onPressed: _buscar,
-              child: const Text('Buscar'),
-            ),
-          ),
-          const SizedBox(height: defaultPadding),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (_future == null) {
-                return const Text(
-                  'Realize a busca para visualizar os resultados.',
-                );
-              }
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final dados = snapshot.data ?? [];
-              if (dados.isEmpty) {
-                return const Text('Nenhum dado encontrado.');
-              }
-              final headerMap = _headerConfigs[_tipo] ?? const {};
-              _ensureColumnState(headerMap);
-              final hiddenSet = _hiddenColumns[_tipo] ?? <String>{};
-              final order = _columnOrders[_tipo] ?? <String>[];
-              final visibleColumns = [
-                for (final key in order)
-                  if (!hiddenSet.contains(key)) key,
-              ];
-              final hiddenColumns = [
-                for (final key in order)
-                  if (hiddenSet.contains(key)) key,
-              ];
-              final manager = _buildColumnManager(
-                context,
-                headerMap,
-                visibleColumns,
-                hiddenColumns,
-              );
-              final filterSummary = _buildActiveFilterSummary(
-                context,
-                headerMap,
-                dados,
-              );
-              final filteredRows = _applyActiveFilters(dados);
-              if (visibleColumns.isEmpty) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    manager,
-                    if (filterSummary != null) ...[
-                      const SizedBox(height: 12),
-                      filterSummary,
-                    ],
-                    const SizedBox(height: 12),
-                    const Text('Selecione ao menos uma coluna para exibir.'),
-                  ],
-                );
-              }
-              if (filteredRows.isEmpty) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    manager,
-                    if (filterSummary != null) ...[
-                      const SizedBox(height: 12),
-                      filterSummary,
-                    ],
-                    const SizedBox(height: 12),
-                    Text(
-                      'Nenhum resultado com os filtros aplicados.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                );
-              }
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  manager,
-                  if (filterSummary != null) ...[
-                    const SizedBox(height: 12),
-                    filterSummary,
-                  ],
-                  const SizedBox(height: 12),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final theme = Theme.of(context);
-                      final groupColor = theme.colorScheme.surfaceVariant
-                          .withOpacity(0.25);
-                      final pauseColor = Colors.orange.withOpacity(0.12);
-                      final metrics = _computeTableMetrics(
-                        context,
-                        headerMap,
-                        visibleColumns,
-                        filteredRows,
-                      );
-                      final overrides =
-                          _columnWidthOverrides[_tipo] ??
-                          const <String, double>{};
-                      final lockedIndices = <int>{};
-                      final overrideAdjusted = List<double>.from(
-                        metrics.columnWidths,
-                      );
-                      double overrideContentWidth = 0;
-                      for (var i = 0; i < overrideAdjusted.length; i++) {
-                        final overrideWidth = overrides[visibleColumns[i]];
-                        if (overrideWidth != null) {
-                          final clamped = overrideWidth
-                              .clamp(_minColumnWidth, _maxColumnWidth)
-                              .toDouble();
-                          overrideAdjusted[i] = clamped;
-                          lockedIndices.add(i);
-                        }
-                        overrideContentWidth += overrideAdjusted[i];
-                      }
-                      final spacingCount = math.max(
-                        0,
-                        visibleColumns.length - 1,
-                      );
-                      final baseSpacing = spacingCount == 0
-                          ? 0.0
-                          : metrics.columnSpacing;
-                      final manualSpacingWidth = baseSpacing * spacingCount;
-                      final manualMetrics = _TableMetrics(
-                        columnWidths: overrideAdjusted,
-                        totalWidth: overrideContentWidth + manualSpacingWidth,
-                        columnSpacing: baseSpacing,
-                      );
-                      final mediaWidth = MediaQuery.maybeOf(
-                        context,
-                      )?.size.width;
-                      final rawViewportWidth = constraints.maxWidth.isFinite
-                          ? constraints.maxWidth
-                          : (mediaWidth ?? manualMetrics.totalWidth);
-                      final availableViewportWidth = rawViewportWidth.isFinite
-                          ? math.max(
-                              0.0,
-                              rawViewportWidth - (_horizontalMargin * 2),
-                            )
-                          : rawViewportWidth;
-                      final fittedMetrics = _fitColumnsToViewport(
-                        manualMetrics,
-                        visibleColumns.length,
-                        availableViewportWidth,
-                        lockedColumns: lockedIndices,
-                      );
-                      final adjustedColumns = fittedMetrics.columnWidths;
-                      final columnFlexes = _buildColumnFlexes(adjustedColumns);
-                      final columnSpacing = spacingCount == 0
-                          ? 0.0
-                          : fittedMetrics.columnSpacing;
-                      final spacingWidth = columnSpacing * spacingCount;
-                      final naturalTableWidth = adjustedColumns.fold<double>(
-                        spacingWidth,
-                        (sum, width) => sum + width,
-                      );
-                      final viewportBaseline = availableViewportWidth.isFinite
-                          ? availableViewportWidth
-                          : naturalTableWidth;
-                      final tableWidth = math.max(
-                        naturalTableWidth,
-                        viewportBaseline,
-                      );
-                      final rows = <Widget>[
-                        _buildTableHeaderRow(
-                          context,
-                          headerMap,
-                          visibleColumns,
-                          adjustedColumns,
-                          columnFlexes,
-                          tableWidth,
-                          columnSpacing,
-                          dados,
-                        ),
-                        const SizedBox(height: 8),
-                      ];
-                      for (final row in filteredRows) {
-                        if (row['__isGroup'] == true) {
-                          rows.add(
-                            _buildGroupHeaderRow(
-                              context,
-                              row,
-                              tableWidth,
-                              groupColor,
-                            ),
-                          );
-                        } else {
-                          rows.add(
-                            _buildDataRowWidget(
-                              context,
-                              row,
-                              visibleColumns,
-                              adjustedColumns,
-                              columnFlexes,
-                              tableWidth,
-                              columnSpacing,
-                              pauseColor,
-                            ),
-                          );
-                        }
-                      }
-                      final needsHorizontalScroll =
-                          naturalTableWidth - viewportBaseline > 0.5;
-                      final tableView = SingleChildScrollView(
-                        controller: _tableScrollController,
-                        scrollDirection: Axis.horizontal,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: _horizontalMargin,
-                          ),
-                          child: SizedBox(
-                            width: tableWidth,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: rows,
-                            ),
-                          ),
-                        ),
-                      );
-                      return Scrollbar(
-                        controller: _tableScrollController,
-                        thumbVisibility: needsHorizontalScroll,
-                        trackVisibility: needsHorizontalScroll,
-                        notificationPredicate: (notification) =>
-                            notification.metrics.axis == Axis.horizontal,
-                        child: tableView,
-                      );
-                    },
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
+      child: content,
     );
   }
 }

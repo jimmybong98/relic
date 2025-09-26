@@ -30,7 +30,7 @@ void main() {
 
   test(
     'fetchReleases builds params for preparador partnumber search',
-    () async {
+        () async {
       late Uri requestedUri;
       final client = MockClient((req) async {
         requestedUri = req.url;

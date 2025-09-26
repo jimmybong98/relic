@@ -15,18 +15,6 @@ from datetime import date, datetime
 
 from openpyxl import Workbook
 
-LIBERACAO_STATUS_OK = (
-    "liberada",
-    "liberado",
-    "ok",
-    "aprovada",
-    "aprovado",
-)
-
-
-def _status_liberacao_final(status: Optional[str]) -> bool:
-    return (status or "").strip().lower() in LIBERACAO_STATUS_OK
-
 # --------- MySQL ----------
 import pymysql
 from pymysql.cursors import DictCursor
@@ -839,7 +827,7 @@ def _medidas_operador_db(part: str, op: str, os_num: Optional[str] = None):
 
 # ========= HELPERS DE NEGÓCIO =========
 def _outra_os_em_andamento(
-    conn, os_num: str, maquina: str
+        conn, os_num: str, maquina: str
 ) -> Tuple[bool, Optional[str]]:
     os_num = _norm(os_num)
     maquina = _norm(maquina)
@@ -894,74 +882,11 @@ def _maquina_liberada(
         if status_atual == "encerrada":
             return (False, "ordem_servico", "status=encerrada")
         if status_atual == "pausada":
-            # Verifica se há liberação final posterior à pausa mais recente.
-            with conn.cursor() as cur:
-                placeholders = ",".join(["%s"] * len(LIBERACAO_STATUS_OK))
-                cur.execute(
-                    f"""
-                    SELECT created_at
-                      FROM preparador_liberacao
-                     WHERE os=%s
-                       AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
-                       AND maquina=%s
-                       AND LOWER(COALESCE(status_geral,'')) IN ({placeholders})
-                     ORDER BY id DESC
-                     LIMIT 1
-                    """,
-                    (os_num, part, maquina, *LIBERACAO_STATUS_OK),
-                )
-                ultima_liberacao = cur.fetchone()
-
-            ultima_liberacao_at = (
-                ultima_liberacao.get("created_at") if ultima_liberacao else None
-            )
-
-            ultima_pausa_at = None
-            retorno_at = None
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT pausa_at, retorno_at
-                      FROM operador_jornada
-                     WHERE os=%s
-                       AND (partnumber IS NULL OR partnumber = %s OR %s IS NULL)
-                       AND (operacao IS NULL OR operacao = %s OR %s IS NULL)
-                     ORDER BY pausa_at DESC
-                     LIMIT 1
-                    """,
-                    (os_num, part or None, part or None, op or None, op or None),
-                )
-                ultima_pausa = cur.fetchone()
-                if ultima_pausa:
-                    ultima_pausa_at = ultima_pausa.get("pausa_at")
-                    retorno_at = ultima_pausa.get("retorno_at")
-
-            pode_reabrir = False
-            if retorno_at is not None:
-                pode_reabrir = True
-            elif ultima_liberacao_at and (
-                not ultima_pausa_at or ultima_liberacao_at >= ultima_pausa_at
-            ):
-                pode_reabrir = True
-
-            if pode_reabrir:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        """
-                        UPDATE ordem_servico
-                           SET status='aberta'
-                         WHERE os=%s
-                        """,
-                        (os_num,),
-                    )
-                conn.commit()
-                status_atual = "aberta"
-            else:
-                return (False, "ordem_servico", "status=pausada")
+            return (False, "ordem_servico", "status=pausada")
         # 1) Se existir liberação com status final, já libera
 
         cur.execute(
-            f"""
+            """
             SELECT status_geral
             FROM preparador_liberacao
             WHERE os=%s
@@ -975,8 +900,8 @@ def _maquina_liberada(
         )
         row = cur.fetchone()
         if row:
-            st = row.get("status_geral")
-            if _status_liberacao_final(st):
+            st = (row.get("status_geral") or "").strip().lower()
+            if st in ("liberada", "liberado", "ok", "aprovada", "aprovado"):
                 return (True, "preparador_liberacao", f"status_geral={st}")
             # se há registro mas não liberada, informa
             return (False, "preparador_liberacao", f"status_geral={st or 'indefinido'}")
@@ -1310,18 +1235,17 @@ def resultado_preparador():
                 )
 
             with c.cursor() as cur:
-                placeholders = ",".join(["%s"] * len(LIBERACAO_STATUS_OK))
                 cur.execute(
-                    f"""
+                    """
                     SELECT partnumber, operacao, status_geral
                     FROM preparador_liberacao
                     WHERE os=%s
                       AND TRIM(LEADING '0' FROM TRIM(partnumber))=%s
                       AND maquina=%s
-                      AND LOWER(COALESCE(status_geral,'')) IN ({placeholders})
+                      AND status_geral IN ('liberada','liberado','ok','aprovada','aprovado')
                     ORDER BY id DESC LIMIT 1
                     """,
-                    (os_num, part, maquina, *LIBERACAO_STATUS_OK),
+                    (os_num, part, maquina),
                 )
                 row_os = cur.fetchone()
                 if row_os and contexto_tipo != "troca_ferramenta":
@@ -1489,19 +1413,6 @@ def resultado_preparador():
                             parsed["instrumento"] or None,
                             parsed["observacao"],
                         ),
-                    )
-
-                if _status_liberacao_final(status_geral):
-
-                    cur.execute(
-                        """
-                        UPDATE ordem_servico
-                           SET status='aberta'
-                         WHERE os=%s
-
-                           AND LOWER(TRIM(COALESCE(status,''))) IN ('', 'pausada')
-                        """,
-                        (os_num,),
                     )
 
                 if contexto_tipo == "troca_ferramenta":
@@ -2545,77 +2456,84 @@ def relatorio_status_os():
                 )
                 registros = []
                 por_os = {}
-                for row in cur.fetchall():
-                    os_num = row.get("os")
-                    if not os_num:
-                        continue
-                    dados = {
+
+                def _novo_registro(os_num: str, status_label: str = "Aberta"):
+                    return {
                         "os": os_num,
-                        "status": _status_label(row.get("status")),
+                        "status": status_label,
                         "reprovada_abaixo": 0,
                         "alerta_abaixo": 0,
                         "ok": 0,
                         "alerta_acima": 0,
                         "reprovada_acima": 0,
-                        "maquinas": [],
-                        "categorias": [],
-                        "partnumbers": [],
+                        "_maquinas": set(),
+                        "_categorias": set(),
+                        "_partnumbers": set(),
                     }
+
+                for row in cur.fetchall():
+                    os_num = _norm(row.get("os"))
+                    if not os_num:
+                        continue
+                    dados = _novo_registro(os_num, _status_label(row.get("status")))
                     registros.append(dados)
                     por_os[os_num] = dados
 
                 cur.execute(
                     """
-                    SELECT a.os, a.partnumber, a.maquina, i.status, i.escolha
+                    SELECT a.os,
+                           a.partnumber,
+                           a.maquina,
+                           i.status,
+                           i.escolha,
+                           COUNT(*) AS qtd
                       FROM operador_amostragem a
                       JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+                     GROUP BY a.os, a.partnumber, a.maquina, i.status, i.escolha
                     """,
                 )
                 for row in cur.fetchall():
-                    os_num = row.get("os")
+                    os_num = _norm(row.get("os"))
                     if not os_num:
                         continue
                     dados = por_os.get(os_num)
                     if dados is None:
-                        dados = {
-                            "os": os_num,
-                            "status": "Aberta",
-                            "reprovada_abaixo": 0,
-                            "alerta_abaixo": 0,
-                            "ok": 0,
-                            "alerta_acima": 0,
-                            "reprovada_acima": 0,
-                            "maquinas": [],
-                            "categorias": [],
-                            "partnumbers": [],
-                        }
+                        dados = _novo_registro(os_num)
                         por_os[os_num] = dados
                         registros.append(dados)
+
                     partnumber = _norm(row.get("partnumber"))
                     if partnumber:
-                        lista_part = dados.setdefault("partnumbers", [])
-                        if partnumber not in lista_part:
-                            lista_part.append(partnumber)
+                        dados["_partnumbers"].add(partnumber)
+
                     maquina = _norm(row.get("maquina"))
                     if maquina:
-                        lista_maquinas = dados.setdefault("maquinas", [])
-                        if maquina not in lista_maquinas:
-                            lista_maquinas.append(maquina)
+                        dados["_maquinas"].add(maquina)
                         categoria = categorias_por_maquina.get(maquina)
                         if categoria:
-                            lista_cat = dados.setdefault("categorias", [])
-                            if categoria not in lista_cat:
-                                lista_cat.append(categoria)
+                            dados["_categorias"].add(categoria)
+
+                    qtd = int(row.get("qtd") or 0)
+                    if qtd <= 0:
+                        continue
+
                     status_bruto = row.get("status") or ""
                     partes_status = _split_choices(status_bruto)
-                    if not partes_status:
-                        escolha = row.get("escolha") or ""
-                        partes_status = _split_choices(escolha)
+                    classificados = False
                     for parte in partes_status:
                         chave = _classificar_status(parte)
                         if chave is None:
                             continue
-                        dados[chave] = dados.get(chave, 0) + 1
+                        dados[chave] = dados.get(chave, 0) + qtd
+                        classificados = True
+
+                    if not classificados:
+                        escolha = row.get("escolha") or ""
+                        for parte in _split_choices(escolha):
+                            chave = _classificar_status(parte)
+                            if chave is None:
+                                continue
+                            dados[chave] = dados.get(chave, 0) + qtd
 
         def _ordenar(item):
             os_valor = str(item.get("os", ""))
@@ -2625,9 +2543,9 @@ def relatorio_status_os():
             return (1, normalizado)
 
         for item in registros:
-            item["maquinas"] = sorted(item.get("maquinas", []))
-            item["categorias"] = sorted(item.get("categorias", []))
-            item["partnumbers"] = sorted(item.get("partnumbers", []))
+            item["maquinas"] = sorted(item.pop("_maquinas", set()))
+            item["categorias"] = sorted(item.pop("_categorias", set()))
+            item["partnumbers"] = sorted(item.pop("_partnumbers", set()))
         registros.sort(key=_ordenar)
         return jsonify(registros)
     except Exception as e:
@@ -2948,8 +2866,8 @@ def _mensagem_bloqueio(
         det_lower = det.lower()
         if "status=pausada" in det_lower:
             return (
-                base
-                + "\nA ordem de serviço está pausada. Solicite nova liberação ao Preparador."
+                    base
+                    + "\nA ordem de serviço está pausada. Solicite nova liberação ao Preparador."
             )
         if "status=encerrada" in det_lower:
             return base + "\nA ordem de serviço está encerrada."
