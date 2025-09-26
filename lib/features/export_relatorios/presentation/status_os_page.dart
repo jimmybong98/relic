@@ -359,95 +359,109 @@ class _StatusOsPageState extends State<StatusOsPage> {
   }
 
   Widget _buildFiltros() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Filtros', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: [
-                SizedBox(
-                  width: 220,
-                  child: _buildDropdown(
-                    label: 'Categoria da máquina',
-                    opcoes: _categorias,
-                    valor: _categoriaSelecionada,
-                    controller: _categoriaController,
-                    onChanged: (valor) => _atualizarFiltro(() {
-                      _categoriaSelecionada = valor;
-                      _atualizarTextoDropdown(
-                        _categoriaController,
-                        _categoriaSelecionada,
-                      );
-                    }),
-                  ),
+    return SizedBox(
+      width: double.infinity,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Filtros', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 16),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 220,
+                      child: _buildDropdown(
+                        label: 'Categoria da máquina',
+                        opcoes: _categorias,
+                        valor: _categoriaSelecionada,
+                        controller: _categoriaController,
+                        onChanged: (valor) => _atualizarFiltro(() {
+                          _categoriaSelecionada = valor;
+                          _atualizarTextoDropdown(
+                            _categoriaController,
+                            _categoriaSelecionada,
+                          );
+                        }),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: 200,
+                      child: _buildDropdown(
+                        label: 'Máquina',
+                        opcoes: _maquinas,
+                        valor: _maquinaSelecionada,
+                        controller: _maquinaController,
+                        onChanged: (valor) => _atualizarFiltro(() {
+                          _maquinaSelecionada = valor;
+                          _atualizarTextoDropdown(
+                            _maquinaController,
+                            _maquinaSelecionada,
+                          );
+                        }),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: 220,
+                      child: _buildDropdown(
+                        label: 'Part number',
+                        opcoes: _partnumbers,
+                        valor: _partnumberSelecionado,
+                        controller: _partnumberController,
+                        onChanged: (valor) => _atualizarFiltro(() {
+                          _partnumberSelecionado = valor;
+                          _atualizarTextoDropdown(
+                            _partnumberController,
+                            _partnumberSelecionado,
+                          );
+                        }),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: 180,
+                      child: _buildDropdown(
+                        label: 'OS',
+                        opcoes: _osOptions,
+                        valor: _osSelecionada,
+                        controller: _osController,
+                        onChanged: (valor) => _atualizarFiltro(() {
+                          _osSelecionada = valor;
+                          _atualizarTextoDropdown(
+                            _osController,
+                            _osSelecionada,
+                          );
+                        }),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: 180,
+                      child: _buildDropdown(
+                        label: 'RE',
+                        opcoes: _resOptions,
+                        valor: _reSelecionado,
+                        controller: _reController,
+                        onChanged: (valor) => _atualizarFiltro(() {
+                          _reSelecionado = valor;
+                          _atualizarTextoDropdown(
+                            _reController,
+                            _reSelecionado,
+                          );
+                        }),
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(
-                  width: 200,
-                  child: _buildDropdown(
-                    label: 'Máquina',
-                    opcoes: _maquinas,
-                    valor: _maquinaSelecionada,
-                    controller: _maquinaController,
-                    onChanged: (valor) => _atualizarFiltro(() {
-                      _maquinaSelecionada = valor;
-                      _atualizarTextoDropdown(
-                        _maquinaController,
-                        _maquinaSelecionada,
-                      );
-                    }),
-                  ),
-                ),
-                SizedBox(
-                  width: 220,
-                  child: _buildDropdown(
-                    label: 'Part number',
-                    opcoes: _partnumbers,
-                    valor: _partnumberSelecionado,
-                    controller: _partnumberController,
-                    onChanged: (valor) => _atualizarFiltro(() {
-                      _partnumberSelecionado = valor;
-                      _atualizarTextoDropdown(
-                        _partnumberController,
-                        _partnumberSelecionado,
-                      );
-                    }),
-                  ),
-                ),
-                SizedBox(
-                  width: 180,
-                  child: _buildDropdown(
-                    label: 'OS',
-                    opcoes: _osOptions,
-                    valor: _osSelecionada,
-                    controller: _osController,
-                    onChanged: (valor) => _atualizarFiltro(() {
-                      _osSelecionada = valor;
-                      _atualizarTextoDropdown(_osController, _osSelecionada);
-                    }),
-                  ),
-                ),
-                SizedBox(
-                  width: 180,
-                  child: _buildDropdown(
-                    label: 'RE',
-                    opcoes: _resOptions,
-                    valor: _reSelecionado,
-                    controller: _reController,
-                    onChanged: (valor) => _atualizarFiltro(() {
-                      _reSelecionado = valor;
-                      _atualizarTextoDropdown(_reController, _reSelecionado);
-                    }),
-                  ),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
