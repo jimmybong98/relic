@@ -2469,6 +2469,7 @@ def relatorio_status_os():
                         "_maquinas": set(),
                         "_categorias": set(),
                         "_partnumbers": set(),
+                        "_amostragens_por_re": {},
                     }
 
                 for row in cur.fetchall():
@@ -2535,6 +2536,35 @@ def relatorio_status_os():
                                 continue
                             dados[chave] = dados.get(chave, 0) + qtd
 
+                cur.execute(
+                    """
+                    SELECT os, re_operador, COUNT(*) AS qtd
+                      FROM operador_amostragem
+                     WHERE re_operador IS NOT NULL AND re_operador <> ''
+                     GROUP BY os, re_operador
+                    """,
+                )
+                for row in cur.fetchall():
+                    os_num = _norm(row.get("os"))
+                    if not os_num:
+                        continue
+                    dados = por_os.get(os_num)
+                    if dados is None:
+                        dados = _novo_registro(os_num)
+                        por_os[os_num] = dados
+                        registros.append(dados)
+
+                    re_operador = _norm(row.get("re_operador"))
+                    if not re_operador:
+                        continue
+
+                    qtd = int(row.get("qtd") or 0)
+                    if qtd <= 0:
+                        continue
+
+                    por_re = dados.setdefault("_amostragens_por_re", {})
+                    por_re[re_operador] = por_re.get(re_operador, 0) + qtd
+
         def _ordenar(item):
             os_valor = str(item.get("os", ""))
             normalizado = _strip_leading_zeros(os_valor)
@@ -2546,6 +2576,21 @@ def relatorio_status_os():
             item["maquinas"] = sorted(item.pop("_maquinas", set()))
             item["categorias"] = sorted(item.pop("_categorias", set()))
             item["partnumbers"] = sorted(item.pop("_partnumbers", set()))
+            por_re = item.pop("_amostragens_por_re", {}) or {}
+            lista_re = []
+            for chave, valor in por_re.items():
+                re_valor = _norm(chave)
+                if not re_valor:
+                    continue
+                try:
+                    qtd = int(valor or 0)
+                except (TypeError, ValueError):
+                    continue
+                if qtd <= 0:
+                    continue
+                lista_re.append({"re": re_valor, "total": qtd})
+            lista_re.sort(key=lambda x: (-x["total"], x["re"]))
+            item["amostragens_por_re"] = lista_re
         registros.sort(key=_ordenar)
         return jsonify(registros)
     except Exception as e:
