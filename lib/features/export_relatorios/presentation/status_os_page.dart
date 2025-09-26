@@ -380,35 +380,13 @@ class _StatusOsPageState extends State<StatusOsPage> {
           ),
         ];
 
-        final needsHorizontalScroll = constraints.maxWidth < 880;
-
-        Widget osRow;
-        if (needsHorizontalScroll) {
-          final cardWidth = math.max(
-            280.0,
-            math.min(400.0, constraints.maxWidth * 0.92),
-          );
-
-          osRow = SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Row(
-              children: [
-                SizedBox(width: cardWidth, child: charts[0]),
-                const SizedBox(width: 16),
-                SizedBox(width: cardWidth, child: charts[1]),
-              ],
-            ),
-          );
-        } else {
-          osRow = Row(
-            children: [
-              Expanded(child: charts[0]),
-              const SizedBox(width: 16),
-              Expanded(child: charts[1]),
-            ],
-          );
-        }
+        final osRow = Row(
+          children: [
+            Expanded(child: charts[0]),
+            const SizedBox(width: 16),
+            Expanded(child: charts[1]),
+          ],
+        );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
