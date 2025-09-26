@@ -6,6 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:admin/widgets/window_bar.dart';
 
 import '../../../screens/main/components/side_menu.dart';
+import '../../../screens/dashboard/components/personnel_report_chart.dart';
 import '../../../services/report_service.dart';
 
 const _todos = '__all__';
@@ -216,16 +217,6 @@ class _StatusOsPageState extends State<StatusOsPage> {
     return totais;
   }
 
-  String _formatarValor(Map<String, dynamic> row, String key) {
-    final value = row[key];
-    if (value == null) return '';
-    if (value is List) {
-      return value.whereType<String>().join(', ');
-    }
-    if (value is num) return value.toInt().toString();
-    return value.toString();
-  }
-
   Widget _buildDropdown({
     required String label,
     required List<String> opcoes,
@@ -380,7 +371,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
     );
   }
 
-  Widget _buildTabela(List<String> headers) {
+  Widget _buildTabela() {
     if (_loading && _allRows.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -397,6 +388,14 @@ class _StatusOsPageState extends State<StatusOsPage> {
           ),
         ),
       );
+    }
+
+    final osSet = SplayTreeSet<String>();
+    for (final row in _rows) {
+      final os = row['os']?.toString().trim() ?? '';
+      if (os.isNotEmpty) {
+        osSet.add(os);
+      }
     }
 
     return Card(
@@ -419,47 +418,12 @@ class _StatusOsPageState extends State<StatusOsPage> {
             ),
           ),
           const Divider(height: 1),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SingleChildScrollView(
-              child: DataTable(
-                headingRowColor: MaterialStateColor.resolveWith(
-                  (states) => Theme.of(
-                    context,
-                  ).colorScheme.surfaceVariant.withOpacity(0.4),
-                ),
-                columns: headers
-                    .map(
-                      (h) => DataColumn(
-                        label: Text(
-                          _headerMap[h] ?? h,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                rows: _rows
-                    .map(
-                      (row) => DataRow(
-                        cells: headers
-                            .map(
-                              (h) => DataCell(
-                                ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 200,
-                                  ),
-                                  child: Text(
-                                    _formatarValor(row, h),
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    )
-                    .toList(),
-              ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: PersonnelReportChart(
+              osList: osSet.toList(growable: false),
+              showSearchControls: false,
+              withContainer: false,
             ),
           ),
         ],
@@ -469,8 +433,6 @@ class _StatusOsPageState extends State<StatusOsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final headers = _headerMap.keys.toList();
-
     return Scaffold(
       appBar: const WindowBar(title: 'Status das OS', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
@@ -511,7 +473,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
                     const SizedBox(height: 16),
                     _buildGraficos(),
                     const SizedBox(height: 16),
-                    _buildTabela(headers),
+                    _buildTabela(),
                   ],
                 ),
               ),
@@ -587,8 +549,10 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
   void didUpdateWidget(covariant _OsInteractivePie oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final shouldResetIndex = _touchedIndex >= widget.slices.length ||
-        (_touchedIndex >= 0 && _touchedIndex < oldWidget.slices.length &&
+    final shouldResetIndex =
+        _touchedIndex >= widget.slices.length ||
+        (_touchedIndex >= 0 &&
+            _touchedIndex < oldWidget.slices.length &&
             oldWidget.slices[_touchedIndex].label !=
                 widget.slices[_touchedIndex].label);
 
@@ -634,8 +598,8 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
       );
     }
 
-    final hoveredLabel = (_touchedIndex >= 0 &&
-            _touchedIndex < widget.slices.length)
+    final hoveredLabel =
+        (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
         ? widget.slices[_touchedIndex].label
         : null;
     final labelStyle = theme.textTheme.bodyMedium?.copyWith(
@@ -829,7 +793,8 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
   void didUpdateWidget(covariant _InteractivePieWithLegend oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final shouldResetIndex = _touchedIndex >= widget.slices.length ||
+    final shouldResetIndex =
+        _touchedIndex >= widget.slices.length ||
         (_touchedIndex >= 0 &&
             _touchedIndex < oldWidget.slices.length &&
             oldWidget.slices[_touchedIndex].label !=
@@ -843,8 +808,8 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
   void _handleTouch(FlTouchEvent event, PieTouchResponse? response) {
     final newIndex =
         event.isInterestedForInteractions && response?.touchedSection != null
-            ? response!.touchedSection!.touchedSectionIndex
-            : -1;
+        ? response!.touchedSection!.touchedSectionIndex
+        : -1;
     if (newIndex != _touchedIndex) {
       setState(() => _touchedIndex = newIndex);
     }
@@ -858,8 +823,8 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
     final sectionsSpace = widget.slices.length >= 20
         ? 0.6
         : isDense
-            ? 1.2
-            : 2.0;
+        ? 1.2
+        : 2.0;
     final baseRadius = isDense ? 52.0 : 56.0;
 
     final sections = <PieChartSectionData>[];
@@ -884,16 +849,12 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
         ),
       );
       legendEntries.add(
-        _LegendEntry(
-          color: color,
-          label: slice.label,
-          highlighted: isTouched,
-        ),
+        _LegendEntry(color: color, label: slice.label, highlighted: isTouched),
       );
     }
 
-    final hoveredLabel = (_touchedIndex >= 0 &&
-            _touchedIndex < widget.slices.length)
+    final hoveredLabel =
+        (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
         ? widget.slices[_touchedIndex].label
         : null;
     final hoveredStyle = theme.textTheme.bodyMedium?.copyWith(
@@ -980,11 +941,7 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: [
-                  chart,
-                  const SizedBox(height: 12),
-                  hoveredIndicator,
-                ],
+                children: [chart, const SizedBox(height: 12), hoveredIndicator],
               ),
             ),
             const SizedBox(width: 16),
@@ -1016,8 +973,7 @@ class _LegendEntry extends StatelessWidget {
           )
         : Colors.transparent;
     final textStyle = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onSurface
-          .withOpacity(highlighted ? 0.92 : 0.8),
+      color: theme.colorScheme.onSurface.withOpacity(highlighted ? 0.92 : 0.8),
       fontWeight: highlighted ? FontWeight.w600 : FontWeight.w500,
     );
 
