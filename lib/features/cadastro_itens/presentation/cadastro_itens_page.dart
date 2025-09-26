@@ -16,8 +16,11 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   final _service = SupervisaoService();
 
   String _tabelaAdd = 'FOR07';
-  Map<String, TextEditingController> _controllersAdd = {};
+  final _partAddCtrl = TextEditingController();
+  final _opAddCtrl = TextEditingController();
   List<String> _camposAdd = [];
+  List<Map<String, TextEditingController>> _addControllers = [];
+  bool _showAddCards = false;
 
   /// Controladores dos campos de edição para cada registro buscado
   List<Map<String, TextEditingController>> _editControllers = [];
@@ -35,32 +38,122 @@ class _CadastroItensPageState extends State<CadastroItensPage>
 
   Future<void> _loadCampos() async {
     final campos = await _service.fetchCampos(_tabelaAdd);
+    if (!mounted) return;
     setState(() {
       // o campo `idx_medida` será gerado automaticamente no backend,
-      // portanto não deve aparecer para o usuário
+      // portanto não deve aparecer para o usuário. Os campos de
+      // identificação da peça ficam fora dos cards de medidas.
       _camposAdd = [
         for (var c in campos)
-          if (c != 'idx_medida') c,
+          if (c != 'idx_medida' && c != 'partnumber' && c != 'operacao') c,
       ];
-      _controllersAdd = {for (var c in _camposAdd) c: TextEditingController()};
+    });
+  }
+
+  Map<String, TextEditingController> _createAddControllers() {
+    return {
+      for (var c in _camposAdd) c: TextEditingController(),
+    };
+  }
+
+  void _resetAddControllers() {
+    for (final entry in _addControllers) {
+      for (final ctrl in entry.values) {
+        ctrl.dispose();
+      }
+    }
+    _addControllers = [];
+  }
+
+  void _addNovaMedida() {
+    setState(() {
+      _addControllers = [..._addControllers, _createAddControllers()];
+    });
+  }
+
+  void _removerMedida(int index) {
+    setState(() {
+      final removed = _addControllers.removeAt(index);
+      for (final ctrl in removed.values) {
+        ctrl.dispose();
+      }
+    });
+  }
+
+  Future<void> _prepararCadastro() async {
+    await _loadCampos();
+    if (!mounted) return;
+    setState(() {
+      _resetAddControllers();
+      _addControllers.add(_createAddControllers());
+      _showAddCards = true;
     });
   }
 
   Future<void> _adicionar() async {
-    final dados = {for (var c in _camposAdd) c: _controllersAdd[c]!.text};
-    final ok = await _service.inserir(_tabelaAdd, dados);
+    final part = _partAddCtrl.text.trim();
+    final op = _opAddCtrl.text.trim();
+    if (part.isEmpty || op.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe o partnumber e a operação.')),
+      );
+      return;
+    }
+
+    if (_addControllers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Adicione ao menos uma medida.')),
+      );
+      return;
+    }
+
+    var houveAlgumEnvio = false;
+    var sucessoTotal = true;
+
+    for (final mapa in _addControllers) {
+      final dados = <String, dynamic>{
+        'partnumber': part,
+        'operacao': op,
+      };
+      var possuiDados = false;
+      for (final campo in _camposAdd) {
+        final valor = mapa[campo]!.text;
+        dados[campo] = valor;
+        if (valor.isNotEmpty) possuiDados = true;
+      }
+
+      if (!possuiDados) {
+        continue;
+      }
+
+      houveAlgumEnvio = true;
+      final ok = await _service.inserir(_tabelaAdd, dados);
+      if (!ok) sucessoTotal = false;
+    }
+
     if (!mounted) return;
+
+    if (!houveAlgumEnvio) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preencha os campos de ao menos uma medida.')),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(ok ? 'Registro adicionado' : 'Falha ao adicionar'),
+        content: Text(
+          sucessoTotal
+              ? 'Medidas cadastradas com sucesso.'
+              : 'Falha ao cadastrar algumas medidas.',
+        ),
       ),
     );
-    if (ok) {
-      // Mantém os campos de peça e operação preenchidos para facilitar
-      // o cadastro de várias medidas na mesma peça/operacao
-      for (var c in _camposAdd) {
-        if (c != 'partnumber' && c != 'operacao') {
-          _controllersAdd[c]!.clear();
+
+    if (sucessoTotal) {
+      for (final mapa in _addControllers) {
+        for (final ctrl in mapa.values) {
+          ctrl.clear();
         }
       }
     }
@@ -99,6 +192,21 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   }
 
   @override
+  void dispose() {
+    _partAddCtrl.dispose();
+    _opAddCtrl.dispose();
+    _resetAddControllers();
+    _partCtrl.dispose();
+    _opCtrl.dispose();
+    for (final ctrlMap in _editControllers) {
+      for (final ctrl in ctrlMap.values) {
+        ctrl.dispose();
+      }
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const WindowBar(title: 'Cadastro de novos itens', showMenu: true),
@@ -123,36 +231,106 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   }
 
   Widget _buildAdicionar() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          DropdownButton<String>(
-            value: _tabelaAdd,
-            items: const [
-              DropdownMenuItem(value: 'FOR07', child: Text('FOR07')),
-              DropdownMenuItem(value: 'FOR09', child: Text('FOR09')),
-            ],
-            onChanged: (v) {
-              if (v != null) {
-                setState(() => _tabelaAdd = v);
-                _loadCampos();
-              }
-            },
-          ),
-          ..._camposAdd.map(
-            (c) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: TextField(
-                controller: _controllersAdd[c],
-                decoration: InputDecoration(labelText: c),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              DropdownButton<String>(
+                value: _tabelaAdd,
+                items: const [
+                  DropdownMenuItem(value: 'FOR07', child: Text('FOR07')),
+                  DropdownMenuItem(value: 'FOR09', child: Text('FOR09')),
+                ],
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() {
+                      _tabelaAdd = v;
+                      _showAddCards = false;
+                      _resetAddControllers();
+                    });
+                    _loadCampos();
+                  }
+                },
               ),
+              TextField(
+                controller: _partAddCtrl,
+                decoration: const InputDecoration(labelText: 'Código da peça'),
+              ),
+              TextField(
+                controller: _opAddCtrl,
+                decoration: const InputDecoration(labelText: 'Operação'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: _prepararCadastro,
+                child: const Text('Buscar'),
+              ),
+            ],
+          ),
+        ),
+        if (_showAddCards)
+          Expanded(
+            child: ListView.builder(
+              itemCount: _addControllers.length,
+              itemBuilder: (context, index) {
+                final ctrlMap = _addControllers[index];
+                return Card(
+                  margin: const EdgeInsets.all(8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text('Medida ${index + 1}',
+                                style: Theme.of(context).textTheme.titleMedium),
+                            const Spacer(),
+                            if (_addControllers.length > 1)
+                              IconButton(
+                                onPressed: () => _removerMedida(index),
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Remover medida',
+                              ),
+                          ],
+                        ),
+                        ..._camposAdd.map(
+                          (c) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: TextField(
+                              controller: ctrlMap[c],
+                              decoration: InputDecoration(labelText: c),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
-          const SizedBox(height: 16),
-          FilledButton(onPressed: _adicionar, child: const Text('Salvar')),
-        ],
-      ),
+        if (_showAddCards)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _addNovaMedida,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Adicionar medida'),
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: _adicionar,
+                  child: const Text('Salvar'),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
