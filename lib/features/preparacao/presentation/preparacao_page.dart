@@ -700,7 +700,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     DropdownButtonFormField<String>(
                                       value: categoriaValue,
                                       decoration: const InputDecoration(
-                                        labelText: 'Categoria',
+                                        labelText: 'Grupo de máquina',
                                         border: OutlineInputBorder(),
                                       ),
                                       items: _categorias
@@ -795,7 +795,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                   enabled: !flowLocked,
                                   textInputAction: TextInputAction.next,
                                   decoration: const InputDecoration(
-                                    labelText: 'Código da peça (PartNumber)',
+                                    labelText: 'Código da peça',
                                     border: OutlineInputBorder(),
                                   ),
                                   validator: (v) =>

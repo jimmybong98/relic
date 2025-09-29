@@ -676,7 +676,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                   child: DropdownButtonFormField<String>(
                                     value: maquinaValue,
                                     decoration: const InputDecoration(
-                                      labelText: 'Código da máquina',
+                                      labelText: 'Grupo de máquina',
                                       border: OutlineInputBorder(),
                                     ),
                                     items: maquinasDisponiveis
@@ -717,7 +717,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     enabled: !flowLocked,
                                     textInputAction: TextInputAction.next,
                                     decoration: const InputDecoration(
-                                      labelText: 'Código da peça (PartNumber)',
+                                      labelText: 'Código da peça',
                                       border: OutlineInputBorder(),
                                     ),
                                     validator: (v) =>
