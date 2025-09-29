@@ -18,7 +18,9 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   String _tabelaAdd = 'FOR07';
   final _partAddCtrl = TextEditingController();
   final _opAddCtrl = TextEditingController();
+  final Map<String, TextEditingController> _fixedControllers = {};
   List<String> _camposAdd = [];
+  List<String> _camposFixos = [];
   List<Map<String, TextEditingController>> _addControllers = [];
   bool _showAddCards = false;
 
@@ -39,14 +41,37 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   Future<void> _loadCampos() async {
     final campos = await _service.fetchCampos(_tabelaAdd);
     if (!mounted) return;
+    final fixedCandidates = <String>{
+      'nome_peca',
+      'tipo_maquina',
+      'cliente',
+      'data',
+      'data_inclusao',
+    };
+    final fixedEncontrados =
+        campos.where((c) => fixedCandidates.contains(c)).toList();
+    final toRemove = _fixedControllers.keys
+        .where((key) => !fixedEncontrados.contains(key))
+        .toList();
+    for (final key in toRemove) {
+      _fixedControllers.remove(key)?.dispose();
+    }
+    for (final key in fixedEncontrados) {
+      _fixedControllers.putIfAbsent(key, TextEditingController.new);
+    }
     setState(() {
       // o campo `idx_medida` será gerado automaticamente no backend,
       // portanto não deve aparecer para o usuário. Os campos de
       // identificação da peça ficam fora dos cards de medidas.
       _camposAdd = [
         for (var c in campos)
-          if (c != 'idx_medida' && c != 'partnumber' && c != 'operacao') c,
+          if (c != 'idx_medida' &&
+              c != 'partnumber' &&
+              c != 'operacao' &&
+              !fixedEncontrados.contains(c))
+            c,
       ];
+      _camposFixos = fixedEncontrados;
     });
   }
 
@@ -93,9 +118,19 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   Future<void> _adicionar() async {
     final part = _partAddCtrl.text.trim();
     final op = _opAddCtrl.text.trim();
-    if (part.isEmpty || op.isEmpty) {
+    final camposFixosVazios = _camposFixos
+        .where((campo) => _fixedControllers[campo]!.text.trim().isEmpty)
+        .toList();
+
+    if (part.isEmpty ||
+        op.isEmpty ||
+        (_camposFixos.isNotEmpty && camposFixosVazios.isNotEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe o partnumber e a operação.')),
+        SnackBar(
+          content: Text(
+            _mensagemErroCamposObrigatorios(camposFixosVazios.isNotEmpty),
+          ),
+        ),
       );
       return;
     }
@@ -115,6 +150,9 @@ class _CadastroItensPageState extends State<CadastroItensPage>
         'partnumber': part,
         'operacao': op,
       };
+      for (final campo in _camposFixos) {
+        dados[campo] = _fixedControllers[campo]!.text.trim();
+      }
       var possuiDados = false;
       for (final campo in _camposAdd) {
         final valor = mapa[campo]!.text;
@@ -159,6 +197,32 @@ class _CadastroItensPageState extends State<CadastroItensPage>
     }
   }
 
+  String _mensagemErroCamposObrigatorios(bool possuiCamposFixosVazios) {
+    if (!possuiCamposFixosVazios) {
+      return 'Informe o partnumber e a operação.';
+    }
+    final labelsObrigatorios = _camposFixos
+        .map((campo) => _labelParaCampo(campo))
+        .join(', ');
+    return 'Informe partnumber, operação e os campos: $labelsObrigatorios.';
+  }
+
+  String _labelParaCampo(String campo) {
+    switch (campo) {
+      case 'nome_peca':
+        return 'Nome da peça';
+      case 'tipo_maquina':
+        return 'Tipo da máquina';
+      case 'cliente':
+        return 'Cliente';
+      case 'data_inclusao':
+      case 'data':
+        return 'Data';
+      default:
+        return campo;
+    }
+  }
+
   Future<void> _buscarRegistros() async {
     final regs = await _service.fetchRegistros(
       _tabelaEdit,
@@ -195,6 +259,9 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   void dispose() {
     _partAddCtrl.dispose();
     _opAddCtrl.dispose();
+    for (final ctrl in _fixedControllers.values) {
+      ctrl.dispose();
+    }
     _resetAddControllers();
     _partCtrl.dispose();
     _opCtrl.dispose();
@@ -261,6 +328,13 @@ class _CadastroItensPageState extends State<CadastroItensPage>
               TextField(
                 controller: _opAddCtrl,
                 decoration: const InputDecoration(labelText: 'Operação'),
+              ),
+              ..._camposFixos.map(
+                (campo) => TextField(
+                  controller: _fixedControllers[campo],
+                  decoration:
+                      InputDecoration(labelText: _labelParaCampo(campo)),
+                ),
               ),
               const SizedBox(height: 8),
               FilledButton(
