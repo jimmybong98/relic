@@ -184,7 +184,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Bem-vindo ao Relic TT',
+                          'Bem-vindo ao RELIC - Controle de qualidade',
                           style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
@@ -197,7 +197,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        Image.asset('assets/images/traco.png', height: 2),
+                        Image.asset('assets/images/traco.png', height: 14),
                         const SizedBox(height: 32),
                         _MenuGrid(entries: entries),
                       ],
