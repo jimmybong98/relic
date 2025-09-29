@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import 'package:admin/widgets/window_bar.dart';
 
@@ -19,6 +20,7 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   final _partAddCtrl = TextEditingController();
   final _opAddCtrl = TextEditingController();
   final Map<String, TextEditingController> _fixedControllers = {};
+  final _dateInputFormatter = _DateInputFormatter();
   List<String> _camposAdd = [];
   List<String> _camposFixos = [];
   List<Map<String, TextEditingController>> _addControllers = [];
@@ -36,6 +38,22 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   void initState() {
     super.initState();
     _loadCampos();
+  }
+
+  List<TextInputFormatter>? _inputFormattersParaCampo(String campo) {
+    if (campo == 'data' || campo == 'data_inclusao') {
+      return [
+        _dateInputFormatter,
+      ];
+    }
+    return null;
+  }
+
+  TextInputType? _keyboardTypeParaCampo(String campo) {
+    if (campo == 'data' || campo == 'data_inclusao') {
+      return TextInputType.number;
+    }
+    return null;
   }
 
   Future<void> _loadCampos() async {
@@ -332,6 +350,8 @@ class _CadastroItensPageState extends State<CadastroItensPage>
               ..._camposFixos.map(
                 (campo) => TextField(
                   controller: _fixedControllers[campo],
+                  inputFormatters: _inputFormattersParaCampo(campo),
+                  keyboardType: _keyboardTypeParaCampo(campo),
                   decoration:
                       InputDecoration(labelText: _labelParaCampo(campo)),
                 ),
@@ -459,6 +479,8 @@ class _CadastroItensPageState extends State<CadastroItensPage>
                           child: TextField(
                             controller: ctrls[k],
                             decoration: InputDecoration(labelText: k),
+                            inputFormatters: _inputFormattersParaCampo(k),
+                            keyboardType: _keyboardTypeParaCampo(k),
                             enabled: ![
                               'idx_medida',
                               'partnumber',
@@ -487,6 +509,66 @@ class _CadastroItensPageState extends State<CadastroItensPage>
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DateInputFormatter extends TextInputFormatter {
+  static final _digitsRegex = RegExp(r'\D');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var digits = newValue.text.replaceAll(_digitsRegex, '');
+    if (digits.length > 8) {
+      digits = digits.substring(0, 8);
+    }
+
+    final buffer = StringBuffer();
+    final selectionEnd = newValue.selection.end;
+    final safeSelectionEnd = selectionEnd < 0
+        ? 0
+        : selectionEnd > newValue.text.length
+            ? newValue.text.length
+            : selectionEnd;
+    var digitsBeforeCursor = selectionEnd == -1
+        ? digits.length
+        : newValue.text
+            .substring(0, safeSelectionEnd)
+            .replaceAll(_digitsRegex, '')
+            .length;
+    if (digitsBeforeCursor > digits.length) {
+      digitsBeforeCursor = digits.length;
+    }
+
+    var selectionIndex = 0;
+    var writtenDigits = 0;
+
+    for (var i = 0; i < digits.length; i++) {
+      if (i == 2 || i == 4) {
+        buffer.write('/');
+        if (writtenDigits < digitsBeforeCursor) {
+          selectionIndex++;
+        }
+      }
+      buffer.write(digits[i]);
+      writtenDigits++;
+      if (writtenDigits <= digitsBeforeCursor) {
+        selectionIndex++;
+      }
+    }
+
+    final formatted = buffer.toString();
+    if (selectionIndex > formatted.length) {
+      selectionIndex = formatted.length;
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: selectionIndex),
+      composing: TextRange.empty,
     );
   }
 }
