@@ -85,6 +85,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
 
   @override
   void dispose() {
+    _autoRefreshTimer?.cancel();
     _categoriaController.dispose();
     _maquinaController.dispose();
     _partnumberController.dispose();
