@@ -603,6 +603,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final cardColor = Theme.of(context).cardColor;
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: ConstrainedBox(
@@ -613,7 +614,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const OperatorReportChart(),
+                    OperatorReportChart(backgroundColor: cardColor),
                     const SizedBox(height: 24),
                     Center(
                       child: Image.asset(
