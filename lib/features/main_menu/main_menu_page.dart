@@ -141,6 +141,16 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       ),
     ];
 
+    final logoWidget = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      child: Image.asset(
+        logo.asset,
+        key: ValueKey(_logoIndex),
+        height: logo.height,
+        width: logo.width,
+      ),
+    );
+
     return Scaffold(
       appBar: const WindowBar(title: 'Menu Principal', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.mainMenu),
@@ -183,39 +193,58 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Bem-vindo ao RELIC - Controle de qualidade',
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Selecione o módulo desejado para iniciar o seu fluxo de trabalho.',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white70,
-                          ),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final textContent = Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Bem-vindo ao RELIC - Controle de qualidade',
+                                  style:
+                                      theme.textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Selecione o módulo desejado para iniciar o seu fluxo de trabalho.',
+                                  style:
+                                      theme.textTheme.bodyMedium?.copyWith(
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            );
+
+                            if (constraints.maxWidth < 760) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  textContent,
+                                  const SizedBox(height: 24),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: logoWidget,
+                                  ),
+                                ],
+                              );
+                            }
+
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(child: textContent),
+                                const SizedBox(width: 32),
+                                logoWidget,
+                              ],
+                            );
+                          },
                         ),
                         const SizedBox(height: 24),
                         Image.asset('assets/images/traco.png', height: 14),
                         const SizedBox(height: 32),
                         _MenuGrid(entries: entries),
                       ],
-                    ),
-                  ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 500),
-                    child: Image.asset(
-                      logo.asset,
-                      key: ValueKey(_logoIndex),
-                      height: logo.height,
-                      width: logo.width,
                     ),
                   ),
                 ),
