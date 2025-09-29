@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 import 'package:admin/features/operador/presentation/widgets/measurement_tile.dart';
 import 'package:admin/features/preparacao/data/models.dart';
@@ -39,6 +40,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
   List<MedidaItem> _medidasSelecionadas = [];
   bool _medindo = false;
   bool _registrando = false;
+  String? _dataRevisao;
 
   @override
   void initState() {
@@ -57,6 +59,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
     setState(() {
       _loading = true;
       _erro = null;
+      _dataRevisao = null;
     });
 
     final uri = buildApiUri('/preparador/medidas', {
@@ -79,12 +82,17 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
                   )
                   .toList()
             : <MedidaItem>[];
+        final dataInclusao = itens.firstDataInclusao;
+        final dataFormatada = dataInclusao != null
+            ? DateFormat('dd/MM/yyyy').format(dataInclusao.toLocal())
+            : null;
         setState(() {
           _todas = itens;
           _selecionadas = <int>{};
           _medidasSelecionadas = [];
           _medindo = false;
           _loading = false;
+          _dataRevisao = dataFormatada;
         });
       } else if (resp.statusCode == 404 || resp.statusCode == 204) {
         setState(() {
@@ -93,6 +101,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
           _medidasSelecionadas = [];
           _medindo = false;
           _loading = false;
+          _dataRevisao = null;
         });
       } else {
         throw Exception('Falha ao carregar (${resp.statusCode}) ${resp.body}');
@@ -102,6 +111,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
       setState(() {
         _erro = e.toString();
         _loading = false;
+        _dataRevisao = null;
       });
     }
   }
@@ -139,6 +149,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
         observacao: item.observacao,
         periodicidade: item.periodicidade,
         instrumento: item.instrumento,
+        dataInclusao: item.dataInclusao,
         tolerancias: item.tolerancias,
         contagens: item.contagens,
         anguloMinimo: item.anguloMinimo,
@@ -168,6 +179,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
       observacao: antigo.observacao,
       periodicidade: antigo.periodicidade,
       instrumento: antigo.instrumento,
+      dataInclusao: antigo.dataInclusao,
       tolerancias: antigo.tolerancias,
       contagens: antigo.contagens,
       anguloMinimo: antigo.anguloMinimo,
@@ -427,6 +439,8 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
                             _buildInfoChip('O.S.', widget.os),
                             _buildInfoChip('Peça', widget.partnumber),
                             _buildInfoChip('Operação', widget.operacao),
+                            if (_dataRevisao != null)
+                              _buildInfoChip('Data de revisão', _dataRevisao!),
                             _buildInfoChip('Máquina', widget.maquina),
                           ],
                         ),

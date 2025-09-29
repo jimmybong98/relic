@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:intl/intl.dart';
 
 import 'medidas_repository.dart';
 import 'models.dart';
@@ -77,6 +78,54 @@ class LocalExcelRepository implements MedidasRepository {
         final observacao = map['observacao']?.toString();
         final periodicidade = map['periodicidade']?.toString();
         final instrumento = map['instrumento']?.toString();
+
+        final httpDatePattern = RegExp(
+          r'^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} (GMT|UTC)$',
+        );
+        final httpDateFormatter =
+            DateFormat('EEE, dd MMM yyyy HH:mm:ss', 'en_US');
+
+        DateTime? parseDate(dynamic rawValue) {
+          if (rawValue == null) return null;
+          if (rawValue is DateTime) return rawValue;
+          if (rawValue is int) {
+            if (rawValue > 9999999999) {
+              return DateTime.fromMillisecondsSinceEpoch(rawValue);
+            }
+            return DateTime.fromMillisecondsSinceEpoch(rawValue * 1000);
+          }
+          final text = rawValue.toString().trim();
+          if (text.isEmpty) return null;
+          final normalized = text.contains('T') || text.contains(' ')
+              ? text.replaceFirst(' ', 'T')
+              : text;
+          final parsedIso = DateTime.tryParse(normalized);
+          if (parsedIso != null) return parsedIso;
+          final httpMatch = httpDatePattern.firstMatch(text);
+          if (httpMatch != null) {
+            try {
+              final sanitized = text.replaceFirst(RegExp(r' (GMT|UTC)$'), '');
+              return httpDateFormatter.parseUtc(sanitized);
+            } catch (_) {}
+          }
+          final match = RegExp(
+            r'^(\d{1,2})/(\d{1,2})/(\d{2,4})$',
+          ).firstMatch(text);
+          if (match != null) {
+            final day = int.tryParse(match.group(1)!);
+            final month = int.tryParse(match.group(2)!);
+            final yearRaw = int.tryParse(match.group(3)!);
+            if (day != null && month != null && yearRaw != null) {
+              final year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+              return DateTime(year, month, day);
+            }
+          }
+          return null;
+        }
+
+        final dataInclusao = parseDate(
+          map['data_inclusao'] ?? map['dataInclusao'] ?? map['dataInclusão'],
+        );
 
         final rawTolerancias = map['tolerancias'];
         final tolerancias = (rawTolerancias is List)
@@ -247,6 +296,7 @@ class LocalExcelRepository implements MedidasRepository {
           observacao: observacao,
           periodicidade: periodicidade,
           instrumento: instrumento,
+          dataInclusao: dataInclusao,
           tolerancias: tolerancias,
           contagens: contagens,
           anguloMinimo: anguloMinDeduced,

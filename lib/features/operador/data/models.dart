@@ -1,6 +1,8 @@
 // lib/features/preparacao/data/models.dart
 import 'dart:convert';
 
+import 'package:intl/intl.dart';
+
 import 'package:admin/utils/string_utils.dart';
 
 enum StatusMedida {
@@ -85,6 +87,7 @@ class MedidaItem {
   final String? observacao;
   final String? periodicidade;
   final String? instrumento;
+  final DateTime? dataInclusao;
 
   /// Rótulos de tolerância (até 4) vindos do backend do Operador (AE/AF/AG/AH...).
   final List<String> tolerancias;
@@ -104,6 +107,7 @@ class MedidaItem {
     this.observacao,
     this.periodicidade,
     this.instrumento,
+    this.dataInclusao,
     this.tolerancias = const [],
     Map<String, int>? contagens,
     this.anguloMinimo,
@@ -168,6 +172,49 @@ class MedidaItem {
     if (v is num) return v.toDouble();
     final s = v.toString().replaceAll(',', '.').trim();
     return double.tryParse(s);
+  }
+
+  static final RegExp _httpDatePattern = RegExp(
+    r'^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} (GMT|UTC)$',
+  );
+
+  static final DateFormat _httpDateFormatter =
+      DateFormat('EEE, dd MMM yyyy HH:mm:ss', 'en_US');
+
+  static DateTime? _parseDate(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) return raw;
+    if (raw is int) {
+      if (raw > 9999999999) {
+        return DateTime.fromMillisecondsSinceEpoch(raw);
+      }
+      return DateTime.fromMillisecondsSinceEpoch(raw * 1000);
+    }
+    final text = raw.toString().trim();
+    if (text.isEmpty) return null;
+    final normalized = text.contains('T') || text.contains(' ')
+        ? text.replaceFirst(' ', 'T')
+        : text;
+    final parsedIso = DateTime.tryParse(normalized);
+    if (parsedIso != null) return parsedIso;
+    final httpMatch = _httpDatePattern.firstMatch(text);
+    if (httpMatch != null) {
+      try {
+        final sanitized = text.replaceFirst(RegExp(r' (GMT|UTC)$'), '');
+        return _httpDateFormatter.parseUtc(sanitized);
+      } catch (_) {}
+    }
+    final match = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{2,4})$').firstMatch(text);
+    if (match != null) {
+      final day = int.tryParse(match.group(1)!);
+      final month = int.tryParse(match.group(2)!);
+      final yearRaw = int.tryParse(match.group(3)!);
+      if (day != null && month != null && yearRaw != null) {
+        final year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+        return DateTime(year, month, day);
+      }
+    }
+    return null;
   }
 
   static String _normalizeLower(String s) {
@@ -340,10 +387,7 @@ class MedidaItem {
       var out = input.replaceAll(',', '.');
       out = out.replaceAll('º', '°');
       out = out.replaceAll('×', 'x');
-      out = out.replaceAll(
-        RegExp(r'(?<=[\d°º])\s*[-–—]\s*(?=\d)'),
-        ' - ',
-      );
+      out = out.replaceAll(RegExp(r'(?<=[\d°º])\s*[-–—]\s*(?=\d)'), ' - ');
       out = out.replaceAll(RegExp(r'(\d)°\.(\d+)'), r'$1.$2°');
       out = out.replaceAll(RegExp(r'([°º])\s*[xX]\s*(?=\d)'), r'$1 - ');
       out = out.replaceAll(RegExp(r'([°º])\s+(?=\d)'), r'$1 - ');
@@ -540,6 +584,9 @@ class MedidaItem {
     final observacao = rawObservacao?.toString();
     final periodicidade = rawPeriodicidade?.toString();
     final instrumento = rawInstrumento?.toString();
+    final dataInclusao = _parseDate(
+      map['data_inclusao'] ?? map['dataInclusao'] ?? map['dataInclusão'],
+    );
     double? anguloMinDeduced;
     double? anguloMaxDeduced;
 
@@ -681,6 +728,7 @@ class MedidaItem {
       contagens: counts,
       anguloMinimo: anguloMinDeduced,
       anguloMaximo: anguloMaxDeduced,
+      dataInclusao: dataInclusao,
     );
   }
 
@@ -699,6 +747,16 @@ class MedidaItem {
     'tolerancias': tolerancias,
     'contagens': contagens,
   };
+}
+
+extension OperadorMedidaItemIterableExt on Iterable<MedidaItem> {
+  DateTime? get firstDataInclusao {
+    for (final item in this) {
+      final data = item.dataInclusao;
+      if (data != null) return data;
+    }
+    return null;
+  }
 }
 
 class PreparacaoResultado {
