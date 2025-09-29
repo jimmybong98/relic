@@ -1315,46 +1315,67 @@ class _PieSlice {
 }
 
 List<Color> _buildPalette(ThemeData theme, int count) {
+  bool addUnique(List<Color> list, Color? color) {
+    if (color == null) return false;
+    if (list.any((existing) => existing.value == color.value)) {
+      return false;
+    }
+    list.add(color);
+    return true;
+  }
+
   final candidates = <Color>[
-    theme.colorScheme.primary,
-    theme.colorScheme.secondary,
-    theme.colorScheme.tertiary,
-    theme.colorScheme.error,
-    Colors.teal,
-    Colors.deepOrange,
-    Colors.indigo,
-    Colors.pink,
-    Colors.blueGrey,
-    Colors.amber,
-    Colors.cyan.shade700,
-    Colors.deepPurple,
-    Colors.lightGreen.shade700,
-    Colors.brown,
-  ].whereType<Color>().toList();
+    const Color(0xFF1E88E5), // blue
+    const Color(0xFFE53935), // red
+    const Color(0xFF43A047), // green
+    const Color(0xFFFFC107), // yellow
+    const Color(0xFF8E24AA), // purple
+    const Color(0xFFFF7043), // orange
+    const Color(0xFF00ACC1), // cyan
+    const Color(0xFF7CB342), // light green
+    const Color(0xFFF06292), // pink
+    const Color(0xFF5C6BC0), // indigo
+    const Color(0xFFFF8F00), // amber orange
+    const Color(0xFF26A69A), // teal
+    const Color(0xFFAB47BC), // violet
+    const Color(0xFFD81B60), // magenta
+  ];
 
-  if (candidates.isEmpty) {
-    candidates.add(Colors.blue);
+  final palette = <Color>[];
+  for (final color in candidates) {
+    addUnique(palette, color);
   }
 
-  if (count <= candidates.length) {
-    return candidates.take(count).toList(growable: false);
+  addUnique(palette, theme.colorScheme.primary);
+  addUnique(palette, theme.colorScheme.secondary);
+  addUnique(palette, theme.colorScheme.tertiary);
+  addUnique(palette, theme.colorScheme.error);
+
+  if (palette.isEmpty) {
+    palette.add(Colors.blueAccent);
   }
 
-  final colors = <Color>[]..addAll(candidates);
+  if (count <= palette.length) {
+    return palette.take(count).toList(growable: false);
+  }
+
+  final colors = <Color>[]..addAll(palette);
   const goldenRatio = 0.6180339887498949;
   var hue = 0.0;
 
   while (colors.length < count) {
     hue = (hue + goldenRatio) % 1.0;
-    final saturation = 0.55 + ((colors.length) % 3) * 0.1;
-    final value = 0.65 - ((colors.length ~/ 3) % 2) * 0.08;
+    final saturation = 0.78;
+    final value = 0.88;
     final color = HSVColor.fromAHSV(
       1,
       hue * 360,
-      saturation.clamp(0.4, 0.85),
-      value.clamp(0.45, 0.85),
+      saturation,
+      value,
     ).toColor();
-    colors.add(color);
+    if (!colors.any((existing) => existing.value == color.value)) {
+      colors.add(color);
+    }
   }
 
   return colors.take(count).toList(growable: false);
