@@ -324,6 +324,132 @@ class _StatusOsPageState extends State<StatusOsPage> {
     return totais;
   }
 
+  Widget _buildRelatorioProgressoAmostragens() {
+    final theme = Theme.of(context);
+    final totais = _totaisGeraisAmostragens();
+    final totalAmostragens = totais.values.fold<int>(0, (acc, value) => acc + value);
+    final totaisPorRe = _totaisGeraisAmostragensPorRe();
+    final totaisPorReOrdenados = totaisPorRe.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final statusWidgets = <Widget>[];
+    for (var i = 0; i < _statusKeys.length; i++) {
+      final key = _statusKeys[i];
+      final label = _headerMap[key] ?? key;
+      final quantidade = totais[key] ?? 0;
+      final progresso = totalAmostragens > 0
+          ? quantidade.clamp(0, totalAmostragens).toDouble() / totalAmostragens
+          : 0.0;
+      statusWidgets.addAll([
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Text('$quantidade'),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: const BorderRadius.all(Radius.circular(6)),
+          child: LinearProgressIndicator(
+            minHeight: 8,
+            value: progresso.isNaN ? 0.0 : progresso,
+            backgroundColor:
+                theme.colorScheme.onSurface.withValues(alpha: 0.08),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              theme.colorScheme.primary,
+            ),
+          ),
+        ),
+      ]);
+      if (i < _statusKeys.length - 1) {
+        statusWidgets.add(const SizedBox(height: 16));
+      }
+    }
+
+    Widget buildConteudo() {
+      if (_loading && _rows.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.4),
+            ),
+          ),
+        );
+      }
+
+      if (totalAmostragens <= 0) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Text(
+            'Nenhuma amostragem encontrada para os filtros selecionados.',
+            style: theme.textTheme.bodyMedium,
+          ),
+        );
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Total de amostragens: $totalAmostragens',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...statusWidgets,
+          if (totaisPorReOrdenados.isNotEmpty) ...[
+            Text(
+              'Amostragens por RE',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final entry in totaisPorReOrdenados)
+                  Chip(
+                    label: Text('${entry.key}: ${entry.value}'),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Relatório de progresso das amostragens',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            buildConteudo(),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDropdown({
     required String label,
     required List<String> opcoes,
@@ -612,6 +738,16 @@ class _StatusOsPageState extends State<StatusOsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildRelatorioProgressoAmostragens(),
+                    const SizedBox(height: 24),
+                    Center(
+                      child: Image.asset(
+                        'assets/images/traco.png',
+                        height: 12,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     Row(
                       children: [
                         FilledButton.icon(
