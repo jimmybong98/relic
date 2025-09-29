@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import 'package:admin/screens/main/main_screen.dart';
+import 'package:admin/features/export_relatorios/presentation/status_os_page.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import 'package:admin/widgets/window_bar.dart';
 import '../preparacao/presentation/preparacao_page.dart';
@@ -98,7 +98,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       }
       Navigator.of(
         context,
-      ).push(MaterialPageRoute(builder: (_) => MainScreen()));
+      ).push(MaterialPageRoute(builder: (_) => const StatusOsPage()));
     }
 
     final logo = _logos[_logoIndex];

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:math' as math;
 
@@ -8,6 +9,7 @@ import 'package:admin/widgets/window_bar.dart';
 
 import '../../../screens/main/components/side_menu.dart';
 import '../../../screens/dashboard/components/personnel_report_chart.dart';
+import '../../../screens/dashboard/components/operator_report_chart.dart';
 import '../../../services/report_service.dart';
 
 const _todos = '__all__';
@@ -46,6 +48,8 @@ class _StatusOsPageState extends State<StatusOsPage> {
   List<Map<String, dynamic>> _allRows = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _rows = const <Map<String, dynamic>>[];
 
+  Timer? _autoRefreshTimer;
+
   List<String> _categorias = const <String>[];
   List<String> _maquinas = const <String>[];
   List<String> _partnumbers = const <String>[];
@@ -73,6 +77,10 @@ class _StatusOsPageState extends State<StatusOsPage> {
     _osController = TextEditingController();
     _reController = TextEditingController();
     Future.microtask(_carregar);
+    _autoRefreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (!mounted || _loading) return;
+      _carregar();
+    });
   }
 
   @override
@@ -602,6 +610,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final cardColor = Theme.of(context).cardColor;
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: ConstrainedBox(
@@ -612,25 +621,17 @@ class _StatusOsPageState extends State<StatusOsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        FilledButton.icon(
-                          onPressed: _loading ? null : _carregar,
-                          icon: const Icon(Icons.refresh),
-                          label: _loading
-                              ? const Text('Atualizando...')
-                              : const Text('Atualizar'),
-                        ),
-                        if (_loading) ...[
-                          const SizedBox(width: 16),
-                          const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2.2),
-                          ),
-                        ],
-                      ],
+                    OperatorReportChart(backgroundColor: cardColor),
+                    const SizedBox(height: 24),
+                    Center(
+                      child: Image.asset(
+                        'assets/images/traco.png',
+                        height: 12,
+                        fit: BoxFit.contain,
+                      ),
                     ),
+                    const SizedBox(height: 24),
+
                     const SizedBox(height: 16),
                     _buildFiltros(),
                     const SizedBox(height: 16),
