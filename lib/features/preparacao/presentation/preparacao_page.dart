@@ -596,7 +596,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                             SummaryInfo(label: 'Máquina', value: maquinaValue!),
                           if ((categoriaValue ?? '').isNotEmpty)
                             SummaryInfo(
-                              label: 'Categoria',
+                              label: 'Grupo de máquina',
                               value: categoriaValue!,
                             ),
                         ],

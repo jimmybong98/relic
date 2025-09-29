@@ -1177,7 +1177,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                   child: DropdownButtonFormField<String>(
                                     value: categoriaValue,
                                     decoration: const InputDecoration(
-                                      labelText: 'Categoria',
+                                      labelText: 'Grupo de máquina',
                                       border: OutlineInputBorder(),
                                     ),
                                     items: _categorias
@@ -1252,7 +1252,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                     enabled: !flowLocked,
                                     textInputAction: TextInputAction.next,
                                     decoration: const InputDecoration(
-                                      labelText: 'Código da peça (PartNumber)',
+                                      labelText: 'Código da peça',
                                       border: OutlineInputBorder(),
                                     ),
                                     validator: (v) =>
