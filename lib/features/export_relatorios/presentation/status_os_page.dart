@@ -552,6 +552,20 @@ class _StatusOsPageState extends State<StatusOsPage> {
           ),
         ];
 
+        final isCompact = constraints.maxWidth < 720;
+
+        if (isCompact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < charts.length; i++) ...[
+                charts[i],
+                if (i < charts.length - 1) const SizedBox(height: 16),
+              ],
+            ],
+          );
+        }
+
         final osRow = Row(
           children: [
             Expanded(child: charts[0]),
@@ -772,23 +786,6 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
         ? 1.0
         : 2.0;
 
-    final sections = <PieChartSectionData>[];
-    for (var i = 0; i < widget.slices.length; i++) {
-      final slice = widget.slices[i];
-      final color = slice.colorOverride ?? colors[i];
-      final isTouched = i == _touchedIndex;
-      sections.add(
-        PieChartSectionData(
-          color: color,
-          value: slice.value,
-          showTitle: false,
-          radius: isTouched ? 62 : 56,
-          badgeWidget: _OsSliceBadge(label: slice.label, visible: isTouched),
-          badgePositionPercentageOffset: 1.18,
-        ),
-      );
-    }
-
     final hoveredLabel =
     (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
         ? widget.slices[_touchedIndex].label
@@ -798,60 +795,93 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
       fontWeight: FontWeight.w600,
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: 240,
-          child: Stack(
-            children: [
-              PieChart(
-                PieChartData(
-                  sections: sections,
-                  sectionsSpace: sectionsSpace,
-                  centerSpaceRadius: 58,
-                  startDegreeOffset: -90,
-                  pieTouchData: PieTouchData(touchCallback: _handleTouch),
-                ),
-              ),
-              Positioned.fill(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      widget.centerLabel,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.of(context).size.width;
+        final chartSize = math.max(180.0, math.min(availableWidth, 320.0));
+        final maxRadius = chartSize / 2 - 12;
+        final baseRadius = math.max(42.0, math.min(56.0, maxRadius));
+        final touchedRadius = math.min(baseRadius + 6, maxRadius);
+        final centerSpace = math.max(chartSize * 0.26, 46.0);
+        final badgeOffset = chartSize < 240 ? 1.04 : 1.12;
+
+        final adjustedSections = <PieChartSectionData>[];
+        for (var i = 0; i < widget.slices.length; i++) {
+          final slice = widget.slices[i];
+          final color = slice.colorOverride ?? colors[i];
+          final isTouched = i == _touchedIndex;
+          adjustedSections.add(
+            PieChartSectionData(
+              color: color,
+              value: slice.value,
+              showTitle: false,
+              radius: isTouched ? touchedRadius : baseRadius,
+              badgeWidget:
+                  _OsSliceBadge(label: slice.label, visible: isTouched),
+              badgePositionPercentageOffset: badgeOffset,
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: chartSize,
+              child: Stack(
+                children: [
+                  PieChart(
+                    PieChartData(
+                      sections: adjustedSections,
+                      sectionsSpace: sectionsSpace,
+                      centerSpaceRadius: centerSpace,
+                      startDegreeOffset: -90,
+                      pieTouchData:
+                          PieTouchData(touchCallback: _handleTouch),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.centerDescription,
-                      style: theme.textTheme.labelMedium,
+                  ),
+                  Positioned.fill(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          widget.centerLabel,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.centerDescription,
+                          style: theme.textTheme.labelMedium,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 28,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
-            child: hoveredLabel == null
-                ? const SizedBox.shrink()
-                : Center(
-              child: Text(
-                hoveredLabel,
-                textAlign: TextAlign.center,
-                style: labelStyle,
+                  ),
+                ],
               ),
             ),
-          ),
-        ),
-      ],
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 28,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: hoveredLabel == null
+                    ? const SizedBox.shrink()
+                    : Center(
+                        child: Text(
+                          hoveredLabel,
+                          textAlign: TextAlign.center,
+                          style: labelStyle,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1117,36 +1147,10 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
         : 2.0;
     final baseRadius = isDense ? 52.0 : 56.0;
 
-    final sections = <PieChartSectionData>[];
-    final legendEntries = <Widget>[];
-
-    for (var i = 0; i < widget.slices.length; i++) {
-      final slice = widget.slices[i];
-      final color = slice.colorOverride ?? colors[i];
-      final isTouched = i == _touchedIndex;
-      sections.add(
-        PieChartSectionData(
-          color: color,
-          value: slice.value,
-          showTitle: false,
-          radius: isTouched ? baseRadius + 6 : baseRadius,
-          borderSide: isTouched
-              ? BorderSide(
-            color: theme.colorScheme.onSurface.withOpacity(0.18),
-            width: 1.4,
-          )
-              : const BorderSide(color: Colors.transparent),
-        ),
-      );
-      legendEntries.add(
-        _LegendEntry(color: color, label: slice.label, highlighted: isTouched),
-      );
-    }
-
     final hoveredLabel =
-    (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
-        ? widget.slices[_touchedIndex].label
-        : null;
+        (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
+            ? widget.slices[_touchedIndex].label
+            : null;
     final hoveredStyle = theme.textTheme.bodyMedium?.copyWith(
       color: theme.colorScheme.onSurface.withOpacity(0.82),
       fontWeight: FontWeight.w600,
@@ -1154,15 +1158,54 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.of(context).size.width;
+        final chartSize = math.min(math.max(180.0, availableWidth), 340.0);
+        final maxRadius = chartSize / 2 - 14;
+        final baseRadiusValue = math.max(40.0, math.min(baseRadius, maxRadius));
+        final touchedRadius = math.min(baseRadiusValue + 6, maxRadius);
+        final centerSpace = math.max(chartSize * 0.24, 48.0);
+
+        final sections = <PieChartSectionData>[];
+        final legendEntries = <Widget>[];
+
+        for (var i = 0; i < widget.slices.length; i++) {
+          final slice = widget.slices[i];
+          final color = slice.colorOverride ?? colors[i];
+          final isTouched = i == _touchedIndex;
+          sections.add(
+            PieChartSectionData(
+              color: color,
+              value: slice.value,
+              showTitle: false,
+              radius: isTouched ? touchedRadius : baseRadiusValue,
+              borderSide: isTouched
+                  ? BorderSide(
+                      color: theme.colorScheme.onSurface.withOpacity(0.18),
+                      width: 1.4,
+                    )
+                  : const BorderSide(color: Colors.transparent),
+            ),
+          );
+          legendEntries.add(
+            _LegendEntry(
+              color: color,
+              label: slice.label,
+              highlighted: isTouched,
+            ),
+          );
+        }
+
         final chart = SizedBox(
-          height: 220,
+          height: chartSize,
           child: Stack(
             children: [
               PieChart(
                 PieChartData(
                   sections: sections,
                   sectionsSpace: sectionsSpace,
-                  centerSpaceRadius: 58,
+                  centerSpaceRadius: centerSpace,
                   startDegreeOffset: -90,
                   pieTouchData: PieTouchData(touchCallback: _handleTouch),
                 ),
@@ -1196,12 +1239,12 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
             child: hoveredLabel == null
                 ? const SizedBox.shrink()
                 : Center(
-              child: Text(
-                hoveredLabel,
-                textAlign: TextAlign.center,
-                style: hoveredStyle,
-              ),
-            ),
+                    child: Text(
+                      hoveredLabel,
+                      textAlign: TextAlign.center,
+                      style: hoveredStyle,
+                    ),
+                  ),
           ),
         );
 

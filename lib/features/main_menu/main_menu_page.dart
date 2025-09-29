@@ -195,36 +195,31 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                       children: [
                         LayoutBuilder(
                           builder: (context, constraints) {
-                            final textContent = Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Bem-vindo ao RELIC - Controle de qualidade',
-                                  style:
-                                      theme.textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Selecione o módulo desejado para iniciar o seu fluxo de trabalho.',
-                                  style:
-                                      theme.textTheme.bodyMedium?.copyWith(
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                              ],
+                            final titleStyle =
+                                theme.textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            );
+                            final subtitleStyle =
+                                theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.white70,
                             );
 
                             if (constraints.maxWidth < 760) {
                               return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  textContent,
+                                  Center(child: logoWidget),
                                   const SizedBox(height: 24),
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: logoWidget,
+                                  Text(
+                                    'Bem-vindo ao RELIC - Controle de qualidade',
+                                    textAlign: TextAlign.center,
+                                    style: titleStyle,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Selecione o módulo desejado para iniciar o seu fluxo de trabalho.',
+                                    textAlign: TextAlign.center,
+                                    style: subtitleStyle,
                                   ),
                                 ],
                               );
@@ -233,7 +228,22 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                             return Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Expanded(child: textContent),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Bem-vindo ao RELIC - Controle de qualidade',
+                                        style: titleStyle,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Selecione o módulo desejado para iniciar o seu fluxo de trabalho.',
+                                        style: subtitleStyle,
+                                      ),
+                                    ],
+                                  ),
+                                ),
                                 const SizedBox(width: 32),
                                 logoWidget,
                               ],
