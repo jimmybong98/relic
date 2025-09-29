@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 import 'package:admin/features/preparacao/data/models.dart';
 import 'package:admin/features/operador/data/repository_provider.dart';
@@ -67,6 +68,7 @@ class MedidasPreparadorController
               observacao: m.observacao,
               periodicidade: m.periodicidade,
               instrumento: m.instrumento,
+              dataInclusao: m.dataInclusao,
               tolerancias: m.tolerancias,
               contagens: m.contagens,
               anguloMinimo: m.anguloMinimo,
@@ -97,6 +99,7 @@ class MedidasPreparadorController
       observacao: old.observacao,
       periodicidade: old.periodicidade,
       instrumento: old.instrumento,
+      dataInclusao: old.dataInclusao,
       tolerancias: old.tolerancias,
       contagens: old.contagens,
       anguloMinimo: old.anguloMinimo,
@@ -121,6 +124,7 @@ class MedidasPreparadorController
         observacao: old.observacao,
         periodicidade: old.periodicidade,
         instrumento: old.instrumento,
+        dataInclusao: old.dataInclusao,
         tolerancias: old.tolerancias,
         contagens: old.contagens,
         anguloMinimo: old.anguloMinimo,
@@ -465,6 +469,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   Widget build(BuildContext context) {
     final medidasAsync = ref.watch(medidasPreparadorControllerProvider);
     final medidas = medidasAsync.value ?? [];
+    final dataRevisao = medidas.firstDataInclusao != null
+        ? DateFormat('dd/MM/yyyy').format(medidas.firstDataInclusao!.toLocal())
+        : null;
     final flowState = ref.watch(sharedSearchFormProvider);
     final flowLocked = flowState.isActive;
     final flowProcessName = flowState.processDisplayName;
@@ -580,6 +587,11 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                           SummaryInfo(label: 'O.S.', value: _osCtrl.text),
                           SummaryInfo(label: 'Peça', value: _partCtrl.text),
                           SummaryInfo(label: 'Operação', value: _opCtrl.text),
+                          if (dataRevisao != null)
+                            SummaryInfo(
+                              label: 'Data de revisão',
+                              value: dataRevisao,
+                            ),
                           if ((maquinaValue ?? '').isNotEmpty)
                             SummaryInfo(label: 'Máquina', value: maquinaValue!),
                           if ((categoriaValue ?? '').isNotEmpty)
@@ -886,8 +898,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton.icon(
-                            onPressed:
-                                podeRegistrar ? _registrarResultado : null,
+                            onPressed: podeRegistrar
+                                ? _registrarResultado
+                                : null,
                             icon: _registrando
                                 ? const SizedBox(
                                     width: 18,

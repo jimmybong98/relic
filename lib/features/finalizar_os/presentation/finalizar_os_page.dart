@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 import 'package:admin/features/preparacao/data/models.dart';
 import 'package:admin/features/preparacao/data/repository_provider.dart';
@@ -66,6 +67,7 @@ class MedidasFinalizadorController
               observacao: m.observacao,
               periodicidade: m.periodicidade,
               instrumento: m.instrumento,
+              dataInclusao: m.dataInclusao,
               tolerancias: m.tolerancias,
               contagens: m.contagens,
               anguloMinimo: m.anguloMinimo,
@@ -96,6 +98,7 @@ class MedidasFinalizadorController
       observacao: old.observacao,
       periodicidade: old.periodicidade,
       instrumento: old.instrumento,
+      dataInclusao: old.dataInclusao,
       tolerancias: old.tolerancias,
       contagens: old.contagens,
       anguloMinimo: old.anguloMinimo,
@@ -120,6 +123,7 @@ class MedidasFinalizadorController
         observacao: old.observacao,
         periodicidade: old.periodicidade,
         instrumento: old.instrumento,
+        dataInclusao: old.dataInclusao,
         tolerancias: old.tolerancias,
         contagens: old.contagens,
         anguloMinimo: old.anguloMinimo,
@@ -436,6 +440,9 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
   Widget build(BuildContext context) {
     final medidasAsync = ref.watch(medidasFinalizadorControllerProvider);
     final medidas = medidasAsync.value ?? [];
+    final dataRevisao = medidas.firstDataInclusao != null
+        ? DateFormat('dd/MM/yyyy').format(medidas.firstDataInclusao!.toLocal())
+        : null;
     final flowState = ref.watch(sharedSearchFormProvider);
     final flowLocked = flowState.isActive;
     final flowProcessName = flowState.processDisplayName;
@@ -551,6 +558,11 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                           SummaryInfo(label: 'O.S.', value: _osCtrl.text),
                           SummaryInfo(label: 'Peça', value: _partCtrl.text),
                           SummaryInfo(label: 'Operação', value: _opCtrl.text),
+                          if (dataRevisao != null)
+                            SummaryInfo(
+                              label: 'Data de revisão',
+                              value: dataRevisao,
+                            ),
                           if ((maquinaValue ?? '').isNotEmpty)
                             SummaryInfo(label: 'Máquina', value: maquinaValue!),
                           if ((categoriaValue ?? '').isNotEmpty)
