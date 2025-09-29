@@ -79,7 +79,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
     _osController = TextEditingController();
     _reController = TextEditingController();
     Future.microtask(_carregar);
-    _autoRefreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted || _loading) return;
       _carregar();
     });

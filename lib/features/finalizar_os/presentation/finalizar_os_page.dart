@@ -158,6 +158,14 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     if (_osFinalizada) setState(() => _osFinalizada = false);
   }
 
+  void _voltarParaMenuPrincipal() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true)
+          .popUntil((route) => route.isFirst);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -406,6 +414,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
         );
         ref.read(medidasFinalizadorControllerProvider.notifier).resetSelecoes();
         ref.read(sharedSearchFormProvider.notifier).clear();
+        _voltarParaMenuPrincipal();
       } else if (resp.statusCode == 409) {
         final data = jsonDecode(resp.body);
         if ((data['code'] ?? '') == 'ja_finalizada') {

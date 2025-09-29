@@ -110,12 +110,6 @@ class SideMenu extends ConsumerWidget {
           press: () => _navigate(context, ref, const ExportRelatoriosPage()),
         ),
         DrawerListTile(
-          title: 'Visualizar relatórios',
-          svgSrc: 'assets/icons/menu_doc.svg',
-          press: () =>
-              _navigate(context, ref, const VisualizarRelatoriosPage()),
-        ),
-        DrawerListTile(
           title: 'Tempo por OS',
           svgSrc: 'assets/icons/menu_doc.svg',
           press: () => _navigate(context, ref, const TempoOsPage()),
