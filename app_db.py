@@ -647,7 +647,8 @@ def _medidas_preparador_db(part: str, op: str):
         with c.cursor() as cur:
             cur.execute(
                 """
-                SELECT idx_medida, titulo, faixa_texto, instrumento, minimo, maximo
+                SELECT idx_medida, titulo, faixa_texto, instrumento, minimo, maximo,
+                       data_inclusao
                 FROM for07_norm
 
                 WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=%s
@@ -691,6 +692,7 @@ def _medidas_preparador_db(part: str, op: str):
                 "max": mx,
                 "unidade": uni,
                 "instrumento": row.get("instrumento") or "",
+                "data_inclusao": row.get("data_inclusao"),
             }
         )
     return medidas
@@ -721,7 +723,7 @@ def _medidas_operador_db(part: str, op: str, os_num: Optional[str] = None):
             cur.execute(
                 """
                 SELECT idx_medida, titulo, faixa_texto, minimo, maximo,
-                       periodicidade, instrumento,
+                       periodicidade, instrumento, data_inclusao,
                        reprovada_abaixo, alerta_abaixo, alerta_acima, reprovada_acima
                 FROM for09_norm
                 WHERE TRIM(LEADING '0' FROM TRIM(partnumber))=%s
@@ -820,6 +822,7 @@ def _medidas_operador_db(part: str, op: str, os_num: Optional[str] = None):
                 "instrumento": row.get("instrumento") or "",
                 "tolerancias": tolerancias,
                 "contagens": {k: int(v) for k, v in raw_counts.items()},
+                "data_inclusao": row.get("data_inclusao"),
             }
         )
     return medidas
