@@ -28,12 +28,12 @@ class FinalizarOsPage extends ConsumerStatefulWidget {
 }
 
 final medidasFinalizadorControllerProvider =
-    StateNotifierProvider.autoDispose<
-      MedidasFinalizadorController,
-      AsyncValue<List<MedidaItem>>
-    >((ref) {
-      return MedidasFinalizadorController(ref);
-    });
+StateNotifierProvider.autoDispose<
+    MedidasFinalizadorController,
+    AsyncValue<List<MedidaItem>>
+>((ref) {
+  return MedidasFinalizadorController(ref);
+});
 
 class MedidasFinalizadorController
     extends StateNotifier<AsyncValue<List<MedidaItem>>> {
@@ -56,24 +56,24 @@ class MedidasFinalizadorController
       final normalizados = itens
           .map(
             (m) => MedidaItem(
-              indice: m.indice,
-              titulo: m.titulo,
-              faixaTexto: m.faixaTexto,
-              minimo: m.minimo,
-              maximo: m.maximo,
-              unidade: m.unidade,
-              status: StatusMedida.pendente,
-              medicao: null,
-              observacao: m.observacao,
-              periodicidade: m.periodicidade,
-              instrumento: m.instrumento,
-              dataInclusao: m.dataInclusao,
-              tolerancias: m.tolerancias,
-              contagens: m.contagens,
-              anguloMinimo: m.anguloMinimo,
-              anguloMaximo: m.anguloMaximo,
-            ),
-          )
+          indice: m.indice,
+          titulo: m.titulo,
+          faixaTexto: m.faixaTexto,
+          minimo: m.minimo,
+          maximo: m.maximo,
+          unidade: m.unidade,
+          status: StatusMedida.pendente,
+          medicao: null,
+          observacao: m.observacao,
+          periodicidade: m.periodicidade,
+          instrumento: m.instrumento,
+          dataInclusao: m.dataInclusao,
+          tolerancias: m.tolerancias,
+          contagens: m.contagens,
+          anguloMinimo: m.anguloMinimo,
+          anguloMaximo: m.anguloMaximo,
+        ),
+      )
           .toList();
 
       state = AsyncValue.data(normalizados);
@@ -211,7 +211,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
 
           if (_categoriaSel != null) {
             final possuiMaquina = _maquinas.any(
-              (m) => m.categoria == _categoriaSel && m.codigo == _maquinaSel,
+                  (m) => m.categoria == _categoriaSel && m.codigo == _maquinaSel,
             );
             if (!possuiMaquina && _maquinaSel != null) {
               _maquinaSel = null;
@@ -237,7 +237,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     final maquina = _maquinaSel;
     if (categoria == null || maquina == null) return false;
     return _maquinas.any(
-      (m) => m.categoria == categoria && m.codigo == maquina,
+          (m) => m.categoria == categoria && m.codigo == maquina,
     );
   }
 
@@ -345,9 +345,9 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     final reprovadas = medidas
         .where(
           (m) =>
-              m.status == StatusMedida.reprovadaAbaixo ||
-              m.status == StatusMedida.reprovadaAcima,
-        )
+      m.status == StatusMedida.reprovadaAbaixo ||
+          m.status == StatusMedida.reprovadaAcima,
+    )
         .toList();
     if (reprovadas.isNotEmpty) {
       if (!mounted) return;
@@ -454,41 +454,41 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     final reOk = _reCtrl.text.trim().isNotEmpty;
     final osOk = _osCtrl.text.trim().isNotEmpty;
     final categoriaValue =
-        (_categoriaSel != null && _categorias.contains(_categoriaSel))
+    (_categoriaSel != null && _categorias.contains(_categoriaSel))
         ? _categoriaSel
         : null;
     final maquinasDisponiveis = _maquinas
         .where((m) => m.categoria == categoriaValue)
         .toList();
     final maquinaValue =
-        (_maquinaSel != null &&
-            maquinasDisponiveis.any((m) => m.codigo == _maquinaSel))
+    (_maquinaSel != null &&
+        maquinasDisponiveis.any((m) => m.codigo == _maquinaSel))
         ? _maquinaSel
         : null;
     final maquinaOk = (maquinaValue ?? '').isNotEmpty;
     final formMatchesFlow =
         !flowLocked ||
-        flowState.matchesValues(
-          os: _osCtrl.text,
-          partNumber: _partCtrl.text,
-          operacao: _opCtrl.text,
-          categoria: categoriaValue,
-          maquina: maquinaValue,
-        );
+            flowState.matchesValues(
+              os: _osCtrl.text,
+              partNumber: _partCtrl.text,
+              operacao: _opCtrl.text,
+              categoria: categoriaValue,
+              maquina: maquinaValue,
+            );
     final todasOk =
         medidas.isNotEmpty &&
-        medidas.every(
-          (m) =>
+            medidas.every(
+                  (m) =>
               (m.medicao ?? '').isNotEmpty && m.status != StatusMedida.pendente,
-        );
+            );
     final podeRegistrar =
         formMatchesFlow &&
-        reOk &&
-        osOk &&
-        maquinaOk &&
-        todasOk &&
-        !_registrando &&
-        !_osFinalizada;
+            reOk &&
+            osOk &&
+            maquinaOk &&
+            todasOk &&
+            !_registrando &&
+            !_osFinalizada;
 
     return Scaffold(
       appBar: WindowBar(
@@ -593,7 +593,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     ],
                                     decoration: const InputDecoration(
                                       labelText:
-                                          'R.E. do Preparador', // ajuste o texto se for Operador
+                                      'R.E. do Preparador', // ajuste o texto se for Operador
                                       border: OutlineInputBorder(),
                                     ),
                                     validator: (v) {
@@ -647,25 +647,25 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     items: _categorias
                                         .map(
                                           (c) => DropdownMenuItem(
-                                            value: c,
-                                            child: Text(c),
-                                          ),
-                                        )
+                                        value: c,
+                                        child: Text(c),
+                                      ),
+                                    )
                                         .toList(),
                                     onChanged: flowLocked
                                         ? null
                                         : (v) {
-                                            ref
-                                                .read(
-                                                  sharedSearchFormProvider
-                                                      .notifier,
-                                                )
-                                                .setCategoria(v);
-                                            setState(() {
-                                              _categoriaSel = v;
-                                              _maquinaSel = null;
-                                            });
-                                          },
+                                      ref
+                                          .read(
+                                        sharedSearchFormProvider
+                                            .notifier,
+                                      )
+                                          .setCategoria(v);
+                                      setState(() {
+                                        _categoriaSel = v;
+                                        _maquinaSel = null;
+                                      });
+                                    },
                                     validator: (v) => (v == null || v.isEmpty)
                                         ? 'Obrigatório'
                                         : null,
@@ -682,22 +682,22 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     items: maquinasDisponiveis
                                         .map(
                                           (m) => DropdownMenuItem(
-                                            value: m.codigo,
-                                            child: Text(m.codigo),
-                                          ),
-                                        )
+                                        value: m.codigo,
+                                        child: Text(m.codigo),
+                                      ),
+                                    )
                                         .toList(),
                                     onChanged: flowLocked
                                         ? null
                                         : (v) {
-                                            ref
-                                                .read(
-                                                  sharedSearchFormProvider
-                                                      .notifier,
-                                                )
-                                                .setMaquina(v);
-                                            setState(() => _maquinaSel = v);
-                                          },
+                                      ref
+                                          .read(
+                                        sharedSearchFormProvider
+                                            .notifier,
+                                      )
+                                          .setMaquina(v);
+                                      setState(() => _maquinaSel = v);
+                                    },
                                     validator: (v) => (v == null || v.isEmpty)
                                         ? 'Obrigatório'
                                         : null,
@@ -721,7 +721,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                       border: OutlineInputBorder(),
                                     ),
                                     validator: (v) =>
-                                        (v == null || v.trim().isEmpty)
+                                    (v == null || v.trim().isEmpty)
                                         ? 'Obrigatório'
                                         : null,
                                   ),
@@ -763,15 +763,15 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     FocusScope.of(context).unfocus();
                                     await ref
                                         .read(
-                                          medidasFinalizadorControllerProvider
-                                              .notifier,
-                                        )
+                                      medidasFinalizadorControllerProvider
+                                          .notifier,
+                                    )
                                         .carregar(
-                                          partnumber: normalizeCode(
-                                            _partCtrl.text,
-                                          ),
-                                          operacao: normalizeCode(_opCtrl.text),
-                                        );
+                                      partnumber: normalizeCode(
+                                        _partCtrl.text,
+                                      ),
+                                      operacao: normalizeCode(_opCtrl.text),
+                                    );
                                     if (mounted) {
                                       setState(() => _mostrarResumo = true);
                                     }
@@ -810,12 +810,12 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                 : null,
                             icon: _registrando
                                 ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
                                 : const Icon(Icons.save_outlined),
                             label: const Text('Finalizar OS'),
                           ),

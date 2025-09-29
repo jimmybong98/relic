@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:intl/intl.dart';
 
 import 'medidas_repository.dart';
 import 'models.dart';
@@ -26,10 +27,10 @@ class LocalExcelRepository implements MedidasRepository {
   /// - LocalExcelRepository(assetPath: 'assets/medidas.json')
   /// - LocalExcelRepository(planilhaPath: '/caminho/arquivo.xlsx', aba: 'CADASTRO')
   LocalExcelRepository({this.assetPath, this.planilhaPath, this.aba})
-    : assert(
-        assetPath != null || planilhaPath != null,
-        'Informe assetPath OU planilhaPath',
-      );
+      : assert(
+  assetPath != null || planilhaPath != null,
+  'Informe assetPath OU planilhaPath',
+  );
 
   @override
   Future<List<MedidaItem>> getMedidas({
@@ -78,6 +79,12 @@ class LocalExcelRepository implements MedidasRepository {
         final periodicidade = map['periodicidade']?.toString();
         final instrumento = map['instrumento']?.toString();
 
+        final httpDatePattern = RegExp(
+          r'^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} (GMT|UTC)$',
+        );
+        final httpDateFormatter =
+        DateFormat('EEE, dd MMM yyyy HH:mm:ss', 'en_US');
+
         DateTime? parseDate(dynamic rawValue) {
           if (rawValue == null) return null;
           if (rawValue is DateTime) return rawValue;
@@ -94,6 +101,13 @@ class LocalExcelRepository implements MedidasRepository {
               : text;
           final parsedIso = DateTime.tryParse(normalized);
           if (parsedIso != null) return parsedIso;
+          final httpMatch = httpDatePattern.firstMatch(text);
+          if (httpMatch != null) {
+            try {
+              final sanitized = text.replaceFirst(RegExp(r' (GMT|UTC)$'), '');
+              return httpDateFormatter.parseUtc(sanitized);
+            } catch (_) {}
+          }
           final match = RegExp(
             r'^(\d{1,2})/(\d{1,2})/(\d{2,4})$',
           ).firstMatch(text);
@@ -218,7 +232,7 @@ class LocalExcelRepository implements MedidasRepository {
             'ç': 'c',
           };
           repl.forEach(
-            (from, to) => normalized = normalized.replaceAll(from, to),
+                (from, to) => normalized = normalized.replaceAll(from, to),
           );
           return text.contains('°') ||
               text.contains('º') ||

@@ -67,7 +67,7 @@ class _CadastroItensPageState extends State<CadastroItensPage>
       'data_inclusao',
     };
     final fixedEncontrados =
-        campos.where((c) => fixedCandidates.contains(c)).toList();
+    campos.where((c) => fixedCandidates.contains(c)).toList();
     final toRemove = _fixedControllers.keys
         .where((key) => !fixedEncontrados.contains(key))
         .toList();
@@ -348,12 +348,12 @@ class _CadastroItensPageState extends State<CadastroItensPage>
                 decoration: const InputDecoration(labelText: 'Operação'),
               ),
               ..._camposFixos.map(
-                (campo) => TextField(
+                    (campo) => TextField(
                   controller: _fixedControllers[campo],
                   inputFormatters: _inputFormattersParaCampo(campo),
                   keyboardType: _keyboardTypeParaCampo(campo),
                   decoration:
-                      InputDecoration(labelText: _labelParaCampo(campo)),
+                  InputDecoration(labelText: _labelParaCampo(campo)),
                 ),
               ),
               const SizedBox(height: 8),
@@ -518,9 +518,9 @@ class _DateInputFormatter extends TextInputFormatter {
 
   @override
   TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+      ) {
     var digits = newValue.text.replaceAll(_digitsRegex, '');
     if (digits.length > 8) {
       digits = digits.substring(0, 8);
@@ -531,14 +531,14 @@ class _DateInputFormatter extends TextInputFormatter {
     final safeSelectionEnd = selectionEnd < 0
         ? 0
         : selectionEnd > newValue.text.length
-            ? newValue.text.length
-            : selectionEnd;
+        ? newValue.text.length
+        : selectionEnd;
     var digitsBeforeCursor = selectionEnd == -1
         ? digits.length
         : newValue.text
-            .substring(0, safeSelectionEnd)
-            .replaceAll(_digitsRegex, '')
-            .length;
+        .substring(0, safeSelectionEnd)
+        .replaceAll(_digitsRegex, '')
+        .length;
     if (digitsBeforeCursor > digits.length) {
       digitsBeforeCursor = digits.length;
     }

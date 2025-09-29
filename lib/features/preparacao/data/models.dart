@@ -1,6 +1,8 @@
 // lib/features/preparacao/data/models.dart
 import 'dart:convert';
 
+import 'package:intl/intl.dart';
+
 import 'package:admin/utils/string_utils.dart';
 
 enum StatusMedida {
@@ -24,7 +26,7 @@ StatusMedida statusFromString(String? s) {
     case 'alerta abaixo':
       return StatusMedida.alertaAbaixo;
     case 'alerta':
-      // suporte a registros antigos sem direção
+    // suporte a registros antigos sem direção
       return StatusMedida.alertaAcima;
     case 'reprovada_acima':
     case 'reprovada acima':
@@ -170,6 +172,13 @@ class MedidaItem {
     return double.tryParse(s);
   }
 
+  static final RegExp _httpDatePattern = RegExp(
+    r'^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} (GMT|UTC)$',
+  );
+
+  static final DateFormat _httpDateFormatter =
+  DateFormat('EEE, dd MMM yyyy HH:mm:ss', 'en_US');
+
   static DateTime? _parseDate(dynamic raw) {
     if (raw == null) return null;
     if (raw is DateTime) return raw;
@@ -186,6 +195,13 @@ class MedidaItem {
         : text;
     final parsedIso = DateTime.tryParse(normalized);
     if (parsedIso != null) return parsedIso;
+    final httpMatch = _httpDatePattern.firstMatch(text);
+    if (httpMatch != null) {
+      try {
+        final sanitized = text.replaceFirst(RegExp(r' (GMT|UTC)$'), '');
+        return _httpDateFormatter.parseUtc(sanitized);
+      } catch (_) {}
+    }
     final match = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{2,4})$').firstMatch(text);
     if (match != null) {
       final day = int.tryParse(match.group(1)!);
@@ -247,8 +263,8 @@ class MedidaItem {
   ///  - Com token “minimo” → (v,null,uni)
   ///  - Com token “maximo” → (null,v,uni)
   static ({double? min, double? max, String? uni}) _parseRangeAny(
-    String texto,
-  ) {
+      String texto,
+      ) {
     if (texto.trim().isEmpty) return (min: null, max: null, uni: null);
     final s = texto.trim();
 
@@ -394,7 +410,7 @@ class MedidaItem {
       caseSensitive: false,
     );
     final tokens =
-        <({String raw, int start, int end, bool hasMarker, double value})>[];
+    <({String raw, int start, int end, bool hasMarker, double value})>[];
 
     bool hasAngleMarker(String raw) {
       return RegExp("[°º'\"’′″]|grau", caseSensitive: false).hasMatch(raw);
@@ -407,22 +423,22 @@ class MedidaItem {
       final value = _parseAngleToken(raw);
       if (value == null) continue;
       tokens.add((
-        raw: raw,
-        start: match.start,
-        end: match.end,
-        hasMarker: hasAngleMarker(raw),
-        value: value,
+      raw: raw,
+      start: match.start,
+      end: match.end,
+      hasMarker: hasAngleMarker(raw),
+      value: value,
       ));
     }
 
     if (tokens.length < 2) return null;
 
     bool allowsRange(
-      String between,
-      String compact,
-      bool firstHasMarker,
-      bool secondHasMarker,
-    ) {
+        String between,
+        String compact,
+        bool firstHasMarker,
+        bool secondHasMarker,
+        ) {
       final trimmed = between.trim();
       final lower = trimmed.toLowerCase();
       if (_isRangeConnector(between, lower, compact)) return true;
@@ -468,10 +484,10 @@ class MedidaItem {
           ..sort();
         final score = 50 + markerCount * 10;
         candidates.add((
-          min: range.first,
-          max: range.last,
-          score: score,
-          index: i,
+        min: range.first,
+        max: range.last,
+        score: score,
+        index: i,
         ));
         continue;
       }
@@ -485,10 +501,10 @@ class MedidaItem {
           score += 3;
         }
         candidates.add((
-          min: range.first,
-          max: range.last,
-          score: score,
-          index: i,
+        min: range.first,
+        max: range.last,
+        score: score,
+        index: i,
         ));
       }
     }
@@ -542,7 +558,7 @@ class MedidaItem {
     final tituloNorm = _normalizeLower(titulo);
     final isAngulo =
         (uni != null && RegExp(r'[°º]').hasMatch(uni)) ||
-        tituloNorm.contains('angulo');
+            tituloNorm.contains('angulo');
     if (isAngulo && minimo != null && maximo != null) {
       final vals = [minimo.abs(), maximo.abs()]..sort();
       minimo = vals.first;
