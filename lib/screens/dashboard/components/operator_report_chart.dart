@@ -11,7 +11,9 @@ import 'package:intl/intl.dart';
 /// The user must provide an OS number to fetch the report. End-of-shift
 /// and OS closing events are highlighted in the chart.
 class OperatorReportChart extends StatefulWidget {
-  const OperatorReportChart({super.key});
+  const OperatorReportChart({super.key, this.backgroundColor});
+
+  final Color? backgroundColor;
 
   @override
   State<OperatorReportChart> createState() => _OperatorReportChartState();
@@ -73,7 +75,7 @@ class _OperatorReportChartState extends State<OperatorReportChart> {
     return Container(
       padding: const EdgeInsets.all(defaultPadding),
       decoration: BoxDecoration(
-        color: secondaryColor,
+        color: widget.backgroundColor ?? secondaryColor,
         borderRadius: const BorderRadius.all(Radius.circular(10)),
       ),
       child: Column(

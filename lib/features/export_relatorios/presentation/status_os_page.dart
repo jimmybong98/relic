@@ -8,6 +8,7 @@ import 'package:admin/widgets/window_bar.dart';
 
 import '../../../screens/main/components/side_menu.dart';
 import '../../../screens/dashboard/components/personnel_report_chart.dart';
+import '../../../screens/dashboard/components/operator_report_chart.dart';
 import '../../../services/report_service.dart';
 
 const _todos = '__all__';
@@ -602,6 +603,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final cardColor = Theme.of(context).cardColor;
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: ConstrainedBox(
@@ -612,6 +614,16 @@ class _StatusOsPageState extends State<StatusOsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    OperatorReportChart(backgroundColor: cardColor),
+                    const SizedBox(height: 24),
+                    Center(
+                      child: Image.asset(
+                        'assets/images/traco.png',
+                        height: 12,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     Row(
                       children: [
                         FilledButton.icon(
