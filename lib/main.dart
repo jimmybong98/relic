@@ -60,6 +60,7 @@ class MyApp extends StatelessWidget {
         title: 'Relic TT',
         theme: AppTheme.dark(),
         themeAnimationDuration: Duration.zero,
+
         builder: (context, child) {
           return ScrollConfiguration(
             behavior: const _AppScrollBehavior(),
