@@ -372,7 +372,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
 
     final dropdowns = <Widget>[
       _buildDropdown(
-        label: 'Categoria da máquina',
+        label: 'Grupo de máquina',
         opcoes: _categorias,
         valor: _categoriaSelecionada,
         controller: _categoriaController,
@@ -398,7 +398,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
         }),
       ),
       _buildDropdown(
-        label: 'Part number',
+        label: 'Partnumber',
         opcoes: _partnumbers,
         valor: _partnumberSelecionado,
         controller: _partnumberController,
