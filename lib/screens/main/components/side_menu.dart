@@ -16,7 +16,6 @@ import 'package:admin/features/cadastro_maquinas/presentation/cadastro_maquinas_
 import 'package:admin/features/login/login_page.dart';
 import 'package:admin/features/users/users_page.dart';
 import 'package:admin/services/auth_service.dart';
-import 'package:admin/screens/main/main_screen.dart';
 import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
 
 enum SideMenuSection { mainMenu, dashboard, preparador, operador, finalizar }
@@ -237,7 +236,7 @@ class SideMenu extends ConsumerWidget {
               _navigate(
                 context,
                 ref,
-                MainScreen(),
+                const StatusOsPage(),
                 allowDuringActiveFlow: true,
               );
             },
