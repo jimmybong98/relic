@@ -52,6 +52,8 @@ class _StatusOsPageState extends State<StatusOsPage> {
 
   List<String> _categorias = const <String>[];
   List<String> _maquinas = const <String>[];
+  Map<String, List<String>> _maquinasPorCategoria =
+  const <String, List<String>>{};
   List<String> _partnumbers = const <String>[];
   List<String> _osOptions = const <String>[];
   List<String> _resOptions = const <String>[];
@@ -77,7 +79,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
     _osController = TextEditingController();
     _reController = TextEditingController();
     Future.microtask(_carregar);
-    _autoRefreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted || _loading) return;
       _carregar();
     });
@@ -155,13 +157,22 @@ class _StatusOsPageState extends State<StatusOsPage> {
 
     final categorias = SplayTreeSet<String>();
     final maquinas = SplayTreeSet<String>();
+    final maquinasPorCategoria = <String, SplayTreeSet<String>>{};
     final partnumbers = SplayTreeSet<String>();
     final ordens = SplayTreeSet<String>();
     final res = SplayTreeSet<String>();
 
     for (final row in parsed) {
       categorias.addAll(row['categorias'].cast<String>());
-      maquinas.addAll(row['maquinas'].cast<String>());
+      final maquinasDaLinha = row['maquinas'].cast<String>();
+      maquinas.addAll(maquinasDaLinha);
+      for (final categoria in row['categorias'].cast<String>()) {
+        final bucket = maquinasPorCategoria.putIfAbsent(
+          categoria,
+              () => SplayTreeSet<String>(),
+        );
+        bucket.addAll(maquinasDaLinha);
+      }
       partnumbers.addAll(row['partnumbers'].cast<String>());
       ordens.add(row['os'] as String);
       final amostragens = row['amostragens_por_re'];
@@ -180,6 +191,13 @@ class _StatusOsPageState extends State<StatusOsPage> {
     var maquinaSelecionada = _maquinaSelecionada;
     if (maquinaSelecionada != null && !maquinas.contains(maquinaSelecionada)) {
       maquinaSelecionada = null;
+    }
+    if (categoriaSelecionada != null) {
+      final maquinasDoGrupo = maquinasPorCategoria[categoriaSelecionada];
+      if (maquinasDoGrupo == null ||
+          !maquinasDoGrupo.contains(maquinaSelecionada)) {
+        maquinaSelecionada = null;
+      }
     }
     var partnumberSelecionado = _partnumberSelecionado;
     if (partnumberSelecionado != null &&
@@ -209,6 +227,9 @@ class _StatusOsPageState extends State<StatusOsPage> {
       _rows = filtrado;
       _categorias = categorias.toList(growable: false);
       _maquinas = maquinas.toList(growable: false);
+      _maquinasPorCategoria = maquinasPorCategoria.map(
+            (key, value) => MapEntry(key, value.toList(growable: false)),
+      );
       _partnumbers = partnumbers.toList(growable: false);
       _osOptions = ordens.toList(growable: false);
       _resOptions = res.toList(growable: false);
@@ -291,6 +312,14 @@ class _StatusOsPageState extends State<StatusOsPage> {
         re: _reSelecionado,
       );
     });
+  }
+
+  List<String> _obterMaquinasDisponiveis() {
+    final categoria = _categoriaSelecionada;
+    if (categoria == null || categoria.isEmpty) {
+      return _maquinas;
+    }
+    return _maquinasPorCategoria[categoria] ?? const <String>[];
   }
 
   void _atualizarTextoDropdown(
@@ -378,23 +407,26 @@ class _StatusOsPageState extends State<StatusOsPage> {
         controller: _categoriaController,
         onChanged: (valor) => _atualizarFiltro(() {
           _categoriaSelecionada = valor;
-          _atualizarTextoDropdown(
-            _categoriaController,
-            _categoriaSelecionada,
-          );
+          _atualizarTextoDropdown(_categoriaController, _categoriaSelecionada);
+          if (_categoriaSelecionada != null) {
+            final maquinasDisponiveis =
+            _maquinasPorCategoria[_categoriaSelecionada];
+            if (maquinasDisponiveis == null ||
+                !maquinasDisponiveis.contains(_maquinaSelecionada)) {
+              _maquinaSelecionada = null;
+              _atualizarTextoDropdown(_maquinaController, _maquinaSelecionada);
+            }
+          }
         }),
       ),
       _buildDropdown(
         label: 'Máquina',
-        opcoes: _maquinas,
+        opcoes: _obterMaquinasDisponiveis(),
         valor: _maquinaSelecionada,
         controller: _maquinaController,
         onChanged: (valor) => _atualizarFiltro(() {
           _maquinaSelecionada = valor;
-          _atualizarTextoDropdown(
-            _maquinaController,
-            _maquinaSelecionada,
-          );
+          _atualizarTextoDropdown(_maquinaController, _maquinaSelecionada);
         }),
       ),
       _buildDropdown(
@@ -417,10 +449,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
         controller: _osController,
         onChanged: (valor) => _atualizarFiltro(() {
           _osSelecionada = valor;
-          _atualizarTextoDropdown(
-            _osController,
-            _osSelecionada,
-          );
+          _atualizarTextoDropdown(_osController, _osSelecionada);
         }),
       ),
       _buildDropdown(
@@ -430,10 +459,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
         controller: _reController,
         onChanged: (valor) => _atualizarFiltro(() {
           _reSelecionado = valor;
-          _atualizarTextoDropdown(
-            _reController,
-            _reSelecionado,
-          );
+          _atualizarTextoDropdown(_reController, _reSelecionado);
         }),
       ),
     ];
@@ -466,18 +492,18 @@ class _StatusOsPageState extends State<StatusOsPage> {
                     }
                   }
                   final totalSpacing = spacing * (itemCount - 1);
-                  final availableForItems =
-                  (maxWidth - totalSpacing).clamp(0.0, double.infinity);
-                  final itemWidth =
-                  itemCount > 0 ? availableForItems / itemCount : 0.0;
+                  final availableForItems = (maxWidth - totalSpacing).clamp(
+                    0.0,
+                    double.infinity,
+                  );
+                  final itemWidth = itemCount > 0
+                      ? availableForItems / itemCount
+                      : 0.0;
 
                   return Row(
                     children: [
                       for (var i = 0; i < itemCount; i++) ...[
-                        SizedBox(
-                          width: itemWidth,
-                          child: dropdowns[i],
-                        ),
+                        SizedBox(width: itemWidth, child: dropdowns[i]),
                         if (i < itemCount - 1) SizedBox(width: spacing),
                       ],
                     ],

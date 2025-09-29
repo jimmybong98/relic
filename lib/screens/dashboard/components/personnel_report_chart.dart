@@ -194,7 +194,7 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   String _modo = 'os';
   Future<List<Map<String, dynamic>>>? _future;
   final Map<String, Set<String>> _hiddenColumns = {
-    'operador': <String>{},
+    'operador': <String>{'retorno_at', 'motivo'},
     'preparador': <String>{},
   };
   final Map<String, List<String>> _columnOrders = {
@@ -222,6 +222,8 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
   static const double _minColumnWidth = 40;
   static const double _maxColumnWidth = 480;
   static const double _resizeHandleHitWidth = 16;
+  static const double _headerActionMinWidth = 10;
+  static const double _headerActionGap = 6;
 
   static const Map<String, Map<String, String>> _headerConfigs = {
     'preparador': {
@@ -805,7 +807,10 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
         }
         maxWidth = math.max(maxWidth, measure(value.toString(), dataStyle));
       }
-      final padded = maxWidth + (_cellHorizontalPadding * 2);
+      final padded = maxWidth +
+          (_cellHorizontalPadding * 1) +
+          _headerActionMinWidth +
+          _headerActionGap;
       final width = padded.clamp(_minColumnWidth, _maxColumnWidth).toDouble();
       widths.add(width);
     }
