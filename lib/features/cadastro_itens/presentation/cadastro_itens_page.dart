@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import 'package:admin/widgets/window_bar.dart';
 
@@ -18,7 +19,10 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   String _tabelaAdd = 'FOR07';
   final _partAddCtrl = TextEditingController();
   final _opAddCtrl = TextEditingController();
+  final Map<String, TextEditingController> _fixedControllers = {};
+  final _dateInputFormatter = _DateInputFormatter();
   List<String> _camposAdd = [];
+  List<String> _camposFixos = [];
   List<Map<String, TextEditingController>> _addControllers = [];
   bool _showAddCards = false;
 
@@ -36,17 +40,56 @@ class _CadastroItensPageState extends State<CadastroItensPage>
     _loadCampos();
   }
 
+  List<TextInputFormatter>? _inputFormattersParaCampo(String campo) {
+    if (campo == 'data' || campo == 'data_inclusao') {
+      return [
+        _dateInputFormatter,
+      ];
+    }
+    return null;
+  }
+
+  TextInputType? _keyboardTypeParaCampo(String campo) {
+    if (campo == 'data' || campo == 'data_inclusao') {
+      return TextInputType.number;
+    }
+    return null;
+  }
+
   Future<void> _loadCampos() async {
     final campos = await _service.fetchCampos(_tabelaAdd);
     if (!mounted) return;
+    final fixedCandidates = <String>{
+      'nome_peca',
+      'tipo_maquina',
+      'cliente',
+      'data',
+      'data_inclusao',
+    };
+    final fixedEncontrados =
+        campos.where((c) => fixedCandidates.contains(c)).toList();
+    final toRemove = _fixedControllers.keys
+        .where((key) => !fixedEncontrados.contains(key))
+        .toList();
+    for (final key in toRemove) {
+      _fixedControllers.remove(key)?.dispose();
+    }
+    for (final key in fixedEncontrados) {
+      _fixedControllers.putIfAbsent(key, TextEditingController.new);
+    }
     setState(() {
       // o campo `idx_medida` será gerado automaticamente no backend,
       // portanto não deve aparecer para o usuário. Os campos de
       // identificação da peça ficam fora dos cards de medidas.
       _camposAdd = [
         for (var c in campos)
-          if (c != 'idx_medida' && c != 'partnumber' && c != 'operacao') c,
+          if (c != 'idx_medida' &&
+              c != 'partnumber' &&
+              c != 'operacao' &&
+              !fixedEncontrados.contains(c))
+            c,
       ];
+      _camposFixos = fixedEncontrados;
     });
   }
 
@@ -93,9 +136,19 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   Future<void> _adicionar() async {
     final part = _partAddCtrl.text.trim();
     final op = _opAddCtrl.text.trim();
-    if (part.isEmpty || op.isEmpty) {
+    final camposFixosVazios = _camposFixos
+        .where((campo) => _fixedControllers[campo]!.text.trim().isEmpty)
+        .toList();
+
+    if (part.isEmpty ||
+        op.isEmpty ||
+        (_camposFixos.isNotEmpty && camposFixosVazios.isNotEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe o partnumber e a operação.')),
+        SnackBar(
+          content: Text(
+            _mensagemErroCamposObrigatorios(camposFixosVazios.isNotEmpty),
+          ),
+        ),
       );
       return;
     }
@@ -115,6 +168,9 @@ class _CadastroItensPageState extends State<CadastroItensPage>
         'partnumber': part,
         'operacao': op,
       };
+      for (final campo in _camposFixos) {
+        dados[campo] = _fixedControllers[campo]!.text.trim();
+      }
       var possuiDados = false;
       for (final campo in _camposAdd) {
         final valor = mapa[campo]!.text;
@@ -159,6 +215,32 @@ class _CadastroItensPageState extends State<CadastroItensPage>
     }
   }
 
+  String _mensagemErroCamposObrigatorios(bool possuiCamposFixosVazios) {
+    if (!possuiCamposFixosVazios) {
+      return 'Informe o partnumber e a operação.';
+    }
+    final labelsObrigatorios = _camposFixos
+        .map((campo) => _labelParaCampo(campo))
+        .join(', ');
+    return 'Informe partnumber, operação e os campos: $labelsObrigatorios.';
+  }
+
+  String _labelParaCampo(String campo) {
+    switch (campo) {
+      case 'nome_peca':
+        return 'Nome da peça';
+      case 'tipo_maquina':
+        return 'Tipo da máquina';
+      case 'cliente':
+        return 'Cliente';
+      case 'data_inclusao':
+      case 'data':
+        return 'Data';
+      default:
+        return campo;
+    }
+  }
+
   Future<void> _buscarRegistros() async {
     final regs = await _service.fetchRegistros(
       _tabelaEdit,
@@ -195,6 +277,9 @@ class _CadastroItensPageState extends State<CadastroItensPage>
   void dispose() {
     _partAddCtrl.dispose();
     _opAddCtrl.dispose();
+    for (final ctrl in _fixedControllers.values) {
+      ctrl.dispose();
+    }
     _resetAddControllers();
     _partCtrl.dispose();
     _opCtrl.dispose();
@@ -261,6 +346,15 @@ class _CadastroItensPageState extends State<CadastroItensPage>
               TextField(
                 controller: _opAddCtrl,
                 decoration: const InputDecoration(labelText: 'Operação'),
+              ),
+              ..._camposFixos.map(
+                (campo) => TextField(
+                  controller: _fixedControllers[campo],
+                  inputFormatters: _inputFormattersParaCampo(campo),
+                  keyboardType: _keyboardTypeParaCampo(campo),
+                  decoration:
+                      InputDecoration(labelText: _labelParaCampo(campo)),
+                ),
               ),
               const SizedBox(height: 8),
               FilledButton(
@@ -385,6 +479,8 @@ class _CadastroItensPageState extends State<CadastroItensPage>
                           child: TextField(
                             controller: ctrls[k],
                             decoration: InputDecoration(labelText: k),
+                            inputFormatters: _inputFormattersParaCampo(k),
+                            keyboardType: _keyboardTypeParaCampo(k),
                             enabled: ![
                               'idx_medida',
                               'partnumber',
@@ -413,6 +509,66 @@ class _CadastroItensPageState extends State<CadastroItensPage>
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DateInputFormatter extends TextInputFormatter {
+  static final _digitsRegex = RegExp(r'\D');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var digits = newValue.text.replaceAll(_digitsRegex, '');
+    if (digits.length > 8) {
+      digits = digits.substring(0, 8);
+    }
+
+    final buffer = StringBuffer();
+    final selectionEnd = newValue.selection.end;
+    final safeSelectionEnd = selectionEnd < 0
+        ? 0
+        : selectionEnd > newValue.text.length
+            ? newValue.text.length
+            : selectionEnd;
+    var digitsBeforeCursor = selectionEnd == -1
+        ? digits.length
+        : newValue.text
+            .substring(0, safeSelectionEnd)
+            .replaceAll(_digitsRegex, '')
+            .length;
+    if (digitsBeforeCursor > digits.length) {
+      digitsBeforeCursor = digits.length;
+    }
+
+    var selectionIndex = 0;
+    var writtenDigits = 0;
+
+    for (var i = 0; i < digits.length; i++) {
+      if (i == 2 || i == 4) {
+        buffer.write('/');
+        if (writtenDigits < digitsBeforeCursor) {
+          selectionIndex++;
+        }
+      }
+      buffer.write(digits[i]);
+      writtenDigits++;
+      if (writtenDigits <= digitsBeforeCursor) {
+        selectionIndex++;
+      }
+    }
+
+    final formatted = buffer.toString();
+    if (selectionIndex > formatted.length) {
+      selectionIndex = formatted.length;
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: selectionIndex),
+      composing: TextRange.empty,
     );
   }
 }
