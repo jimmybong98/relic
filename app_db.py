@@ -82,7 +82,7 @@ def _sql_operador_context_filter(alias: str = "a") -> str:
         " AND NOT EXISTS ("
         "SELECT 1 FROM operador_amostragem_item tf "
         f"WHERE tf.amostragem_id = {alias}.id "
-        "AND LOWER(COALESCE(tf.observacao, '')) LIKE '%troca de ferramenta%')"
+        "AND LOWER(COALESCE(tf.observacao, '')) LIKE '%%troca de ferramenta%%')"
         ")"
     )
 
