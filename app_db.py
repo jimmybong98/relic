@@ -444,6 +444,9 @@ def _ensure_schema():
                 "ON preparador_liberacao (os, partnumber, maquina)"
             )
         _ensure_column(c, "operador_amostragem", "maquina", "VARCHAR(128) DEFAULT NULL")
+        _ensure_column(
+            c, "operador_amostragem", "contexto", "VARCHAR(64) DEFAULT NULL"
+        )
         _ensure_column(c, "preparador_registro", "maquina", "VARCHAR(128) DEFAULT NULL")
         _ensure_column(
             c, "preparador_finalizacao", "maquina", "VARCHAR(128) DEFAULT NULL"
@@ -749,6 +752,7 @@ def _medidas_operador_db(part: str, op: str, os_num: Optional[str] = None):
                   JOIN operador_amostragem a ON a.id = i.amostragem_id
                  WHERE TRIM(LEADING '0' FROM TRIM(a.partnumber))=%s
                    AND TRIM(LEADING '0' FROM TRIM(a.operacao))=%s
+                   AND COALESCE(LOWER(a.contexto), '') <> 'troca_ferramenta'
                    {filtro_os}
                  GROUP BY i.idx_medida, i.titulo, i.escolha
                 """,
@@ -1418,10 +1422,10 @@ def resultado_preparador():
                 if contexto_tipo == "troca_ferramenta":
                     cur.execute(
                         """
-                        INSERT INTO operador_amostragem (os, partnumber, operacao, re_operador, maquina)
-                        VALUES (%s, %s, %s, %s, %s)
+                        INSERT INTO operador_amostragem (os, partnumber, operacao, re_operador, maquina, contexto)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                         """,
-                        (os_num, part, op, re_prep, maquina),
+                        (os_num, part, op, re_prep, maquina, contexto_tipo),
                     )
                     amostragem_id = cur.lastrowid
 
@@ -1703,6 +1707,8 @@ def operador_registrar():
     op = _norm_op(payload.get("operacao"))
     maquina = _norm(payload.get("maquina"))
     itens = payload.get("itens", [])
+    contexto = _norm(payload.get("contexto"))
+    contexto_tipo = contexto.lower() if contexto else "operador"
 
     # validações mínimas
     if not os_num or not re_op or not part or not op or not maquina:
@@ -1773,10 +1779,10 @@ def operador_registrar():
                 # cabeçalho
                 cur.execute(
                     """
-                    INSERT INTO operador_amostragem (os, partnumber, operacao, re_operador, maquina)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO operador_amostragem (os, partnumber, operacao, re_operador, maquina, contexto)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     """,
-                    (os_num, part, op, re_op, maquina),
+                    (os_num, part, op, re_op, maquina, contexto_tipo),
                 )
                 amostragem_id = cur.lastrowid
 
@@ -1888,7 +1894,7 @@ def operador_listar():
     os_num = _norm(request.args.get("os"))
     part = _norm_part(request.args.get("partnumber"))
     op = _norm_op(request.args.get("operacao"))
-    where = []
+    where = ["COALESCE(LOWER(a.contexto), '') <> 'troca_ferramenta'"]
     params = []
     if os_num:
         where.append("a.os = %s")
@@ -2034,7 +2040,8 @@ def operador_encerrar_producao():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 cur.execute(
-                    "SELECT COUNT(*) AS cnt FROM operador_amostragem WHERE os=%s",
+                    "SELECT COUNT(*) AS cnt FROM operador_amostragem"
+                    " WHERE os=%s AND COALESCE(LOWER(contexto), '') <> 'troca_ferramenta'",
                     (os_num,),
                 )
                 if cur.fetchone()["cnt"] == 0:
@@ -2213,6 +2220,7 @@ def listar_relatorios_operador():
                           FROM operador_amostragem a
                           JOIN operador_amostragem_item i ON i.amostragem_id = a.id
                          WHERE a.os = %s
+                           AND COALESCE(LOWER(a.contexto), '') <> 'troca_ferramenta'
                          ORDER BY i.idx_medida, i.created_at
                         """,
                         (os_num,),
@@ -2230,6 +2238,7 @@ def listar_relatorios_operador():
                           JOIN operador_amostragem_item i ON i.amostragem_id = a.id
                          WHERE TRIM(LEADING '0' FROM TRIM(a.partnumber)) = %s
                            AND TRIM(LEADING '0' FROM TRIM(a.operacao)) = %s
+                           AND COALESCE(LOWER(a.contexto), '') <> 'troca_ferramenta'
                          ORDER BY i.idx_medida, i.created_at
                         """,
                         (part, op),
@@ -2255,6 +2264,7 @@ def listar_relatorios_operador():
                                a.created_at
                           FROM operador_amostragem a
                           LEFT JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+                         WHERE COALESCE(LOWER(a.contexto), '') <> 'troca_ferramenta'
                           GROUP BY a.id
                           ORDER BY a.created_at DESC
                           LIMIT 200
@@ -2312,6 +2322,7 @@ def relatorio_os():
                           FROM operador_amostragem a
                           JOIN operador_amostragem_item i ON i.amostragem_id = a.id
                          WHERE a.os=%s
+                           AND COALESCE(LOWER(a.contexto), '') <> 'troca_ferramenta'
                          ORDER BY i.idx_medida, i.created_at
                         """,
                         (os_num,),
@@ -2490,6 +2501,7 @@ def relatorio_status_os():
                            COUNT(*) AS qtd
                       FROM operador_amostragem a
                       JOIN operador_amostragem_item i ON i.amostragem_id = a.id
+                     WHERE COALESCE(LOWER(a.contexto), '') <> 'troca_ferramenta'
                      GROUP BY a.os, a.partnumber, a.maquina, i.status, i.escolha
                     """,
                 )
@@ -2541,6 +2553,7 @@ def relatorio_status_os():
                     SELECT os, re_operador, COUNT(*) AS qtd
                       FROM operador_amostragem
                      WHERE re_operador IS NOT NULL AND re_operador <> ''
+                       AND COALESCE(LOWER(contexto), '') <> 'troca_ferramenta'
                      GROUP BY os, re_operador
                     """,
                 )
@@ -2718,6 +2731,7 @@ def exportar_relatorio_excel():
                         JOIN operador_amostragem_item i ON i.amostragem_id = a.id
 
                         WHERE a.os=%s
+                          AND COALESCE(LOWER(a.contexto), '') <> 'troca_ferramenta'
                         ORDER BY a.created_at DESC, i.idx_medida ASC
                         """,
                         (os_num,),
