@@ -1085,6 +1085,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
     }
 
     return moved;
+
   }
 
   void _handleChanfroChanged() {

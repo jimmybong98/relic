@@ -832,7 +832,6 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                   );
                                 },
                               ),
-
                               const SizedBox(height: 12),
 
                               // ---------- PartNumber + Operação (Operação só números) ----------

@@ -827,7 +827,6 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                   ),
                                 ],
                               ),
-
                               const SizedBox(height: 12),
                               SizedBox(
                                 width: double.infinity,
