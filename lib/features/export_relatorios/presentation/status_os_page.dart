@@ -419,6 +419,8 @@ class _StatusOsPageState extends State<StatusOsPage> {
       focusNode: focusNode,
       inputDecorationTheme: const InputDecorationTheme(
         border: OutlineInputBorder(),
+        enabledBorder: OutlineInputBorder(),
+        focusedBorder: OutlineInputBorder(),
         isDense: true,
       ),
       onSelected: (selecionado) {
