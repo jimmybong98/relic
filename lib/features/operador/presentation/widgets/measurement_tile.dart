@@ -1054,38 +1054,73 @@ class _MeasurementTileState extends State<MeasurementTile> {
     if (!currentNode.hasFocus) {
       return false;
     }
-    final scope = FocusScope.of(context);
-    final before = scope.focusedChild;
-    scope.nextFocus();
-    FocusNode? after = scope.focusedChild;
-    var hops = 0;
-    while (after != null &&
-        after != before &&
-        !identical(after, currentNode) &&
-        after.context?.widget is! EditableText) {
-      scope.nextFocus();
-      hops++;
-      if (hops > 20) {
-        break;
-      }
-      final candidate = scope.focusedChild;
-      if (candidate == after) {
-        break;
-      }
-      after = candidate;
-    }
-    final moved =
-        after != null &&
-        after != before &&
-        !identical(after, currentNode) &&
-        after.context?.widget is EditableText;
 
-    if (!moved) {
-      scope.unfocus();
+    final nodeContext = currentNode.context;
+    if (nodeContext == null) {
+      return false;
     }
 
-    return moved;
+    bool isEditableTarget(FocusNode node) {
+      final ctx = node.context;
+      if (ctx == null) return false;
+      if (ctx.widget is EditableText) return true;
+      if (ctx.findAncestorWidgetOfExactType<EditableText>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorStateOfType<EditableTextState>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorWidgetOfExactType<TextField>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorWidgetOfExactType<TextFormField>() != null) {
+        return true;
+      }
+      return false;
+    }
 
+    final focusManager = WidgetsBinding.instance.focusManager;
+    final before = focusManager.primaryFocus ?? currentNode;
+
+    FocusScopeNode? scope = FocusScope.of(nodeContext);
+    final visitedScopes = <FocusScopeNode>{};
+
+    FocusScopeNode? parentScopeOf(FocusScopeNode node) {
+      FocusNode? parent = node.parent;
+      while (parent != null && parent is! FocusScopeNode) {
+        parent = parent.parent;
+      }
+      return parent is FocusScopeNode ? parent : null;
+    }
+
+    while (scope != null && visitedScopes.add(scope)) {
+      FocusNode? candidate;
+      var hops = 0;
+      while (hops++ < 50) {
+        final moved = scope.nextFocus();
+        if (!moved) {
+          break;
+        }
+
+        candidate = focusManager.primaryFocus ?? scope.focusedChild;
+        if (candidate == null) {
+          continue;
+        }
+
+        if (identical(candidate, before) || identical(candidate, currentNode)) {
+          continue;
+        }
+
+        if (isEditableTarget(candidate)) {
+          return true;
+        }
+      }
+
+      scope = parentScopeOf(scope);
+    }
+
+    currentNode.requestFocus();
+    return false;
   }
 
   void _handleChanfroChanged() {
