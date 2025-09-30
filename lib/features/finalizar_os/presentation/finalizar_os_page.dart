@@ -612,21 +612,29 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     inputFormatters: [
                                       FilteringTextInputFormatter.digitsOnly,
                                     ],
-                                    decoration: const InputDecoration(
-                                      labelText:
-                                          'R.E. do Preparador', // ajuste o texto se for Operador
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    onFieldSubmitted: (_) {
-                                      if (flowLocked) {
-                                        FocusScope.of(context).unfocus();
-                                      } else {
-                                        FocusScope.of(
+                                  decoration: const InputDecoration(
+                                    labelText:
+                                        'R.E. do Preparador', // ajuste o texto se for Operador
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  onEditingComplete: () {
+                                    if (flowLocked) {
+                                      FocusScope.of(context).unfocus();
+                                    } else {
+                                      FocusScope.of(context).requestFocus(
+                                        _osFocusNode,
+                                      );
+                                    }
+                                  },
+                                  onFieldSubmitted: (_) {
+                                    if (flowLocked) {
+                                      FocusScope.of(context).unfocus();
+                                    } else {
+                                      FocusScope.of(
                                           context,
                                         ).requestFocus(_osFocusNode);
                                       }
                                     },
-
                                     validator: (v) {
                                       final s = (v ?? '').trim();
                                       if (s.isEmpty) return 'Obrigatório';
@@ -649,15 +657,24 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     inputFormatters: [
                                       FilteringTextInputFormatter.digitsOnly,
                                     ],
-                                    decoration: const InputDecoration(
-                                      labelText: 'O.S.',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    onFieldSubmitted: (_) {
-                                      if (flowLocked) {
-                                        FocusScope.of(context).unfocus();
-                                      } else {
-                                        FocusScope.of(
+                                  decoration: const InputDecoration(
+                                    labelText: 'O.S.',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  onEditingComplete: () {
+                                    if (flowLocked) {
+                                      FocusScope.of(context).unfocus();
+                                    } else {
+                                      FocusScope.of(context).requestFocus(
+                                        _partFocusNode,
+                                      );
+                                    }
+                                  },
+                                  onFieldSubmitted: (_) {
+                                    if (flowLocked) {
+                                      FocusScope.of(context).unfocus();
+                                    } else {
+                                      FocusScope.of(
                                           context,
                                         ).requestFocus(_partFocusNode);
                                       }
@@ -758,15 +775,24 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     enabled: !flowLocked,
                                     focusNode: _partFocusNode,
                                     textInputAction: TextInputAction.next,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Código da peça',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    onFieldSubmitted: (_) {
-                                      if (flowLocked) {
-                                        FocusScope.of(context).unfocus();
-                                      } else {
-                                        FocusScope.of(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Código da peça',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  onEditingComplete: () {
+                                    if (flowLocked) {
+                                      FocusScope.of(context).unfocus();
+                                    } else {
+                                      FocusScope.of(context).requestFocus(
+                                        _opFocusNode,
+                                      );
+                                    }
+                                  },
+                                  onFieldSubmitted: (_) {
+                                    if (flowLocked) {
+                                      FocusScope.of(context).unfocus();
+                                    } else {
+                                      FocusScope.of(
                                           context,
                                         ).requestFocus(_opFocusNode);
                                       }
@@ -789,12 +815,14 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     inputFormatters: [
                                       FilteringTextInputFormatter.digitsOnly,
                                     ],
-                                    decoration: const InputDecoration(
-                                      labelText: 'Operação',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    onFieldSubmitted: (_) =>
-                                        FocusScope.of(context).unfocus(),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Operação',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  onEditingComplete:
+                                      () => FocusScope.of(context).unfocus(),
+                                  onFieldSubmitted: (_) =>
+                                      FocusScope.of(context).unfocus(),
                                     validator: (v) {
                                       final s = (v ?? '').trim();
                                       if (s.isEmpty) return 'Obrigatório';

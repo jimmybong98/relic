@@ -644,6 +644,15 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'R.E. do Preparador',
                                     border: OutlineInputBorder(),
                                   ),
+                                  onEditingComplete: () {
+                                    if (flowLocked) {
+                                      FocusScope.of(context).unfocus();
+                                    } else {
+                                      FocusScope.of(context).requestFocus(
+                                        _osFocusNode,
+                                      );
+                                    }
+                                  },
                                   onFieldSubmitted: (_) {
                                     if (flowLocked) {
                                       FocusScope.of(context).unfocus();
@@ -675,6 +684,15 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'O.S.',
                                     border: OutlineInputBorder(),
                                   ),
+                                  onEditingComplete: () {
+                                    if (flowLocked) {
+                                      FocusScope.of(context).unfocus();
+                                    } else {
+                                      FocusScope.of(context).requestFocus(
+                                        _partFocusNode,
+                                      );
+                                    }
+                                  },
                                   onFieldSubmitted: (_) {
                                     if (flowLocked) {
                                       FocusScope.of(context).unfocus();
@@ -828,6 +846,15 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'Código da peça',
                                     border: OutlineInputBorder(),
                                   ),
+                                  onEditingComplete: () {
+                                    if (flowLocked) {
+                                      FocusScope.of(context).unfocus();
+                                    } else {
+                                      FocusScope.of(context).requestFocus(
+                                        _opFocusNode,
+                                      );
+                                    }
+                                  },
                                   onFieldSubmitted: (_) {
                                     if (flowLocked) {
                                       FocusScope.of(context).unfocus();
@@ -855,6 +882,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'Operação',
                                     border: OutlineInputBorder(),
                                   ),
+                                  onEditingComplete:
+                                      () => FocusScope.of(context).unfocus(),
                                   onFieldSubmitted: (_) =>
                                       FocusScope.of(context).unfocus(),
                                   validator: (v) {
