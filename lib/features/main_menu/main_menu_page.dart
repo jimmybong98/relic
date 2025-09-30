@@ -93,7 +93,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
     final double dividerHeight = isPhonePortrait ? 8 : 15;
     final entries = [
       _MenuEntry(
-        title: 'FOR007',
+        title: 'FOR07',
         description:
         'Organize recursos, prepare itens e acompanhe o fluxo inicial.',
         iconAsset: 'assets/icons/FOR007.svg',
@@ -101,7 +101,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
         onTap: () => openFlowPage(const PreparacaoPage()),
       ),
       _MenuEntry(
-        title: 'FOR009-014',
+        title: 'FOR09-14',
         description:
         'Registre atividades de produção e mantenha o time sincronizado.',
         iconAsset: 'assets/icons/Amostragem.svg',
@@ -109,7 +109,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
         onTap: () => openFlowPage(const OperadorPage()),
       ),
       _MenuEntry(
-        title: 'FOR008',
+        title: 'FOR08',
         description: 'Conclua ordens de serviço garantindo rastreabilidade.',
         iconAsset: 'assets/icons/FOR008.svg',
         accentColor: const Color(0xFF8E7CFF),
@@ -118,7 +118,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'Área de supervisão',
         description:
-        'Visualize indicadores e relatórios estratégicos em tempo real.',
+        'Realize cadastros, visualize indicadores e relatórios estratégicos em tempo real.',
         iconAsset: 'assets/icons/Dashboard.svg',
         accentColor: accentColor,
         onTap: () => openAdmin(),
@@ -158,10 +158,23 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
               ),
 
               // Logos flutuando sobre as bolhas (Opção 2)
-              if (!isPhonePortrait)
+                Positioned(
+                  top: isPhonePortrait ? 20 : 20,
+                  left: isPhonePortrait ? 15 : 20,
+                  child: IgnorePointer(
+                    ignoring: true,
+                    child: Opacity(
+                      opacity: 1,
+                      child: Image.asset(
+                        'assets/images/logotuptech1.png',
+                        width: isTabletWidth ? 150 : 150,
+                      ),
+                    ),
+                  ),
+                ),
               Positioned(
-                right: isPhonePortrait ? 12 : 20,
-                bottom: isPhonePortrait ? 12 : 30,
+                right: isPhonePortrait ? 20 : 20,
+                bottom: isPhonePortrait ? 20 : 20,
                 child: IgnorePointer(
                   ignoring: true,
                   child: Opacity(
@@ -173,20 +186,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                   ),
                 ),
               ),
-              Positioned(
-                top: isPhonePortrait ? 32 : 22,
-                left: isPhonePortrait ? 20 : 10,
-                child: IgnorePointer(
-                  ignoring: true,
-                  child: Opacity(
-                    opacity: 1,
-                    child: Image.asset(
-                      'assets/images/logotuptech1.png',
-                      width: isPhonePortrait ? 150 : 150,
-                    ),
-                  ),
-                ),
-              ),
+
               Align(
                 alignment: Alignment.topCenter,
                 child: LayoutBuilder(
@@ -233,6 +233,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                                         ? 0.5
                                         : 0.55,
                                     hideDescriptionsWhenTight: true,
+                                    alwaysHideDescriptions: true,
                                   ),
                                 ),
                               ],
@@ -353,6 +354,7 @@ class _MenuGrid extends StatelessWidget {
     this.idealCardHeight = 200,
     this.minDensity = 0.55,
     this.hideDescriptionsWhenTight = false,
+    this.alwaysHideDescriptions = false,
   });
 
   final List<_MenuEntry> entries;
@@ -360,6 +362,7 @@ class _MenuGrid extends StatelessWidget {
   final double idealCardHeight;
   final double minDensity;
   final bool hideDescriptionsWhenTight;
+  final bool alwaysHideDescriptions;
 
   @override
   Widget build(BuildContext context) {
@@ -448,8 +451,9 @@ class _MenuGrid extends StatelessWidget {
                   isCompact: forceColumn,
                   density: density,
                   minDensityFloor: minDensity,
-                  hideDescription:
-                  hideDescriptionsWhenTight && density <= minDensity + 0.04,
+                  hideDescription: alwaysHideDescriptions ||
+                      (hideDescriptionsWhenTight &&
+                          density <= minDensity + 0.04),
                 ),
                 if (i < entries.length - 1) SizedBox(height: spacing),
               ],
