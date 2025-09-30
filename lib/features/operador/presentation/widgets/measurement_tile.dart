@@ -1080,53 +1080,50 @@ class _MeasurementTileState extends State<MeasurementTile> {
     }
 
     final focusManager = WidgetsBinding.instance.focusManager;
-    final FocusNode restoreFocus = focusManager.primaryFocus ?? currentNode;
+    final entries = <_MeasurementFocusEntry>[];
 
-    FocusScopeNode? parentScopeOf(FocusScopeNode node) {
-      FocusNode? parent = node.parent;
-      while (parent != null && parent is! FocusScopeNode) {
-        parent = parent.parent;
+    for (final FocusNode node in focusManager.rootScope.traversalDescendants) {
+      if (node.skipTraversal || !node.canRequestFocus) {
+        continue;
       }
-      return parent is FocusScopeNode ? parent : null;
+      final ctx = node.context;
+      if (ctx == null) {
+        continue;
+      }
+      if (ctx.findAncestorStateOfType<_MeasurementTileState>() == null) {
+        continue;
+      }
+      final order = FocusTraversalOrder.maybeOf(ctx);
+      if (order is! NumericFocusOrder) {
+        continue;
+      }
+      if (!isEditableTarget(node)) {
+        continue;
+      }
+      entries.add(_MeasurementFocusEntry(node: node, order: order.order));
     }
 
-    bool advanceFrom(FocusNode node) {
-      final policy = FocusTraversalGroup.maybeOf(node.context ?? nodeContext);
-      if (policy != null) {
-        return policy.next(node);
-      }
-
-      FocusScopeNode? scope = node.nearestScope;
-      final visitedScopes = <FocusScopeNode>{};
-      while (scope != null && visitedScopes.add(scope)) {
-        if (scope.context != null && scope.nextFocus()) {
-          return true;
-        }
-        scope = parentScopeOf(scope);
-      }
+    if (entries.isEmpty) {
       return false;
     }
 
-    final visitedNodes = <FocusNode>{restoreFocus};
-    FocusNode pivot = currentNode;
+    entries.sort((a, b) => a.order.compareTo(b.order));
 
-    for (var hops = 0; hops < 50; hops++) {
-      final moved = advanceFrom(pivot);
-      final FocusNode? candidate = focusManager.primaryFocus;
-
-      if (!moved || candidate == null || !visitedNodes.add(candidate)) {
-        restoreFocus.requestFocus();
-        return false;
-      }
-
-      if (isEditableTarget(candidate)) {
-        return true;
-      }
-
-      pivot = candidate;
+    final currentIndex = entries.indexWhere(
+      (entry) => entry.node == currentNode,
+    );
+    if (currentIndex == -1) {
+      return false;
     }
 
-    restoreFocus.requestFocus();
+    for (var i = currentIndex + 1; i < entries.length; i++) {
+      final candidate = entries[i].node;
+      if (!candidate.canRequestFocus) {
+        continue;
+      }
+      candidate.requestFocus();
+      return true;
+    }
     return false;
   }
 
@@ -1387,4 +1384,11 @@ class _MeasurementTileState extends State<MeasurementTile> {
     }
     return _buildAutomaticEntry(context);
   }
+}
+
+class _MeasurementFocusEntry {
+  const _MeasurementFocusEntry({required this.node, required this.order});
+
+  final FocusNode node;
+  final double order;
 }
