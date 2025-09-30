@@ -70,12 +70,13 @@ class _StatusOsPageState extends State<StatusOsPage> {
   final TextEditingController _osController = TextEditingController();
   final TextEditingController _reController = TextEditingController();
 
-  final FocusNode _categoriaFocusNode =
-      FocusNode(debugLabel: 'categoriaDropdown');
-  final FocusNode _maquinaFocusNode =
-      FocusNode(debugLabel: 'maquinaDropdown');
-  final FocusNode _partnumberFocusNode =
-      FocusNode(debugLabel: 'partnumberDropdown');
+  final FocusNode _categoriaFocusNode = FocusNode(
+    debugLabel: 'categoriaDropdown',
+  );
+  final FocusNode _maquinaFocusNode = FocusNode(debugLabel: 'maquinaDropdown');
+  final FocusNode _partnumberFocusNode = FocusNode(
+    debugLabel: 'partnumberDropdown',
+  );
   final FocusNode _osFocusNode = FocusNode(debugLabel: 'osDropdown');
   final FocusNode _reFocusNode = FocusNode(debugLabel: 'reDropdown');
 
@@ -410,7 +411,12 @@ class _StatusOsPageState extends State<StatusOsPage> {
 
     return DropdownMenu<String>(
       controller: controller,
-      label: Text(label),
+      label: Text(
+        label,
+        maxLines: 2,
+        softWrap: true,
+        overflow: TextOverflow.visible,
+      ),
       hintText: 'Todos',
       dropdownMenuEntries: entries,
       enableFilter: true,
@@ -434,8 +440,6 @@ class _StatusOsPageState extends State<StatusOsPage> {
   }
 
   Widget _buildFiltros() {
-    const gap = 12.0;
-
     final dropdowns = <Widget>[
       _buildDropdown(
         label: 'Grupo de máquina',
@@ -531,36 +535,27 @@ class _StatusOsPageState extends State<StatusOsPage> {
               const SizedBox(height: 16),
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final itemCount = dropdowns.length;
-                  if (itemCount == 0) {
-                    return const SizedBox.shrink();
-                  }
-
                   final maxWidth = constraints.maxWidth.isFinite
                       ? constraints.maxWidth
                       : MediaQuery.of(context).size.width;
-                  var spacing = gap;
-                  if (itemCount > 1 && maxWidth.isFinite) {
-                    final requiredSpacing = spacing * (itemCount - 1);
-                    if (requiredSpacing > maxWidth) {
-                      spacing = maxWidth / (itemCount - 1 + itemCount);
-                    }
-                  }
-                  final totalSpacing = spacing * (itemCount - 1);
-                  final availableForItems = (maxWidth - totalSpacing).clamp(
-                    0.0,
-                    double.infinity,
-                  );
-                  final itemWidth = itemCount > 0
-                      ? availableForItems / itemCount
-                      : 0.0;
+                  final resolvedMaxWidth = maxWidth.isFinite && maxWidth > 0
+                      ? maxWidth
+                      : MediaQuery.of(context).size.width;
+                  final maxItemWidth = math.min(320.0, resolvedMaxWidth);
+                  final minItemWidth = math.min(220.0, maxItemWidth);
 
-                  return Row(
+                  return Wrap(
+                    spacing: 16,
+                    runSpacing: 12,
                     children: [
-                      for (var i = 0; i < itemCount; i++) ...[
-                        SizedBox(width: itemWidth, child: dropdowns[i]),
-                        if (i < itemCount - 1) SizedBox(width: spacing),
-                      ],
+                      for (final dropdown in dropdowns)
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth: minItemWidth,
+                            maxWidth: maxItemWidth,
+                          ),
+                          child: dropdown,
+                        ),
                     ],
                   );
                 },
