@@ -1307,6 +1307,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                     controller: _opCtrl,
                                     enabled: !flowLocked,
                                     focusNode: _opFocusNode,
+
                                     textInputAction: TextInputAction.done,
                                     keyboardType: TextInputType.number,
                                     inputFormatters: [

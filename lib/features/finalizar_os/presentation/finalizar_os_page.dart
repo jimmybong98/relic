@@ -626,6 +626,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                         ).requestFocus(_osFocusNode);
                                       }
                                     },
+
                                     validator: (v) {
                                       final s = (v ?? '').trim();
                                       if (s.isEmpty) return 'Obrigatório';
