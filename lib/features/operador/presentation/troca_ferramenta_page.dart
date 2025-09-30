@@ -505,18 +505,21 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
                       ),
                       const SizedBox(height: 12),
                       Expanded(
-                        child: ListView.builder(
-                          itemCount: _medidasSelecionadas.length,
-                          itemBuilder: (context, index) {
-                            final item = _medidasSelecionadas[index];
-                            return MeasurementTile(
-                              index: index,
-                              item: item,
-                              manualEntry: true,
-                              onSelect: (status, medicao) =>
-                                  _atualizarMedicao(index, status, medicao),
-                            );
-                          },
+                        child: FocusTraversalGroup(
+                          policy: OrderedTraversalPolicy(),
+                          child: ListView.builder(
+                            itemCount: _medidasSelecionadas.length,
+                            itemBuilder: (context, index) {
+                              final item = _medidasSelecionadas[index];
+                              return MeasurementTile(
+                                index: index,
+                                item: item,
+                                manualEntry: true,
+                                onSelect: (status, medicao) =>
+                                    _atualizarMedicao(index, status, medicao),
+                              );
+                            },
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),

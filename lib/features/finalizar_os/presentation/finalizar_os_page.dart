@@ -163,10 +163,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     FocusManager.instance.primaryFocus?.unfocus();
   }
 
-  void _submitField({
-    required bool flowLocked,
-    FocusNode? next,
-  }) {
+  void _submitField({required bool flowLocked, FocusNode? next}) {
     if (flowLocked) {
       _unfocusKeyboard();
       return;
@@ -553,354 +550,359 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: CustomScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            slivers: [
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (flowLocked)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.lock,
-                              size: 18,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                flowOs.isEmpty
-                                    ? 'Existe um fluxo de $flowProcessName em andamento. Finalize a O.S. atual para iniciar outra.'
-                                    : 'Fluxo de $flowProcessName ativo para a O.S. $flowOs. Finalize a O.S. atual para iniciar outra.',
-                                style: Theme.of(context).textTheme.bodyMedium,
+          child: FocusTraversalGroup(
+            policy: OrderedTraversalPolicy(),
+            child: CustomScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (flowLocked)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.lock,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  flowOs.isEmpty
+                                      ? 'Existe um fluxo de $flowProcessName em andamento. Finalize a O.S. atual para iniciar outra.'
+                                      : 'Fluxo de $flowProcessName ativo para a O.S. $flowOs. Finalize a O.S. atual para iniciar outra.',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    if (_mostrarResumo) ...[
-                      SearchSummarySection(
-                        reLabel: 'R.E. do Preparador',
-                        reValue: _reCtrl.text,
-                        items: [
-                          SummaryInfo(label: 'O.S.', value: _osCtrl.text),
-                          SummaryInfo(label: 'Peça', value: _partCtrl.text),
-                          SummaryInfo(label: 'Operação', value: _opCtrl.text),
-                          if (dataRevisao != null)
-                            SummaryInfo(
-                              label: 'Data de revisão',
-                              value: dataRevisao,
-                            ),
-                          if ((maquinaValue ?? '').isNotEmpty)
-                            SummaryInfo(label: 'Máquina', value: maquinaValue!),
-                          if ((categoriaValue ?? '').isNotEmpty)
-                            SummaryInfo(
-                              label: 'Categoria',
-                              value: categoriaValue!,
-                            ),
-                        ],
-                        onEdit: () {
-                          FocusScope.of(context).unfocus();
-                          setState(() => _mostrarResumo = false);
-                        },
-                      ),
-                    ] else ...[
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _reCtrl,
-                                    focusNode: _reFocusNode,
-                                    textInputAction: TextInputAction.next,
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                    ],
-                                  decoration: const InputDecoration(
-                                    labelText:
-                                        'R.E. do Preparador', // ajuste o texto se for Operador
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  onEditingComplete: () => _submitField(
-                                    flowLocked: flowLocked,
-                                    next: _osFocusNode,
-                                  ),
-                                  onFieldSubmitted: (_) => _submitField(
-                                    flowLocked: flowLocked,
-                                    next: _osFocusNode,
-                                  ),
-                                    validator: (v) {
-                                      final s = (v ?? '').trim();
-                                      if (s.isEmpty) return 'Obrigatório';
-                                      if (!RegExp(r'^[0-9]+$').hasMatch(s)) {
-                                        return 'Apenas números';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                SizedBox(
-                                  width: 140, // igual ao campo Operação
-                                  child: TextFormField(
-                                    controller: _osCtrl,
-                                    enabled: !flowLocked,
-                                    focusNode: _osFocusNode,
-                                    textInputAction: TextInputAction.next,
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                    ],
-                                  decoration: const InputDecoration(
-                                    labelText: 'O.S.',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  onEditingComplete: () => _submitField(
-                                    flowLocked: flowLocked,
-                                    next: _partFocusNode,
-                                  ),
-                                  onFieldSubmitted: (_) => _submitField(
-                                    flowLocked: flowLocked,
-                                    next: _partFocusNode,
-                                  ),
-                                    validator: (v) {
-                                      final s = (v ?? '').trim();
-                                      if (s.isEmpty) return 'Obrigatório';
-                                      if (!RegExp(r'^[0-9]+$').hasMatch(s)) {
-                                        return 'Apenas números';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: categoriaValue,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Categoria',
-                                      border: OutlineInputBorder(),
+                      if (_mostrarResumo) ...[
+                        SearchSummarySection(
+                          reLabel: 'R.E. do Preparador',
+                          reValue: _reCtrl.text,
+                          items: [
+                            SummaryInfo(label: 'O.S.', value: _osCtrl.text),
+                            SummaryInfo(label: 'Peça', value: _partCtrl.text),
+                            SummaryInfo(label: 'Operação', value: _opCtrl.text),
+                            if (dataRevisao != null)
+                              SummaryInfo(
+                                label: 'Data de revisão',
+                                value: dataRevisao,
+                              ),
+                            if ((maquinaValue ?? '').isNotEmpty)
+                              SummaryInfo(
+                                label: 'Máquina',
+                                value: maquinaValue!,
+                              ),
+                            if ((categoriaValue ?? '').isNotEmpty)
+                              SummaryInfo(
+                                label: 'Categoria',
+                                value: categoriaValue!,
+                              ),
+                          ],
+                          onEdit: () {
+                            FocusScope.of(context).unfocus();
+                            setState(() => _mostrarResumo = false);
+                          },
+                        ),
+                      ] else ...[
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _reCtrl,
+                                      focusNode: _reFocusNode,
+                                      textInputAction: TextInputAction.next,
+                                      keyboardType: TextInputType.number,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
+                                      decoration: const InputDecoration(
+                                        labelText:
+                                            'R.E. do Preparador', // ajuste o texto se for Operador
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      onEditingComplete: () => _submitField(
+                                        flowLocked: flowLocked,
+                                        next: _osFocusNode,
+                                      ),
+                                      onFieldSubmitted: (_) => _submitField(
+                                        flowLocked: flowLocked,
+                                        next: _osFocusNode,
+                                      ),
+                                      validator: (v) {
+                                        final s = (v ?? '').trim();
+                                        if (s.isEmpty) return 'Obrigatório';
+                                        if (!RegExp(r'^[0-9]+$').hasMatch(s)) {
+                                          return 'Apenas números';
+                                        }
+                                        return null;
+                                      },
                                     ),
-                                    items: _categorias
-                                        .map(
-                                          (c) => DropdownMenuItem(
-                                            value: c,
-                                            child: Text(c),
-                                          ),
-                                        )
-                                        .toList(),
-                                    onChanged: flowLocked
-                                        ? null
-                                        : (v) {
-                                            ref
-                                                .read(
-                                                  sharedSearchFormProvider
-                                                      .notifier,
-                                                )
-                                                .setCategoria(v);
-                                            setState(() {
-                                              _categoriaSel = v;
-                                              _maquinaSel = null;
-                                            });
-                                          },
-                                    validator: (v) => (v == null || v.isEmpty)
-                                        ? 'Obrigatório'
-                                        : null,
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: maquinaValue,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Grupo de máquina',
-                                      border: OutlineInputBorder(),
+                                  const SizedBox(width: 12),
+                                  SizedBox(
+                                    width: 140, // igual ao campo Operação
+                                    child: TextFormField(
+                                      controller: _osCtrl,
+                                      enabled: !flowLocked,
+                                      focusNode: _osFocusNode,
+                                      textInputAction: TextInputAction.next,
+                                      keyboardType: TextInputType.number,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
+                                      decoration: const InputDecoration(
+                                        labelText: 'O.S.',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      onEditingComplete: () => _submitField(
+                                        flowLocked: flowLocked,
+                                        next: _partFocusNode,
+                                      ),
+                                      onFieldSubmitted: (_) => _submitField(
+                                        flowLocked: flowLocked,
+                                        next: _partFocusNode,
+                                      ),
+                                      validator: (v) {
+                                        final s = (v ?? '').trim();
+                                        if (s.isEmpty) return 'Obrigatório';
+                                        if (!RegExp(r'^[0-9]+$').hasMatch(s)) {
+                                          return 'Apenas números';
+                                        }
+                                        return null;
+                                      },
                                     ),
-                                    items: maquinasDisponiveis
-                                        .map(
-                                          (m) => DropdownMenuItem(
-                                            value: m.codigo,
-                                            child: Text(m.codigo),
-                                          ),
-                                        )
-                                        .toList(),
-                                    onChanged: flowLocked
-                                        ? null
-                                        : (v) {
-                                            ref
-                                                .read(
-                                                  sharedSearchFormProvider
-                                                      .notifier,
-                                                )
-                                                .setMaquina(v);
-                                            setState(() => _maquinaSel = v);
-                                          },
-                                    validator: (v) => (v == null || v.isEmpty)
-                                        ? 'Obrigatório'
-                                        : null,
                                   ),
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
 
-                            const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: DropdownButtonFormField<String>(
+                                      value: categoriaValue,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Categoria',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      items: _categorias
+                                          .map(
+                                            (c) => DropdownMenuItem(
+                                              value: c,
+                                              child: Text(c),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: flowLocked
+                                          ? null
+                                          : (v) {
+                                              ref
+                                                  .read(
+                                                    sharedSearchFormProvider
+                                                        .notifier,
+                                                  )
+                                                  .setCategoria(v);
+                                              setState(() {
+                                                _categoriaSel = v;
+                                                _maquinaSel = null;
+                                              });
+                                            },
+                                      validator: (v) => (v == null || v.isEmpty)
+                                          ? 'Obrigatório'
+                                          : null,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: DropdownButtonFormField<String>(
+                                      value: maquinaValue,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Grupo de máquina',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      items: maquinasDisponiveis
+                                          .map(
+                                            (m) => DropdownMenuItem(
+                                              value: m.codigo,
+                                              child: Text(m.codigo),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: flowLocked
+                                          ? null
+                                          : (v) {
+                                              ref
+                                                  .read(
+                                                    sharedSearchFormProvider
+                                                        .notifier,
+                                                  )
+                                                  .setMaquina(v);
+                                              setState(() => _maquinaSel = v);
+                                            },
+                                      validator: (v) => (v == null || v.isEmpty)
+                                          ? 'Obrigatório'
+                                          : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
 
-                            // ---------- PartNumber + Operação (Operação só números) ----------
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _partCtrl,
-                                    enabled: !flowLocked,
-                                    focusNode: _partFocusNode,
-                                    textInputAction: TextInputAction.next,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Código da peça',
-                                    border: OutlineInputBorder(),
+                              const SizedBox(height: 12),
+
+                              // ---------- PartNumber + Operação (Operação só números) ----------
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _partCtrl,
+                                      enabled: !flowLocked,
+                                      focusNode: _partFocusNode,
+                                      textInputAction: TextInputAction.next,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Código da peça',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      onEditingComplete: () => _submitField(
+                                        flowLocked: flowLocked,
+                                        next: _opFocusNode,
+                                      ),
+                                      onFieldSubmitted: (_) => _submitField(
+                                        flowLocked: flowLocked,
+                                        next: _opFocusNode,
+                                      ),
+                                      validator: (v) =>
+                                          (v == null || v.trim().isEmpty)
+                                          ? 'Obrigatório'
+                                          : null,
+                                    ),
                                   ),
-                                  onEditingComplete: () => _submitField(
-                                    flowLocked: flowLocked,
-                                    next: _opFocusNode,
+                                  const SizedBox(width: 12),
+                                  SizedBox(
+                                    width: 140,
+                                    child: TextFormField(
+                                      controller: _opCtrl,
+                                      enabled: !flowLocked,
+                                      focusNode: _opFocusNode,
+                                      textInputAction: TextInputAction.done,
+                                      keyboardType: TextInputType.number,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
+                                      decoration: const InputDecoration(
+                                        labelText: 'Operação',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      onEditingComplete: () =>
+                                          _submitField(flowLocked: flowLocked),
+                                      onFieldSubmitted: (_) =>
+                                          _submitField(flowLocked: flowLocked),
+                                      validator: (v) {
+                                        final s = (v ?? '').trim();
+                                        if (s.isEmpty) return 'Obrigatório';
+                                        if (!RegExp(r'^[0-9]+$').hasMatch(s)) {
+                                          return 'Apenas números';
+                                        }
+                                        return null;
+                                      },
+                                    ),
                                   ),
-                                  onFieldSubmitted: (_) => _submitField(
-                                    flowLocked: flowLocked,
-                                    next: _opFocusNode,
-                                  ),
-                                    validator: (v) =>
-                                        (v == null || v.trim().isEmpty)
-                                        ? 'Obrigatório'
-                                        : null,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                SizedBox(
-                                  width: 140,
-                                  child: TextFormField(
-                                    controller: _opCtrl,
-                                    enabled: !flowLocked,
-                                    focusNode: _opFocusNode,
-                                    textInputAction: TextInputAction.done,
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                    ],
-                                  decoration: const InputDecoration(
-                                    labelText: 'Operação',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  onEditingComplete: () => _submitField(
-                                    flowLocked: flowLocked,
-                                  ),
-                                  onFieldSubmitted: (_) => _submitField(
-                                    flowLocked: flowLocked,
-                                  ),
-                                    validator: (v) {
-                                      final s = (v ?? '').trim();
-                                      if (s.isEmpty) return 'Obrigatório';
-                                      if (!RegExp(r'^[0-9]+$').hasMatch(s)) {
-                                        return 'Apenas números';
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  onPressed: () async {
+                                    if (_formKey.currentState!.validate()) {
+                                      if (!_ensureFlowConsistency()) return;
+                                      FocusScope.of(context).unfocus();
+                                      await ref
+                                          .read(
+                                            medidasFinalizadorControllerProvider
+                                                .notifier,
+                                          )
+                                          .carregar(
+                                            partnumber: normalizeCode(
+                                              _partCtrl.text,
+                                            ),
+                                            operacao: normalizeCode(
+                                              _opCtrl.text,
+                                            ),
+                                          );
+                                      if (mounted) {
+                                        setState(() => _mostrarResumo = true);
                                       }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: FilledButton.icon(
-                                onPressed: () async {
-                                  if (_formKey.currentState!.validate()) {
-                                    if (!_ensureFlowConsistency()) return;
-                                    FocusScope.of(context).unfocus();
-                                    await ref
-                                        .read(
-                                          medidasFinalizadorControllerProvider
-                                              .notifier,
-                                        )
-                                        .carregar(
-                                          partnumber: normalizeCode(
-                                            _partCtrl.text,
-                                          ),
-                                          operacao: normalizeCode(_opCtrl.text),
-                                        );
-                                    if (mounted) {
-                                      setState(() => _mostrarResumo = true);
                                     }
-                                  }
-                                },
-                                icon: const Icon(Icons.search),
-                                label: const Text('Carregar medidas'),
+                                  },
+                                  icon: const Icon(Icons.search),
+                                  label: const Text('Carregar medidas'),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-              ..._buildMedidasSlivers(medidasAsync),
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: AnimatedPadding(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut,
-                  padding: EdgeInsets.only(bottom: actionBottomPadding),
-                  child: SafeArea(
-                    top: false,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: podeRegistrar
-                                ? _registrarFinalizacao
-                                : null,
-                            icon: _registrando
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.save_outlined),
-                            label: const Text('Finalizar OS'),
+                            ],
                           ),
                         ),
                       ],
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+                ..._buildMedidasSlivers(medidasAsync),
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: AnimatedPadding(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    padding: EdgeInsets.only(bottom: actionBottomPadding),
+                    child: SafeArea(
+                      top: false,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: podeRegistrar
+                                  ? _registrarFinalizacao
+                                  : null,
+                              icon: _registrando
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.save_outlined),
+                              label: const Text('Finalizar OS'),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
