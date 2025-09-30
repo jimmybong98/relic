@@ -86,7 +86,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'Preparador',
         description:
-        'Organize recursos, prepare itens e acompanhe o fluxo inicial.',
+            'Organize recursos, prepare itens e acompanhe o fluxo inicial.',
         iconAsset: 'assets/icons/FOR007.svg',
         accentColor: primaryColor,
         onTap: () => openFlowPage(const PreparacaoPage()),
@@ -94,15 +94,14 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'Operador',
         description:
-        'Registre atividades de produção e mantenha o time sincronizado.',
+            'Registre atividades de produção e mantenha o time sincronizado.',
         iconAsset: 'assets/icons/Amostragem.svg',
         accentColor: const Color(0xFFF6A560),
         onTap: () => openFlowPage(const OperadorPage()),
       ),
       _MenuEntry(
         title: 'Finalizar OS',
-        description:
-        'Conclua ordens de serviço garantindo rastreabilidade.',
+        description: 'Conclua ordens de serviço garantindo rastreabilidade.',
         iconAsset: 'assets/icons/FOR008.svg',
         accentColor: const Color(0xFF8E7CFF),
         onTap: () => openFlowPage(const FinalizarOsPage()),
@@ -110,7 +109,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'Supervisão',
         description:
-        'Visualize indicadores e relatórios estratégicos em tempo real.',
+            'Visualize indicadores e relatórios estratégicos em tempo real.',
         iconAsset: 'assets/icons/Dashboard.svg',
         accentColor: accentColor,
         onTap: () => openAdmin(),
@@ -331,10 +330,23 @@ class _MenuGrid extends StatelessWidget {
         final shouldUseColumn = forceColumn || constraints.maxWidth < 640;
 
         if (shouldUseColumn) {
+          const minDensity = 0.55;
           final baseSpacing = forceColumn ? 16.0 : 20.0;
           double spacing = baseSpacing;
           double density = 1.0;
           double? cardMinHeight;
+
+          double normalizeDensity(double value) {
+            return ((value - minDensity) / (1 - minDensity)).clamp(0.0, 1.0);
+          }
+
+          double lerpSpacing(double densityValue) {
+            return ui.lerpDouble(
+              10.0,
+              baseSpacing,
+              normalizeDensity(densityValue),
+            )!;
+          }
 
           if (forceColumn &&
               constraints.hasBoundedHeight &&
@@ -347,26 +359,35 @@ class _MenuGrid extends StatelessWidget {
             final availableHeight = constraints.maxHeight;
 
             if (idealTotalHeight > 0) {
-              density = (availableHeight / idealTotalHeight).clamp(0.72, 1.0);
+              density = (availableHeight / idealTotalHeight).clamp(
+                minDensity,
+                1.0,
+              );
             }
 
-            spacing = ui.lerpDouble(12.0, baseSpacing, density)!;
+            spacing = lerpSpacing(density);
             final spacingTotal = spacing * (entries.length - 1);
-            final heightForCards =
+            var heightForCards =
                 (availableHeight - spacingTotal) / entries.length;
 
             if (heightForCards.isFinite && heightForCards > 0) {
-              density = (heightForCards / idealCardHeight).clamp(0.72, 1.0);
-              spacing = ui.lerpDouble(12.0, baseSpacing, density)!;
+              density = (heightForCards / idealCardHeight).clamp(
+                minDensity,
+                1.0,
+              );
+              spacing = lerpSpacing(density);
 
               final adjustedSpacingTotal = spacing * (entries.length - 1);
-              final adjustedHeightForCards =
+              heightForCards =
                   (availableHeight - adjustedSpacingTotal) / entries.length;
 
-              if (adjustedHeightForCards.isFinite && adjustedHeightForCards > 0) {
-                cardMinHeight = adjustedHeightForCards;
-                density =
-                    (adjustedHeightForCards / idealCardHeight).clamp(0.72, 1.0);
+              if (heightForCards.isFinite && heightForCards > 0) {
+                cardMinHeight = heightForCards;
+                density = (heightForCards / idealCardHeight).clamp(
+                  minDensity,
+                  1.0,
+                );
+                spacing = lerpSpacing(density);
               }
             }
           }
@@ -398,10 +419,10 @@ class _MenuGrid extends StatelessWidget {
           children: entries
               .map(
                 (entry) => _MenuCard(
-              entry: entry,
-              maxWidth: cardWidth.clamp(260.0, 360.0).toDouble(),
-            ),
-          )
+                  entry: entry,
+                  maxWidth: cardWidth.clamp(260.0, 360.0).toDouble(),
+                ),
+              )
               .toList(),
         );
       },
@@ -437,33 +458,45 @@ class _MenuCardState extends State<_MenuCard> {
     final theme = Theme.of(context);
     final accent = widget.entry.accentColor;
     final scale = _pressed ? 0.97 : (_hovering ? 1.02 : 1.0);
-    final clampedDensity = widget.density.clamp(0.7, 1.0);
+    const minDensity = 0.55;
+    final clampedDensity = widget.density.clamp(minDensity, 1.0);
+    final normalizedDensity = ((clampedDensity - minDensity) / (1 - minDensity))
+        .clamp(0.0, 1.0);
     double lerp(double min, double max) =>
-        ui.lerpDouble(min, max, clampedDensity)!;
+        ui.lerpDouble(min, max, normalizedDensity)!;
 
     final basePadding = widget.isCompact ? 20.0 : 24.0;
-    final minPadding = widget.isCompact ? 16.0 : 20.0;
+    final minPadding = widget.isCompact ? 14.0 : 18.0;
     final cardPadding = EdgeInsets.all(lerp(minPadding, basePadding));
-    final iconSize = lerp(widget.isCompact ? 28.0 : 32.0,
-        widget.isCompact ? 32.0 : 36.0);
-    final gapAfterIcon = lerp(widget.isCompact ? 16.0 : 20.0,
-        widget.isCompact ? 20.0 : 24.0);
-    final descriptionGap = lerp(6.0, 8.0);
-    final iconPadding = lerp(10.0, 12.0);
+    final iconSize = lerp(
+      widget.isCompact ? 26.0 : 30.0,
+      widget.isCompact ? 32.0 : 36.0,
+    );
+    final gapAfterIcon = lerp(
+      widget.isCompact ? 14.0 : 18.0,
+      widget.isCompact ? 20.0 : 24.0,
+    );
+    final descriptionGap = lerp(4.0, 8.0);
+    final iconPadding = lerp(8.0, 12.0);
     final titleStyle = theme.textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w600,
-      fontSize: lerp(widget.isCompact ? 16.0 : 18.0,
-          widget.isCompact ? 18.0 : 20.0),
+      fontSize: lerp(
+        widget.isCompact ? 14.5 : 16.5,
+        widget.isCompact ? 18.0 : 20.0,
+      ),
     );
     final descriptionStyle = theme.textTheme.bodyMedium?.copyWith(
       color: Colors.white70,
-      fontSize: lerp(widget.isCompact ? 13.0 : 14.0,
-          widget.isCompact ? 14.0 : 15.0),
-      height: lerp(1.28, 1.42),
+      fontSize: lerp(
+        widget.isCompact ? 12.0 : 13.0,
+        widget.isCompact ? 14.0 : 15.0,
+      ),
+      height: lerp(1.24, 1.42),
     );
 
     return SizedBox(
       width: widget.maxWidth,
+      height: widget.minHeight,
       child: MouseRegion(
         onEnter: (_) => setState(() => _hovering = true),
         onExit: (_) => setState(() {
@@ -490,13 +523,13 @@ class _MenuCardState extends State<_MenuCard> {
               ),
               gradient: _hovering
                   ? LinearGradient(
-                colors: [
-                  accent.withOpacity(0.22),
-                  theme.colorScheme.surface.withOpacity(0.85),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
+                      colors: [
+                        accent.withOpacity(0.22),
+                        theme.colorScheme.surface.withOpacity(0.85),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
                   : null,
               color: _hovering
                   ? null
@@ -524,14 +557,18 @@ class _MenuCardState extends State<_MenuCard> {
                   child: Padding(
                     padding: cardPadding,
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: widget.minHeight != null
+                          ? MainAxisSize.max
+                          : MainAxisSize.min,
                       children: [
                         DecoratedBox(
                           decoration: BoxDecoration(
                             color: accent.withOpacity(0.22),
                             borderRadius: BorderRadius.circular(16),
                           ),
-                      child: Padding(
+                          child: Padding(
                             padding: EdgeInsets.all(iconPadding),
                             child: SvgPicture.asset(
                               widget.entry.iconAsset,
@@ -541,9 +578,31 @@ class _MenuCardState extends State<_MenuCard> {
                           ),
                         ),
                         SizedBox(height: gapAfterIcon),
-                        Text(widget.entry.title, style: titleStyle),
+                        Text(
+                          widget.entry.title,
+                          style: titleStyle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         SizedBox(height: descriptionGap),
-                        Text(widget.entry.description, style: descriptionStyle),
+                        if (widget.minHeight != null)
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.topLeft,
+                              child: Text(
+                                widget.entry.description,
+                                style: descriptionStyle,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.start,
+                              ),
+                            ),
+                          )
+                        else
+                          Text(
+                            widget.entry.description,
+                            style: descriptionStyle,
+                          ),
                       ],
                     ),
                   ),
