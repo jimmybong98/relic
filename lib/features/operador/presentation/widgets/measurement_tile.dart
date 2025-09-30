@@ -1054,38 +1054,80 @@ class _MeasurementTileState extends State<MeasurementTile> {
     if (!currentNode.hasFocus) {
       return false;
     }
-    final scope = FocusScope.of(context);
-    final before = scope.focusedChild;
-    scope.nextFocus();
-    FocusNode? after = scope.focusedChild;
-    var hops = 0;
-    while (after != null &&
-        after != before &&
-        !identical(after, currentNode) &&
-        after.context?.widget is! EditableText) {
-      scope.nextFocus();
-      hops++;
-      if (hops > 20) {
-        break;
-      }
-      final candidate = scope.focusedChild;
-      if (candidate == after) {
-        break;
-      }
-      after = candidate;
-    }
-    final moved =
-        after != null &&
-        after != before &&
-        !identical(after, currentNode) &&
-        after.context?.widget is EditableText;
 
-    if (!moved) {
-      scope.unfocus();
+    final nodeContext = currentNode.context;
+    if (nodeContext == null) {
+      return false;
     }
 
-    return moved;
+    bool isEditableTarget(FocusNode node) {
+      final ctx = node.context;
+      if (ctx == null) return false;
+      if (ctx.widget is EditableText) return true;
+      if (ctx.findAncestorWidgetOfExactType<EditableText>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorStateOfType<EditableTextState>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorWidgetOfExactType<TextField>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorWidgetOfExactType<TextFormField>() != null) {
+        return true;
+      }
+      return false;
+    }
 
+    final focusManager = WidgetsBinding.instance.focusManager;
+    final FocusNode restoreFocus = focusManager.primaryFocus ?? currentNode;
+
+    FocusScopeNode? parentScopeOf(FocusScopeNode node) {
+      FocusNode? parent = node.parent;
+      while (parent != null && parent is! FocusScopeNode) {
+        parent = parent.parent;
+      }
+      return parent is FocusScopeNode ? parent : null;
+    }
+
+    bool advanceFrom(FocusNode node) {
+      final policy = FocusTraversalGroup.maybeOf(node.context ?? nodeContext);
+      if (policy != null) {
+        return policy.next(node);
+      }
+
+      FocusScopeNode? scope = node.nearestScope;
+      final visitedScopes = <FocusScopeNode>{};
+      while (scope != null && visitedScopes.add(scope)) {
+        if (scope.context != null && scope.nextFocus()) {
+          return true;
+        }
+        scope = parentScopeOf(scope);
+      }
+      return false;
+    }
+
+    final visitedNodes = <FocusNode>{restoreFocus};
+    FocusNode pivot = currentNode;
+
+    for (var hops = 0; hops < 50; hops++) {
+      final moved = advanceFrom(pivot);
+      final FocusNode? candidate = focusManager.primaryFocus;
+
+      if (!moved || candidate == null || !visitedNodes.add(candidate)) {
+        restoreFocus.requestFocus();
+        return false;
+      }
+
+      if (isEditableTarget(candidate)) {
+        return true;
+      }
+
+      pivot = candidate;
+    }
+
+    restoreFocus.requestFocus();
+    return false;
   }
 
   void _handleChanfroChanged() {
