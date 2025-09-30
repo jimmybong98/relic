@@ -23,39 +23,8 @@ class MainMenuPage extends ConsumerStatefulWidget {
   ConsumerState<MainMenuPage> createState() => _MainMenuPageState();
 }
 
-class _LogoConfig {
-  const _LogoConfig({required this.asset, this.width, this.height});
-
-  final String asset;
-  final double? width;
-  final double? height;
-}
-
 class _MainMenuPageState extends ConsumerState<MainMenuPage> {
-  int _logoIndex = 0;
-  Timer? _timer;
-  static const _logos = [
-    _LogoConfig(asset: 'assets/images/Relictt.png', width: 250, height: 110),
-    _LogoConfig(
-      asset: 'assets/images/logotuptech1.png',
-      width: 250,
-      height: 110,
-    ),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
-      setState(() => _logoIndex = 1 - _logoIndex);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
+  // Removidos: _logoIndex, _timer, _logos, initState e dispose
 
   @override
   Widget build(BuildContext context) {
@@ -103,13 +72,12 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       ).push(MaterialPageRoute(builder: (_) => const StatusOsPage()));
     }
 
-    final logo = _logos[_logoIndex];
     final theme = Theme.of(context);
     final entries = [
       _MenuEntry(
         title: 'Preparador',
         description:
-            'Organize recursos, prepare itens e acompanhe o fluxo inicial.',
+        'Organize recursos, prepare itens e acompanhe o fluxo inicial.',
         iconAsset: 'assets/icons/FOR007.svg',
         accentColor: primaryColor,
         onTap: () => openFlowPage(const PreparacaoPage()),
@@ -117,7 +85,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'Operador',
         description:
-            'Registre atividades de produção e mantenha o time sincronizado.',
+        'Registre atividades de produção e mantenha o time sincronizado.',
         iconAsset: 'assets/icons/Amostragem.svg',
         accentColor: const Color(0xFFF6A560),
         onTap: () => openFlowPage(const OperadorPage()),
@@ -125,7 +93,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'Finalizar OS',
         description:
-            'Conclua ordens de serviço garantindo rastreabilidade completa.',
+        'Conclua ordens de serviço garantindo rastreabilidade completa.',
         iconAsset: 'assets/icons/FOR008.svg',
         accentColor: const Color(0xFF8E7CFF),
         onTap: () => openFlowPage(const FinalizarOsPage()),
@@ -133,23 +101,13 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'Supervisão',
         description:
-            'Visualize indicadores e relatórios estratégicos em tempo real.',
+        'Visualize indicadores e relatórios estratégicos em tempo real.',
         iconAsset: 'assets/icons/Dashboard.svg',
         accentColor: accentColor,
         onTap: () => openAdmin(),
         semanticLabel: 'Acessar supervisão e dashboards',
       ),
     ];
-
-    final logoWidget = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 500),
-      child: Image.asset(
-        logo.asset,
-        key: ValueKey(_logoIndex),
-        height: logo.height,
-        width: logo.width,
-      ),
-    );
 
     return Scaffold(
       appBar: const WindowBar(title: 'Menu Principal', showMenu: true),
@@ -181,6 +139,37 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                   colors: [Color(0x554DD0E1), Color(0x334DD0E1)],
                 ),
               ),
+
+              // Logos flutuando sobre as bolhas (Opção 2)
+              Positioned(
+                top: 20,
+                left: 20,
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: Opacity(
+                    opacity: 1,
+                    child: Image.asset(
+                      'assets/images/logotuptech1.png',
+                      width: 150,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 20,
+                bottom: 20,
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: Opacity(
+                    opacity: 1,
+                    child: Image.asset(
+                      'assets/images/Relictt.png',
+                      width: 150,
+                    ),
+                  ),
+                ),
+              ),
+
               Align(
                 alignment: Alignment.topCenter,
                 child: SingleChildScrollView(
@@ -196,11 +185,11 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                         LayoutBuilder(
                           builder: (context, constraints) {
                             final titleStyle =
-                                theme.textTheme.headlineSmall?.copyWith(
+                            theme.textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.w600,
                             );
                             final subtitleStyle =
-                                theme.textTheme.bodyMedium?.copyWith(
+                            theme.textTheme.bodyMedium?.copyWith(
                               color: Colors.white70,
                             );
 
@@ -208,7 +197,6 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Center(child: logoWidget),
                                   const SizedBox(height: 24),
                                   Text(
                                     'Bem-vindo ao RELIC - Controle de qualidade',
@@ -230,7 +218,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
                                       Text(
                                         'Bem-vindo ao RELIC - Controle de qualidade',
@@ -244,14 +232,12 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 32),
-                                logoWidget,
                               ],
                             );
                           },
                         ),
                         const SizedBox(height: 24),
-                        Image.asset('assets/images/traco.png', height: 14),
+                        Image.asset('assets/images/traco.png', height: 15),
                         const SizedBox(height: 32),
                         _MenuGrid(entries: entries),
                       ],
@@ -314,10 +300,10 @@ class _MenuGrid extends StatelessWidget {
           children: entries
               .map(
                 (entry) => _MenuCard(
-                  entry: entry,
-                  maxWidth: cardWidth.clamp(260.0, 360.0).toDouble(),
-                ),
-              )
+              entry: entry,
+              maxWidth: cardWidth.clamp(260.0, 360.0).toDouble(),
+            ),
+          )
               .toList(),
         );
       },
@@ -367,13 +353,13 @@ class _MenuCardState extends State<_MenuCard> {
               ),
               gradient: _hovering
                   ? LinearGradient(
-                      colors: [
-                        accent.withOpacity(0.22),
-                        theme.colorScheme.surface.withOpacity(0.85),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
+                colors: [
+                  accent.withOpacity(0.22),
+                  theme.colorScheme.surface.withOpacity(0.85),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
                   : null,
               color: _hovering
                   ? null
