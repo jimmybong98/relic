@@ -1054,34 +1054,32 @@ class _MeasurementTileState extends State<MeasurementTile> {
     if (!currentNode.hasFocus) {
       return false;
     }
-    final scope = FocusScope.of(context);
-    final before = scope.focusedChild;
-    scope.nextFocus();
-    FocusNode? after = scope.focusedChild;
+
+    final nodeContext = currentNode.context;
+    if (nodeContext == null) {
+      return false;
+    }
+
+    final scope = FocusScope.of(nodeContext);
+    final focusManager = WidgetsBinding.instance.focusManager;
+    final before = focusManager.primaryFocus;
+
+    FocusNode? after;
     var hops = 0;
-    while (after != null &&
-        after != before &&
-        !identical(after, currentNode) &&
-        after.context?.widget is! EditableText) {
+    do {
       scope.nextFocus();
-      hops++;
-      if (hops > 50) {
+      after = focusManager.primaryFocus ?? scope.focusedChild;
+      if (after == null || identical(after, before) || identical(after, currentNode)) {
         break;
       }
-      after = scope.focusedChild;
-    }
-    final moved =
-        after != null &&
-        after != before &&
-        !identical(after, currentNode) &&
-        after.context?.widget is EditableText;
+      if (after.context?.widget is EditableText) {
+        return true;
+      }
+      hops++;
+    } while (hops <= 50);
 
-    if (!moved) {
-      currentNode.requestFocus();
-    }
-
-    return moved;
-
+    currentNode.requestFocus();
+    return false;
   }
 
   void _handleChanfroChanged() {
