@@ -141,6 +141,11 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
   final _partCtrl = TextEditingController();
   final _opCtrl = TextEditingController();
 
+  final _reFocusNode = FocusNode();
+  final _osFocusNode = FocusNode();
+  final _partFocusNode = FocusNode();
+  final _opFocusNode = FocusNode();
+
   final List<Machine> _maquinas = [];
   final List<String> _categorias = [];
   String? _categoriaSel;
@@ -290,6 +295,10 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
     _osCtrl.removeListener(_osSyncListener);
     _partCtrl.removeListener(_partSyncListener);
     _opCtrl.removeListener(_opSyncListener);
+    _reFocusNode.dispose();
+    _osFocusNode.dispose();
+    _partFocusNode.dispose();
+    _opFocusNode.dispose();
     _reCtrl.dispose();
     _osCtrl.dispose();
     _partCtrl.dispose();
@@ -597,6 +606,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                 Expanded(
                                   child: TextFormField(
                                     controller: _reCtrl,
+                                    focusNode: _reFocusNode,
                                     textInputAction: TextInputAction.next,
                                     keyboardType: TextInputType.number,
                                     inputFormatters: [
@@ -607,8 +617,16 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                           'R.E. do Preparador', // ajuste o texto se for Operador
                                       border: OutlineInputBorder(),
                                     ),
-                                    onFieldSubmitted: (_) =>
-                                        FocusScope.of(context).nextFocus(),
+                                    onFieldSubmitted: (_) {
+                                      if (flowLocked) {
+                                        FocusScope.of(context).unfocus();
+                                      } else {
+                                        FocusScope.of(
+                                          context,
+                                        ).requestFocus(_osFocusNode);
+                                      }
+                                    },
+
                                     validator: (v) {
                                       final s = (v ?? '').trim();
                                       if (s.isEmpty) return 'Obrigatório';
@@ -625,6 +643,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                   child: TextFormField(
                                     controller: _osCtrl,
                                     enabled: !flowLocked,
+                                    focusNode: _osFocusNode,
                                     textInputAction: TextInputAction.next,
                                     keyboardType: TextInputType.number,
                                     inputFormatters: [
@@ -634,8 +653,15 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                       labelText: 'O.S.',
                                       border: OutlineInputBorder(),
                                     ),
-                                    onFieldSubmitted: (_) =>
-                                        FocusScope.of(context).nextFocus(),
+                                    onFieldSubmitted: (_) {
+                                      if (flowLocked) {
+                                        FocusScope.of(context).unfocus();
+                                      } else {
+                                        FocusScope.of(
+                                          context,
+                                        ).requestFocus(_partFocusNode);
+                                      }
+                                    },
                                     validator: (v) {
                                       final s = (v ?? '').trim();
                                       if (s.isEmpty) return 'Obrigatório';
@@ -730,13 +756,21 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                   child: TextFormField(
                                     controller: _partCtrl,
                                     enabled: !flowLocked,
+                                    focusNode: _partFocusNode,
                                     textInputAction: TextInputAction.next,
                                     decoration: const InputDecoration(
                                       labelText: 'Código da peça',
                                       border: OutlineInputBorder(),
                                     ),
-                                    onFieldSubmitted: (_) =>
-                                        FocusScope.of(context).nextFocus(),
+                                    onFieldSubmitted: (_) {
+                                      if (flowLocked) {
+                                        FocusScope.of(context).unfocus();
+                                      } else {
+                                        FocusScope.of(
+                                          context,
+                                        ).requestFocus(_opFocusNode);
+                                      }
+                                    },
                                     validator: (v) =>
                                         (v == null || v.trim().isEmpty)
                                         ? 'Obrigatório'
@@ -749,6 +783,7 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                   child: TextFormField(
                                     controller: _opCtrl,
                                     enabled: !flowLocked,
+                                    focusNode: _opFocusNode,
                                     textInputAction: TextInputAction.done,
                                     keyboardType: TextInputType.number,
                                     inputFormatters: [
