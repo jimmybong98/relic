@@ -366,6 +366,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
               isDense: true,
             ),
             textInputAction: TextInputAction.done,
+            onEditingComplete: () => FocusScope.of(context).unfocus(),
             onSubmitted: (_) => FocusScope.of(context).unfocus(),
           ),
         ],
