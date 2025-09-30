@@ -234,6 +234,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                                         ? 0.5
                                         : 0.55,
                                     hideDescriptionsWhenTight: true,
+                                    alwaysHideDescriptions: true,
                                   ),
                                 ),
                               ],
@@ -354,6 +355,7 @@ class _MenuGrid extends StatelessWidget {
     this.idealCardHeight = 200,
     this.minDensity = 0.55,
     this.hideDescriptionsWhenTight = false,
+    this.alwaysHideDescriptions = false,
   });
 
   final List<_MenuEntry> entries;
@@ -361,6 +363,7 @@ class _MenuGrid extends StatelessWidget {
   final double idealCardHeight;
   final double minDensity;
   final bool hideDescriptionsWhenTight;
+  final bool alwaysHideDescriptions;
 
   @override
   Widget build(BuildContext context) {
@@ -449,8 +452,9 @@ class _MenuGrid extends StatelessWidget {
                   isCompact: forceColumn,
                   density: density,
                   minDensityFloor: minDensity,
-                  hideDescription:
-                      hideDescriptionsWhenTight && density <= minDensity + 0.04,
+                  hideDescription: alwaysHideDescriptions ||
+                      (hideDescriptionsWhenTight &&
+                          density <= minDensity + 0.04),
                 ),
                 if (i < entries.length - 1) SizedBox(height: spacing),
               ],
