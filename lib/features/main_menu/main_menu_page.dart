@@ -78,15 +78,24 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
     final isPortrait = size.height >= size.width;
     final isPhonePortrait = size.width < 640 && isPortrait;
     final isTabletWidth = size.width >= 640 && size.width < 1024;
-    final double horizontalPadding = isPhonePortrait ? 20 : 24;
-    final double topPadding = isPhonePortrait ? 24 : (isTabletWidth ? 140 : 48);
-    final double bottomPadding = isPhonePortrait ? 24 : 48;
-    final double dividerHeight = isPhonePortrait ? 10 : 15;
+    final bool isUltraCompactHeight = isPhonePortrait && size.height < 700;
+    final bool isSuperCompactHeight = isPhonePortrait && size.height < 630;
+
+    final double horizontalPadding = isSuperCompactHeight
+        ? 16
+        : (isPhonePortrait ? 20 : 24);
+    final double topPadding = isSuperCompactHeight
+        ? 16
+        : (isPhonePortrait ? 24 : (isTabletWidth ? 140 : 48));
+    final double bottomPadding = isSuperCompactHeight
+        ? 16
+        : (isPhonePortrait ? 24 : 48);
+    final double dividerHeight = isPhonePortrait ? 8 : 15;
     final entries = [
       _MenuEntry(
         title: 'Preparador',
         description:
-        'Organize recursos, prepare itens e acompanhe o fluxo inicial.',
+            'Organize recursos, prepare itens e acompanhe o fluxo inicial.',
         iconAsset: 'assets/icons/FOR007.svg',
         accentColor: primaryColor,
         onTap: () => openFlowPage(const PreparacaoPage()),
@@ -94,15 +103,14 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'Operador',
         description:
-        'Registre atividades de produção e mantenha o time sincronizado.',
+            'Registre atividades de produção e mantenha o time sincronizado.',
         iconAsset: 'assets/icons/Amostragem.svg',
         accentColor: const Color(0xFFF6A560),
         onTap: () => openFlowPage(const OperadorPage()),
       ),
       _MenuEntry(
         title: 'Finalizar OS',
-        description:
-        'Conclua ordens de serviço garantindo rastreabilidade.',
+        description: 'Conclua ordens de serviço garantindo rastreabilidade.',
         iconAsset: 'assets/icons/FOR008.svg',
         accentColor: const Color(0xFF8E7CFF),
         onTap: () => openFlowPage(const FinalizarOsPage()),
@@ -110,7 +118,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'Supervisão',
         description:
-        'Visualize indicadores e relatórios estratégicos em tempo real.',
+            'Visualize indicadores e relatórios estratégicos em tempo real.',
         iconAsset: 'assets/icons/Dashboard.svg',
         accentColor: accentColor,
         onTap: () => openAdmin(),
@@ -192,6 +200,10 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                     );
 
                     if (isPhonePortrait) {
+                      final bool showIntroSubtitle = !isSuperCompactHeight;
+                      final double verticalSpacing = isSuperCompactHeight
+                          ? 12
+                          : 16;
                       return Padding(
                         padding: padding,
                         child: Center(
@@ -200,17 +212,28 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                _buildIntroSection(theme, forceCenter: true),
-                                const SizedBox(height: 20),
+                                _buildIntroSection(
+                                  theme,
+                                  forceCenter: true,
+                                  showSubtitle: showIntroSubtitle,
+                                ),
+                                SizedBox(height: verticalSpacing),
                                 Image.asset(
                                   'assets/images/traco.png',
                                   height: dividerHeight,
                                 ),
-                                const SizedBox(height: 20),
+                                SizedBox(height: verticalSpacing),
                                 Expanded(
                                   child: _MenuGrid(
                                     entries: entries,
                                     forceColumn: true,
+                                    idealCardHeight: isSuperCompactHeight
+                                        ? 164
+                                        : (isUltraCompactHeight ? 180 : 200),
+                                    minDensity: isSuperCompactHeight
+                                        ? 0.5
+                                        : 0.55,
+                                    hideDescriptionsWhenTight: true,
                                   ),
                                 ),
                               ],
@@ -249,7 +272,11 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
     );
   }
 
-  Widget _buildIntroSection(ThemeData theme, {bool forceCenter = false}) {
+  Widget _buildIntroSection(
+    ThemeData theme, {
+    bool forceCenter = false,
+    bool showSubtitle = true,
+  }) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final shouldCenter = forceCenter || constraints.maxWidth < 500;
@@ -266,12 +293,14 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
             textAlign: shouldCenter ? TextAlign.center : TextAlign.start,
             style: titleStyle,
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Selecione o módulo desejado para iniciar o seu fluxo de trabalho.',
-            textAlign: shouldCenter ? TextAlign.center : TextAlign.start,
-            style: subtitleStyle,
-          ),
+          if (showSubtitle) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Selecione o módulo desejado para iniciar o seu fluxo de trabalho.',
+              textAlign: shouldCenter ? TextAlign.center : TextAlign.start,
+              style: subtitleStyle,
+            ),
+          ],
         ];
 
         if (shouldCenter) {
@@ -319,10 +348,19 @@ class _MenuEntry {
 }
 
 class _MenuGrid extends StatelessWidget {
-  const _MenuGrid({required this.entries, this.forceColumn = false});
+  const _MenuGrid({
+    required this.entries,
+    this.forceColumn = false,
+    this.idealCardHeight = 200,
+    this.minDensity = 0.55,
+    this.hideDescriptionsWhenTight = false,
+  });
 
   final List<_MenuEntry> entries;
   final bool forceColumn;
+  final double idealCardHeight;
+  final double minDensity;
+  final bool hideDescriptionsWhenTight;
 
   @override
   Widget build(BuildContext context) {
@@ -331,17 +369,72 @@ class _MenuGrid extends StatelessWidget {
         final shouldUseColumn = forceColumn || constraints.maxWidth < 640;
 
         if (shouldUseColumn) {
-          final spacing = forceColumn ? 16.0 : 20.0;
+          final minDensity = this.minDensity;
+          final baseSpacing = forceColumn ? 16.0 : 20.0;
+          double spacing = baseSpacing;
+          double density = 1.0;
           double? cardMinHeight;
+
+          double normalizeDensity(double value) {
+            return ((value - minDensity) / (1 - minDensity)).clamp(0.0, 1.0);
+          }
+
+          double lerpSpacing(double densityValue) {
+            return ui.lerpDouble(
+              10.0,
+              baseSpacing,
+              normalizeDensity(densityValue),
+            )!;
+          }
 
           if (forceColumn &&
               constraints.hasBoundedHeight &&
+              constraints.maxHeight.isFinite &&
               entries.isNotEmpty) {
-            final totalSpacing = spacing * (entries.length - 1);
-            final heightForCards = constraints.maxHeight - totalSpacing;
-            final computed = heightForCards / entries.length;
-            if (computed.isFinite && computed > 0) {
-              cardMinHeight = computed;
+            final idealCardHeight = this.idealCardHeight;
+            final idealTotalSpacing = baseSpacing * (entries.length - 1);
+            final idealTotalHeight =
+                entries.length * idealCardHeight + idealTotalSpacing;
+            final availableHeight = constraints.maxHeight;
+
+            if (idealTotalHeight > 0) {
+              density = (availableHeight / idealTotalHeight).clamp(
+                minDensity,
+                1.0,
+              );
+            }
+
+            spacing = lerpSpacing(density);
+            final spacingTotal = spacing * (entries.length - 1);
+            var heightForCards =
+                (availableHeight - spacingTotal) / entries.length;
+
+            if (heightForCards.isFinite && heightForCards > 0) {
+              density = (heightForCards / idealCardHeight).clamp(
+                minDensity,
+                1.0,
+              );
+              spacing = lerpSpacing(density);
+
+              final adjustedSpacingTotal = spacing * (entries.length - 1);
+              heightForCards =
+                  (availableHeight - adjustedSpacingTotal) / entries.length;
+
+              if (heightForCards.isFinite && heightForCards > 0) {
+                const epsilon = 0.75;
+                final adjustedHeight = (heightForCards - epsilon).clamp(
+                  0.0,
+                  heightForCards,
+                );
+                cardMinHeight = adjustedHeight > 0
+                    ? adjustedHeight
+                    : heightForCards;
+                density = (heightForCards / idealCardHeight).clamp(
+                  minDensity,
+                  1.0,
+                );
+                spacing = lerpSpacing(density);
+              }
             }
           }
 
@@ -354,6 +447,10 @@ class _MenuGrid extends StatelessWidget {
                   maxWidth: constraints.maxWidth,
                   minHeight: cardMinHeight,
                   isCompact: forceColumn,
+                  density: density,
+                  minDensityFloor: minDensity,
+                  hideDescription:
+                      hideDescriptionsWhenTight && density <= minDensity + 0.04,
                 ),
                 if (i < entries.length - 1) SizedBox(height: spacing),
               ],
@@ -371,10 +468,10 @@ class _MenuGrid extends StatelessWidget {
           children: entries
               .map(
                 (entry) => _MenuCard(
-              entry: entry,
-              maxWidth: cardWidth.clamp(260.0, 360.0).toDouble(),
-            ),
-          )
+                  entry: entry,
+                  maxWidth: cardWidth.clamp(260.0, 360.0).toDouble(),
+                ),
+              )
               .toList(),
         );
       },
@@ -388,12 +485,18 @@ class _MenuCard extends StatefulWidget {
     required this.maxWidth,
     this.minHeight,
     this.isCompact = false,
+    this.density = 1.0,
+    this.minDensityFloor = 0.55,
+    this.hideDescription = false,
   });
 
   final _MenuEntry entry;
   final double maxWidth;
   final double? minHeight;
   final bool isCompact;
+  final double density;
+  final double minDensityFloor;
+  final bool hideDescription;
 
   @override
   State<_MenuCard> createState() => _MenuCardState();
@@ -408,20 +511,47 @@ class _MenuCardState extends State<_MenuCard> {
     final theme = Theme.of(context);
     final accent = widget.entry.accentColor;
     final scale = _pressed ? 0.97 : (_hovering ? 1.02 : 1.0);
-    final cardPadding = EdgeInsets.all(widget.isCompact ? 20 : 24);
-    final iconSize = widget.isCompact ? 32.0 : 36.0;
-    final gapAfterIcon = widget.isCompact ? 20.0 : 24.0;
+    final minDensity = widget.minDensityFloor;
+    final clampedDensity = widget.density.clamp(minDensity, 1.0);
+    final normalizedDensity = ((clampedDensity - minDensity) / (1 - minDensity))
+        .clamp(0.0, 1.0);
+    double lerp(double min, double max) =>
+        ui.lerpDouble(min, max, normalizedDensity)!;
+
+    final basePadding = widget.isCompact ? 20.0 : 24.0;
+    final minPadding = widget.isCompact ? 14.0 : 18.0;
+    final cardPadding = EdgeInsets.all(lerp(minPadding, basePadding));
+    final iconSize = lerp(
+      widget.isCompact ? 26.0 : 30.0,
+      widget.isCompact ? 32.0 : 36.0,
+    );
+    final gapAfterIcon = lerp(
+      widget.isCompact ? 14.0 : 18.0,
+      widget.isCompact ? 20.0 : 24.0,
+    );
+    final descriptionGap = widget.hideDescription ? 0.0 : lerp(4.0, 8.0);
+    final iconPadding = lerp(8.0, 12.0);
     final titleStyle = theme.textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w600,
-      fontSize: widget.isCompact ? 18 : null,
+      fontSize: lerp(
+        widget.isCompact ? 14.5 : 16.5,
+        widget.isCompact ? 18.0 : 20.0,
+      ),
     );
     final descriptionStyle = theme.textTheme.bodyMedium?.copyWith(
       color: Colors.white70,
-      fontSize: widget.isCompact ? 14 : null,
+      fontSize: lerp(
+        widget.isCompact ? 12.0 : 13.0,
+        widget.isCompact ? 14.0 : 15.0,
+      ),
+      height: lerp(1.24, 1.42),
     );
+
+    final showDescription = !widget.hideDescription;
 
     return SizedBox(
       width: widget.maxWidth,
+      height: widget.minHeight,
       child: MouseRegion(
         onEnter: (_) => setState(() => _hovering = true),
         onExit: (_) => setState(() {
@@ -433,7 +563,12 @@ class _MenuCardState extends State<_MenuCard> {
           scale: scale,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 220),
-            constraints: BoxConstraints(minHeight: widget.minHeight ?? 0),
+            constraints: widget.minHeight != null
+                ? BoxConstraints(
+                    minHeight: widget.minHeight!,
+                    maxHeight: widget.minHeight!,
+                  )
+                : const BoxConstraints(),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
@@ -443,13 +578,13 @@ class _MenuCardState extends State<_MenuCard> {
               ),
               gradient: _hovering
                   ? LinearGradient(
-                colors: [
-                  accent.withOpacity(0.22),
-                  theme.colorScheme.surface.withOpacity(0.85),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
+                      colors: [
+                        accent.withOpacity(0.22),
+                        theme.colorScheme.surface.withOpacity(0.85),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
                   : null,
               color: _hovering
                   ? null
@@ -477,7 +612,11 @@ class _MenuCardState extends State<_MenuCard> {
                   child: Padding(
                     padding: cardPadding,
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: widget.minHeight != null
+                          ? MainAxisSize.max
+                          : MainAxisSize.min,
                       children: [
                         DecoratedBox(
                           decoration: BoxDecoration(
@@ -485,7 +624,7 @@ class _MenuCardState extends State<_MenuCard> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.all(12),
+                            padding: EdgeInsets.all(iconPadding),
                             child: SvgPicture.asset(
                               widget.entry.iconAsset,
                               width: iconSize,
@@ -494,9 +633,33 @@ class _MenuCardState extends State<_MenuCard> {
                           ),
                         ),
                         SizedBox(height: gapAfterIcon),
-                        Text(widget.entry.title, style: titleStyle),
-                        const SizedBox(height: 8),
-                        Text(widget.entry.description, style: descriptionStyle),
+                        Text(
+                          widget.entry.title,
+                          style: titleStyle,
+                          maxLines: showDescription ? 2 : 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (showDescription) ...[
+                          SizedBox(height: descriptionGap),
+                          if (widget.minHeight != null)
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.topLeft,
+                                child: Text(
+                                  widget.entry.description,
+                                  style: descriptionStyle,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.start,
+                                ),
+                              ),
+                            )
+                          else
+                            Text(
+                              widget.entry.description,
+                              style: descriptionStyle,
+                            ),
+                        ],
                       ],
                     ),
                   ),
