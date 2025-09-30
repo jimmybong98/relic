@@ -159,6 +159,26 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
   late final VoidCallback _partSyncListener;
   late final VoidCallback _opSyncListener;
 
+  void _unfocusKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+  void _submitField({
+    required bool flowLocked,
+    FocusNode? next,
+  }) {
+    if (flowLocked) {
+      _unfocusKeyboard();
+      return;
+    }
+
+    if (next != null) {
+      next.requestFocus();
+    } else {
+      _unfocusKeyboard();
+    }
+  }
+
   void _resetFinalizada() {
     if (_osFinalizada) setState(() => _osFinalizada = false);
   }
@@ -617,24 +637,14 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                         'R.E. do Preparador', // ajuste o texto se for Operador
                                     border: OutlineInputBorder(),
                                   ),
-                                  onEditingComplete: () {
-                                    if (flowLocked) {
-                                      FocusScope.of(context).unfocus();
-                                    } else {
-                                      FocusScope.of(context).requestFocus(
-                                        _osFocusNode,
-                                      );
-                                    }
-                                  },
-                                  onFieldSubmitted: (_) {
-                                    if (flowLocked) {
-                                      FocusScope.of(context).unfocus();
-                                    } else {
-                                      FocusScope.of(
-                                          context,
-                                        ).requestFocus(_osFocusNode);
-                                      }
-                                    },
+                                  onEditingComplete: () => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _osFocusNode,
+                                  ),
+                                  onFieldSubmitted: (_) => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _osFocusNode,
+                                  ),
                                     validator: (v) {
                                       final s = (v ?? '').trim();
                                       if (s.isEmpty) return 'Obrigatório';
@@ -661,24 +671,14 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     labelText: 'O.S.',
                                     border: OutlineInputBorder(),
                                   ),
-                                  onEditingComplete: () {
-                                    if (flowLocked) {
-                                      FocusScope.of(context).unfocus();
-                                    } else {
-                                      FocusScope.of(context).requestFocus(
-                                        _partFocusNode,
-                                      );
-                                    }
-                                  },
-                                  onFieldSubmitted: (_) {
-                                    if (flowLocked) {
-                                      FocusScope.of(context).unfocus();
-                                    } else {
-                                      FocusScope.of(
-                                          context,
-                                        ).requestFocus(_partFocusNode);
-                                      }
-                                    },
+                                  onEditingComplete: () => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _partFocusNode,
+                                  ),
+                                  onFieldSubmitted: (_) => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _partFocusNode,
+                                  ),
                                     validator: (v) {
                                       final s = (v ?? '').trim();
                                       if (s.isEmpty) return 'Obrigatório';
@@ -779,24 +779,14 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     labelText: 'Código da peça',
                                     border: OutlineInputBorder(),
                                   ),
-                                  onEditingComplete: () {
-                                    if (flowLocked) {
-                                      FocusScope.of(context).unfocus();
-                                    } else {
-                                      FocusScope.of(context).requestFocus(
-                                        _opFocusNode,
-                                      );
-                                    }
-                                  },
-                                  onFieldSubmitted: (_) {
-                                    if (flowLocked) {
-                                      FocusScope.of(context).unfocus();
-                                    } else {
-                                      FocusScope.of(
-                                          context,
-                                        ).requestFocus(_opFocusNode);
-                                      }
-                                    },
+                                  onEditingComplete: () => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _opFocusNode,
+                                  ),
+                                  onFieldSubmitted: (_) => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _opFocusNode,
+                                  ),
                                     validator: (v) =>
                                         (v == null || v.trim().isEmpty)
                                         ? 'Obrigatório'
@@ -819,10 +809,12 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
                                     labelText: 'Operação',
                                     border: OutlineInputBorder(),
                                   ),
-                                  onEditingComplete:
-                                      () => FocusScope.of(context).unfocus(),
-                                  onFieldSubmitted: (_) =>
-                                      FocusScope.of(context).unfocus(),
+                                  onEditingComplete: () => _submitField(
+                                    flowLocked: flowLocked,
+                                  ),
+                                  onFieldSubmitted: (_) => _submitField(
+                                    flowLocked: flowLocked,
+                                  ),
                                     validator: (v) {
                                       final s = (v ?? '').trim();
                                       if (s.isEmpty) return 'Obrigatório';

@@ -162,6 +162,26 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   late final VoidCallback _partSyncListener;
   late final VoidCallback _opSyncListener;
 
+  void _unfocusKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+  void _submitField({
+    required bool flowLocked,
+    FocusNode? next,
+  }) {
+    if (flowLocked) {
+      _unfocusKeyboard();
+      return;
+    }
+
+    if (next != null) {
+      next.requestFocus();
+    } else {
+      _unfocusKeyboard();
+    }
+  }
+
   void _resetLiberada() {
     if (_osLiberada) setState(() => _osLiberada = false);
   }
@@ -644,24 +664,14 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'R.E. do Preparador',
                                     border: OutlineInputBorder(),
                                   ),
-                                  onEditingComplete: () {
-                                    if (flowLocked) {
-                                      FocusScope.of(context).unfocus();
-                                    } else {
-                                      FocusScope.of(context).requestFocus(
-                                        _osFocusNode,
-                                      );
-                                    }
-                                  },
-                                  onFieldSubmitted: (_) {
-                                    if (flowLocked) {
-                                      FocusScope.of(context).unfocus();
-                                    } else {
-                                      FocusScope.of(
-                                        context,
-                                      ).requestFocus(_osFocusNode);
-                                    }
-                                  },
+                                  onEditingComplete: () => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _osFocusNode,
+                                  ),
+                                  onFieldSubmitted: (_) => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _osFocusNode,
+                                  ),
                                   validator: (v) {
                                     final s = (v ?? '').trim();
                                     if (s.isEmpty) return 'Obrigatório';
@@ -684,24 +694,14 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'O.S.',
                                     border: OutlineInputBorder(),
                                   ),
-                                  onEditingComplete: () {
-                                    if (flowLocked) {
-                                      FocusScope.of(context).unfocus();
-                                    } else {
-                                      FocusScope.of(context).requestFocus(
-                                        _partFocusNode,
-                                      );
-                                    }
-                                  },
-                                  onFieldSubmitted: (_) {
-                                    if (flowLocked) {
-                                      FocusScope.of(context).unfocus();
-                                    } else {
-                                      FocusScope.of(
-                                        context,
-                                      ).requestFocus(_partFocusNode);
-                                    }
-                                  },
+                                  onEditingComplete: () => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _partFocusNode,
+                                  ),
+                                  onFieldSubmitted: (_) => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _partFocusNode,
+                                  ),
                                   validator: (v) {
                                     final s = (v ?? '').trim();
                                     if (s.isEmpty) return 'Obrigatório';
@@ -846,24 +846,14 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'Código da peça',
                                     border: OutlineInputBorder(),
                                   ),
-                                  onEditingComplete: () {
-                                    if (flowLocked) {
-                                      FocusScope.of(context).unfocus();
-                                    } else {
-                                      FocusScope.of(context).requestFocus(
-                                        _opFocusNode,
-                                      );
-                                    }
-                                  },
-                                  onFieldSubmitted: (_) {
-                                    if (flowLocked) {
-                                      FocusScope.of(context).unfocus();
-                                    } else {
-                                      FocusScope.of(
-                                        context,
-                                      ).requestFocus(_opFocusNode);
-                                    }
-                                  },
+                                  onEditingComplete: () => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _opFocusNode,
+                                  ),
+                                  onFieldSubmitted: (_) => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _opFocusNode,
+                                  ),
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
                                       ? 'Obrigatório'
@@ -882,10 +872,12 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'Operação',
                                     border: OutlineInputBorder(),
                                   ),
-                                  onEditingComplete:
-                                      () => FocusScope.of(context).unfocus(),
-                                  onFieldSubmitted: (_) =>
-                                      FocusScope.of(context).unfocus(),
+                                  onEditingComplete: () => _submitField(
+                                    flowLocked: flowLocked,
+                                  ),
+                                  onFieldSubmitted: (_) => _submitField(
+                                    flowLocked: flowLocked,
+                                  ),
                                   validator: (v) {
                                     final s = (v ?? '').trim();
                                     if (s.isEmpty) return 'Obrigatório';
