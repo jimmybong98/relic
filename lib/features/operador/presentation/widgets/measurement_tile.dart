@@ -1080,10 +1080,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
     }
 
     final focusManager = WidgetsBinding.instance.focusManager;
-    final before = focusManager.primaryFocus ?? currentNode;
-
-    FocusScopeNode? scope = FocusScope.of(nodeContext);
-    final visitedScopes = <FocusScopeNode>{};
+    final FocusNode restoreFocus = focusManager.primaryFocus ?? currentNode;
 
     FocusScopeNode? parentScopeOf(FocusScopeNode node) {
       FocusNode? parent = node.parent;
@@ -1093,33 +1090,43 @@ class _MeasurementTileState extends State<MeasurementTile> {
       return parent is FocusScopeNode ? parent : null;
     }
 
-    while (scope != null && visitedScopes.add(scope)) {
-      FocusNode? candidate;
-      var hops = 0;
-      while (hops++ < 50) {
-        final moved = scope.nextFocus();
-        if (!moved) {
-          break;
-        }
-
-        candidate = focusManager.primaryFocus ?? scope.focusedChild;
-        if (candidate == null) {
-          continue;
-        }
-
-        if (identical(candidate, before) || identical(candidate, currentNode)) {
-          continue;
-        }
-
-        if (isEditableTarget(candidate)) {
-          return true;
-        }
+    bool advanceFrom(FocusNode node) {
+      final policy = FocusTraversalGroup.maybeOf(node.context ?? nodeContext);
+      if (policy != null) {
+        return policy.next(node);
       }
 
-      scope = parentScopeOf(scope);
+      FocusScopeNode? scope = node.nearestScope;
+      final visitedScopes = <FocusScopeNode>{};
+      while (scope != null && visitedScopes.add(scope)) {
+        if (scope.context != null && scope.nextFocus()) {
+          return true;
+        }
+        scope = parentScopeOf(scope);
+      }
+      return false;
     }
 
-    currentNode.requestFocus();
+    final visitedNodes = <FocusNode>{restoreFocus};
+    FocusNode pivot = currentNode;
+
+    for (var hops = 0; hops < 50; hops++) {
+      final moved = advanceFrom(pivot);
+      final FocusNode? candidate = focusManager.primaryFocus;
+
+      if (!moved || candidate == null || !visitedNodes.add(candidate)) {
+        restoreFocus.requestFocus();
+        return false;
+      }
+
+      if (isEditableTarget(candidate)) {
+        return true;
+      }
+
+      pivot = candidate;
+    }
+
+    restoreFocus.requestFocus();
     return false;
   }
 
