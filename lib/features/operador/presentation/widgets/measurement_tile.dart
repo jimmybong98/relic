@@ -1054,38 +1054,55 @@ class _MeasurementTileState extends State<MeasurementTile> {
     if (!currentNode.hasFocus) {
       return false;
     }
-    final scope = FocusScope.of(context);
-    final before = scope.focusedChild;
-    scope.nextFocus();
-    FocusNode? after = scope.focusedChild;
+
+    final nodeContext = currentNode.context;
+    if (nodeContext == null) {
+      return false;
+    }
+
+    bool isEditableTarget(FocusNode node) {
+      final ctx = node.context;
+      if (ctx == null) return false;
+      if (ctx.widget is EditableText) return true;
+      if (ctx.findAncestorWidgetOfExactType<EditableText>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorStateOfType<EditableTextState>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorWidgetOfExactType<TextField>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorWidgetOfExactType<TextFormField>() != null) {
+        return true;
+      }
+      return false;
+    }
+
+    final scope = FocusScope.of(nodeContext);
+    final focusManager = WidgetsBinding.instance.focusManager;
+    final before = focusManager.primaryFocus;
+
+    FocusNode? after = before;
     var hops = 0;
-    while (after != null &&
-        after != before &&
-        !identical(after, currentNode) &&
-        after.context?.widget is! EditableText) {
-      scope.nextFocus();
-      hops++;
-      if (hops > 20) {
+    while (hops++ < 50) {
+      final moved = scope.nextFocus();
+      if (!moved) {
         break;
       }
-      final candidate = scope.focusedChild;
-      if (candidate == after) {
+
+      after = focusManager.primaryFocus ?? scope.focusedChild;
+      if (after == null || identical(after, before) || identical(after, currentNode)) {
         break;
       }
-      after = candidate;
-    }
-    final moved =
-        after != null &&
-        after != before &&
-        !identical(after, currentNode) &&
-        after.context?.widget is EditableText;
 
-    if (!moved) {
-      scope.unfocus();
+      if (isEditableTarget(after)) {
+        return true;
+      }
     }
 
-    return moved;
-
+    currentNode.requestFocus();
+    return false;
   }
 
   void _handleChanfroChanged() {
