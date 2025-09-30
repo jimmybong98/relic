@@ -560,13 +560,31 @@ class _StatusOsPageState extends State<StatusOsPage> {
                   final resolvedMaxWidth = maxWidth.isFinite && maxWidth > 0
                       ? maxWidth
                       : MediaQuery.of(context).size.width;
-                  final spacing = 12.0;
-                  final maxItemWidth = math.min(240.0, resolvedMaxWidth);
-                  final minItemWidth = math.min(180.0, maxItemWidth);
+                  const spacing = 16.0;
+                  const runSpacing = 16.0;
+
+                  if (resolvedMaxWidth >= 900) {
+                    return Row(
+                      children: [
+                        for (var i = 0; i < dropdowns.length; i++)
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                right: i == dropdowns.length - 1 ? 0 : spacing,
+                              ),
+                              child: dropdowns[i],
+                            ),
+                          ),
+                      ],
+                    );
+                  }
+
+                  final maxItemWidth = math.min(320.0, resolvedMaxWidth);
+                  final minItemWidth = math.min(200.0, maxItemWidth);
 
                   return Wrap(
                     spacing: spacing,
-                    runSpacing: 12,
+                    runSpacing: runSpacing,
                     children: [
                       for (final dropdown in dropdowns)
                         ConstrainedBox(
