@@ -64,31 +64,24 @@ class _StatusOsPageState extends State<StatusOsPage> {
   String? _osSelecionada;
   String? _reSelecionado;
 
-  late final TextEditingController _categoriaController;
-  late final TextEditingController _maquinaController;
-  late final TextEditingController _partnumberController;
-  late final TextEditingController _osController;
-  late final TextEditingController _reController;
+  final TextEditingController _categoriaController = TextEditingController();
+  final TextEditingController _maquinaController = TextEditingController();
+  final TextEditingController _partnumberController = TextEditingController();
+  final TextEditingController _osController = TextEditingController();
+  final TextEditingController _reController = TextEditingController();
 
-  late final FocusNode _categoriaFocusNode;
-  late final FocusNode _maquinaFocusNode;
-  late final FocusNode _partnumberFocusNode;
-  late final FocusNode _osFocusNode;
-  late final FocusNode _reFocusNode;
+  final FocusNode _categoriaFocusNode =
+      FocusNode(debugLabel: 'categoriaDropdown');
+  final FocusNode _maquinaFocusNode =
+      FocusNode(debugLabel: 'maquinaDropdown');
+  final FocusNode _partnumberFocusNode =
+      FocusNode(debugLabel: 'partnumberDropdown');
+  final FocusNode _osFocusNode = FocusNode(debugLabel: 'osDropdown');
+  final FocusNode _reFocusNode = FocusNode(debugLabel: 'reDropdown');
 
   @override
   void initState() {
     super.initState();
-    _categoriaController = TextEditingController();
-    _maquinaController = TextEditingController();
-    _partnumberController = TextEditingController();
-    _osController = TextEditingController();
-    _reController = TextEditingController();
-    _categoriaFocusNode = FocusNode(debugLabel: 'categoriaDropdown');
-    _maquinaFocusNode = FocusNode(debugLabel: 'maquinaDropdown');
-    _partnumberFocusNode = FocusNode(debugLabel: 'partnumberDropdown');
-    _osFocusNode = FocusNode(debugLabel: 'osDropdown');
-    _reFocusNode = FocusNode(debugLabel: 'reDropdown');
     Future.microtask(_carregar);
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted || _loading) return;
