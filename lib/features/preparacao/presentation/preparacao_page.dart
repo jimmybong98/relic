@@ -634,6 +634,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'R.E. do Preparador',
                                     border: OutlineInputBorder(),
                                   ),
+                                  onFieldSubmitted: (_) =>
+                                      FocusScope.of(context).nextFocus(),
                                   validator: (v) {
                                     final s = (v ?? '').trim();
                                     if (s.isEmpty) return 'Obrigatório';
@@ -655,6 +657,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'O.S.',
                                     border: OutlineInputBorder(),
                                   ),
+                                  onFieldSubmitted: (_) =>
+                                      FocusScope.of(context).nextFocus(),
                                   validator: (v) {
                                     final s = (v ?? '').trim();
                                     if (s.isEmpty) return 'Obrigatório';
@@ -798,6 +802,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'Código da peça',
                                     border: OutlineInputBorder(),
                                   ),
+                                  onFieldSubmitted: (_) =>
+                                      FocusScope.of(context).nextFocus(),
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
                                       ? 'Obrigatório'
@@ -806,6 +812,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                 final operacaoField = TextFormField(
                                   controller: _opCtrl,
                                   enabled: !flowLocked,
+                                  textInputAction: TextInputAction.done,
                                   keyboardType: TextInputType.number,
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
@@ -814,6 +821,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'Operação',
                                     border: OutlineInputBorder(),
                                   ),
+                                  onFieldSubmitted: (_) =>
+                                      FocusScope.of(context).unfocus(),
                                   validator: (v) {
                                     final s = (v ?? '').trim();
                                     if (s.isEmpty) return 'Obrigatório';
