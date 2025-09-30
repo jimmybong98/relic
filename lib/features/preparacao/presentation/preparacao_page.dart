@@ -144,6 +144,11 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   final _partCtrl = TextEditingController();
   final _opCtrl = TextEditingController();
 
+  final _reFocusNode = FocusNode();
+  final _osFocusNode = FocusNode();
+  final _partFocusNode = FocusNode();
+  final _opFocusNode = FocusNode();
+
   final List<Machine> _maquinas = [];
   final List<String> _categorias = [];
   String? _categoriaSel;
@@ -156,6 +161,26 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   late final VoidCallback _osSyncListener;
   late final VoidCallback _partSyncListener;
   late final VoidCallback _opSyncListener;
+
+  void _unfocusKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+  void _submitField({
+    required bool flowLocked,
+    FocusNode? next,
+  }) {
+    if (flowLocked) {
+      _unfocusKeyboard();
+      return;
+    }
+
+    if (next != null) {
+      next.requestFocus();
+    } else {
+      _unfocusKeyboard();
+    }
+  }
 
   void _resetLiberada() {
     if (_osLiberada) setState(() => _osLiberada = false);
@@ -305,6 +330,10 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     _osCtrl.removeListener(_osSyncListener);
     _partCtrl.removeListener(_partSyncListener);
     _opCtrl.removeListener(_opSyncListener);
+    _reFocusNode.dispose();
+    _osFocusNode.dispose();
+    _partFocusNode.dispose();
+    _opFocusNode.dispose();
     _reCtrl.dispose();
     _osCtrl.dispose();
     _partCtrl.dispose();
@@ -625,6 +654,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     _compactFormBreakpoint;
                                 final reField = TextFormField(
                                   controller: _reCtrl,
+                                  focusNode: _reFocusNode,
                                   textInputAction: TextInputAction.next,
                                   keyboardType: TextInputType.number,
                                   inputFormatters: [
@@ -633,6 +663,14 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                   decoration: const InputDecoration(
                                     labelText: 'R.E. do Preparador',
                                     border: OutlineInputBorder(),
+                                  ),
+                                  onEditingComplete: () => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _osFocusNode,
+                                  ),
+                                  onFieldSubmitted: (_) => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _osFocusNode,
                                   ),
                                   validator: (v) {
                                     final s = (v ?? '').trim();
@@ -646,6 +684,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                 final osField = TextFormField(
                                   controller: _osCtrl,
                                   enabled: !flowLocked,
+                                  focusNode: _osFocusNode,
                                   textInputAction: TextInputAction.next,
                                   keyboardType: TextInputType.number,
                                   inputFormatters: [
@@ -654,6 +693,14 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                   decoration: const InputDecoration(
                                     labelText: 'O.S.',
                                     border: OutlineInputBorder(),
+                                  ),
+                                  onEditingComplete: () => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _partFocusNode,
+                                  ),
+                                  onFieldSubmitted: (_) => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _partFocusNode,
                                   ),
                                   validator: (v) {
                                     final s = (v ?? '').trim();
@@ -793,10 +840,19 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                 final partField = TextFormField(
                                   controller: _partCtrl,
                                   enabled: !flowLocked,
+                                  focusNode: _partFocusNode,
                                   textInputAction: TextInputAction.next,
                                   decoration: const InputDecoration(
                                     labelText: 'Código da peça',
                                     border: OutlineInputBorder(),
+                                  ),
+                                  onEditingComplete: () => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _opFocusNode,
+                                  ),
+                                  onFieldSubmitted: (_) => _submitField(
+                                    flowLocked: flowLocked,
+                                    next: _opFocusNode,
                                   ),
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
@@ -806,6 +862,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                 final operacaoField = TextFormField(
                                   controller: _opCtrl,
                                   enabled: !flowLocked,
+                                  focusNode: _opFocusNode,
+                                  textInputAction: TextInputAction.done,
                                   keyboardType: TextInputType.number,
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
@@ -813,6 +871,12 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                   decoration: const InputDecoration(
                                     labelText: 'Operação',
                                     border: OutlineInputBorder(),
+                                  ),
+                                  onEditingComplete: () => _submitField(
+                                    flowLocked: flowLocked,
+                                  ),
+                                  onFieldSubmitted: (_) => _submitField(
+                                    flowLocked: flowLocked,
                                   ),
                                   validator: (v) {
                                     final s = (v ?? '').trim();
