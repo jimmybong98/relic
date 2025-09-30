@@ -349,15 +349,21 @@ class _StatusOsPageState extends State<StatusOsPage> {
     String? valorSelecionado,
     FocusNode focusNode,
   ) {
-    final texto = valorSelecionado ?? '';
-    if (controller.text == texto) return;
+    if (valorSelecionado == null) {
+      if (focusNode.hasFocus || controller.text.isEmpty) return;
+      controller.value = controller.value.copyWith(
+        text: '',
+        selection: const TextSelection.collapsed(offset: 0),
+        composing: TextRange.empty,
+      );
+      return;
+    }
 
-    final shouldUpdate = valorSelecionado != null || !focusNode.hasFocus;
-    if (!shouldUpdate) return;
+    if (controller.text == valorSelecionado) return;
 
     controller.value = controller.value.copyWith(
-      text: texto,
-      selection: TextSelection.collapsed(offset: texto.length),
+      text: valorSelecionado,
+      selection: TextSelection.collapsed(offset: valorSelecionado.length),
       composing: TextRange.empty,
     );
   }
@@ -402,6 +408,18 @@ class _StatusOsPageState extends State<StatusOsPage> {
   }) {
     _atualizarTextoDropdown(controller, valor, focusNode);
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final borderRadius = BorderRadius.circular(8);
+    final enabledBorder = OutlineInputBorder(
+      borderRadius: borderRadius,
+      borderSide: BorderSide(color: colorScheme.outlineVariant, width: 1.2),
+    );
+    final focusedBorder = OutlineInputBorder(
+      borderRadius: borderRadius,
+      borderSide: BorderSide(color: colorScheme.primary, width: 1.6),
+    );
+
     final entries = <DropdownMenuEntry<String>>[
       const DropdownMenuEntry<String>(value: _todos, label: 'Todos'),
       ...opcoes.map(
@@ -421,16 +439,17 @@ class _StatusOsPageState extends State<StatusOsPage> {
       dropdownMenuEntries: entries,
       enableFilter: true,
       requestFocusOnTap: true,
-      initialSelection: valor,
       focusNode: focusNode,
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(),
-        enabledBorder: OutlineInputBorder(),
-        focusedBorder: OutlineInputBorder(),
+      inputDecorationTheme: InputDecorationTheme(
+        border: enabledBorder,
+        enabledBorder: enabledBorder,
+        focusedBorder: focusedBorder,
         isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       onSelected: (selecionado) {
         if (selecionado == null || selecionado == _todos) {
+          controller.clear();
           onChanged(null);
         } else {
           onChanged(selecionado);
@@ -541,11 +560,12 @@ class _StatusOsPageState extends State<StatusOsPage> {
                   final resolvedMaxWidth = maxWidth.isFinite && maxWidth > 0
                       ? maxWidth
                       : MediaQuery.of(context).size.width;
-                  final maxItemWidth = math.min(320.0, resolvedMaxWidth);
-                  final minItemWidth = math.min(220.0, maxItemWidth);
+                  final spacing = 12.0;
+                  final maxItemWidth = math.min(240.0, resolvedMaxWidth);
+                  final minItemWidth = math.min(180.0, maxItemWidth);
 
                   return Wrap(
-                    spacing: 16,
+                    spacing: spacing,
                     runSpacing: 12,
                     children: [
                       for (final dropdown in dropdowns)
