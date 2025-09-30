@@ -197,24 +197,23 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                         child: Center(
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 520),
-                            child: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  _buildIntroSection(theme, forceCenter: true),
-                                  const SizedBox(height: 20),
-                                  Image.asset(
-                                    'assets/images/traco.png',
-                                    height: dividerHeight,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  _MenuGrid(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                _buildIntroSection(theme, forceCenter: true),
+                                const SizedBox(height: 16),
+                                Image.asset(
+                                  'assets/images/traco.png',
+                                  height: dividerHeight,
+                                ),
+                                const SizedBox(height: 16),
+                                Expanded(
+                                  child: _MenuGrid(
                                     entries: entries,
                                     forceColumn: true,
                                   ),
-                                  const SizedBox(height: 24),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -332,17 +331,43 @@ class _MenuGrid extends StatelessWidget {
         final shouldUseColumn = forceColumn || constraints.maxWidth < 640;
 
         if (shouldUseColumn) {
-          final spacing = forceColumn ? 16.0 : 20.0;
+          final baseSpacing = forceColumn ? 16.0 : 20.0;
+          double spacing = baseSpacing;
+          double density = 1.0;
           double? cardMinHeight;
 
           if (forceColumn &&
               constraints.hasBoundedHeight &&
+              constraints.maxHeight.isFinite &&
               entries.isNotEmpty) {
-            final totalSpacing = spacing * (entries.length - 1);
-            final heightForCards = constraints.maxHeight - totalSpacing;
-            final computed = heightForCards / entries.length;
-            if (computed.isFinite && computed > 0) {
-              cardMinHeight = computed;
+            const idealCardHeight = 200.0;
+            final idealTotalSpacing = baseSpacing * (entries.length - 1);
+            final idealTotalHeight =
+                entries.length * idealCardHeight + idealTotalSpacing;
+            final availableHeight = constraints.maxHeight;
+
+            if (idealTotalHeight > 0) {
+              density = (availableHeight / idealTotalHeight).clamp(0.72, 1.0);
+            }
+
+            spacing = ui.lerpDouble(12.0, baseSpacing, density)!;
+            final spacingTotal = spacing * (entries.length - 1);
+            final heightForCards =
+                (availableHeight - spacingTotal) / entries.length;
+
+            if (heightForCards.isFinite && heightForCards > 0) {
+              density = (heightForCards / idealCardHeight).clamp(0.72, 1.0);
+              spacing = ui.lerpDouble(12.0, baseSpacing, density)!;
+
+              final adjustedSpacingTotal = spacing * (entries.length - 1);
+              final adjustedHeightForCards =
+                  (availableHeight - adjustedSpacingTotal) / entries.length;
+
+              if (adjustedHeightForCards.isFinite && adjustedHeightForCards > 0) {
+                cardMinHeight = adjustedHeightForCards;
+                density =
+                    (adjustedHeightForCards / idealCardHeight).clamp(0.72, 1.0);
+              }
             }
           }
 
@@ -355,6 +380,7 @@ class _MenuGrid extends StatelessWidget {
                   maxWidth: constraints.maxWidth,
                   minHeight: cardMinHeight,
                   isCompact: forceColumn,
+                  density: density,
                 ),
                 if (i < entries.length - 1) SizedBox(height: spacing),
               ],
@@ -389,12 +415,14 @@ class _MenuCard extends StatefulWidget {
     required this.maxWidth,
     this.minHeight,
     this.isCompact = false,
+    this.density = 1.0,
   });
 
   final _MenuEntry entry;
   final double maxWidth;
   final double? minHeight;
   final bool isCompact;
+  final double density;
 
   @override
   State<_MenuCard> createState() => _MenuCardState();
@@ -409,16 +437,29 @@ class _MenuCardState extends State<_MenuCard> {
     final theme = Theme.of(context);
     final accent = widget.entry.accentColor;
     final scale = _pressed ? 0.97 : (_hovering ? 1.02 : 1.0);
-    final cardPadding = EdgeInsets.all(widget.isCompact ? 20 : 24);
-    final iconSize = widget.isCompact ? 32.0 : 36.0;
-    final gapAfterIcon = widget.isCompact ? 20.0 : 24.0;
+    final clampedDensity = widget.density.clamp(0.7, 1.0);
+    double lerp(double min, double max) =>
+        ui.lerpDouble(min, max, clampedDensity)!;
+
+    final basePadding = widget.isCompact ? 20.0 : 24.0;
+    final minPadding = widget.isCompact ? 16.0 : 20.0;
+    final cardPadding = EdgeInsets.all(lerp(minPadding, basePadding));
+    final iconSize = lerp(widget.isCompact ? 28.0 : 32.0,
+        widget.isCompact ? 32.0 : 36.0);
+    final gapAfterIcon = lerp(widget.isCompact ? 16.0 : 20.0,
+        widget.isCompact ? 20.0 : 24.0);
+    final descriptionGap = lerp(6.0, 8.0);
+    final iconPadding = lerp(10.0, 12.0);
     final titleStyle = theme.textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w600,
-      fontSize: widget.isCompact ? 18 : null,
+      fontSize: lerp(widget.isCompact ? 16.0 : 18.0,
+          widget.isCompact ? 18.0 : 20.0),
     );
     final descriptionStyle = theme.textTheme.bodyMedium?.copyWith(
       color: Colors.white70,
-      fontSize: widget.isCompact ? 14 : null,
+      fontSize: lerp(widget.isCompact ? 13.0 : 14.0,
+          widget.isCompact ? 14.0 : 15.0),
+      height: lerp(1.28, 1.42),
     );
 
     return SizedBox(
@@ -434,7 +475,12 @@ class _MenuCardState extends State<_MenuCard> {
           scale: scale,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 220),
-            constraints: BoxConstraints(minHeight: widget.minHeight ?? 0),
+            constraints: widget.minHeight != null
+                ? BoxConstraints(
+                    minHeight: widget.minHeight!,
+                    maxHeight: widget.minHeight!,
+                  )
+                : const BoxConstraints(),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
@@ -485,8 +531,8 @@ class _MenuCardState extends State<_MenuCard> {
                             color: accent.withOpacity(0.22),
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
+                      child: Padding(
+                            padding: EdgeInsets.all(iconPadding),
                             child: SvgPicture.asset(
                               widget.entry.iconAsset,
                               width: iconSize,
@@ -496,7 +542,7 @@ class _MenuCardState extends State<_MenuCard> {
                         ),
                         SizedBox(height: gapAfterIcon),
                         Text(widget.entry.title, style: titleStyle),
-                        const SizedBox(height: 8),
+                        SizedBox(height: descriptionGap),
                         Text(widget.entry.description, style: descriptionStyle),
                       ],
                     ),
