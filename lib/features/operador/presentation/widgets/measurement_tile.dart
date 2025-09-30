@@ -1065,14 +1065,10 @@ class _MeasurementTileState extends State<MeasurementTile> {
         after.context?.widget is! EditableText) {
       scope.nextFocus();
       hops++;
-      if (hops > 20) {
+      if (hops > 50) {
         break;
       }
-      final candidate = scope.focusedChild;
-      if (candidate == after) {
-        break;
-      }
-      after = candidate;
+      after = scope.focusedChild;
     }
     final moved =
         after != null &&
@@ -1081,7 +1077,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
         after.context?.widget is EditableText;
 
     if (!moved) {
-      scope.unfocus();
+      currentNode.requestFocus();
     }
 
     return moved;
