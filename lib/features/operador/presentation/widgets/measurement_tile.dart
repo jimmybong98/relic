@@ -182,10 +182,10 @@ class _MeasurementTileState extends State<MeasurementTile> {
       final segundo = rawParts[1];
       final primeiroEhAngulo =
           _looksLikeAngleToken(primeiro) ||
-              _valueMatchesAngleRange(primeiro, faixa);
+          _valueMatchesAngleRange(primeiro, faixa);
       final segundoEhAngulo =
           _looksLikeAngleToken(segundo) ||
-              _valueMatchesAngleRange(segundo, faixa);
+          _valueMatchesAngleRange(segundo, faixa);
 
       if (!primeiroEhAngulo && segundoEhAngulo) {
         medida = primeiro;
@@ -240,9 +240,9 @@ class _MeasurementTileState extends State<MeasurementTile> {
   }
 
   bool _tokenLooksLikeAngleRange(
-      String token,
-      ({double? min, double? max})? range,
-      ) {
+    String token,
+    ({double? min, double? max})? range,
+  ) {
     final normalized = token.replaceAll(',', '.').trim();
     if (normalized.isEmpty) return false;
 
@@ -281,9 +281,9 @@ class _MeasurementTileState extends State<MeasurementTile> {
   }
 
   bool _valueMatchesAngleRange(
-      String token,
-      ({double? min, double? max})? range,
-      ) {
+    String token,
+    ({double? min, double? max})? range,
+  ) {
     if (range == null) return false;
     final value = _parseAngleInput(token);
     if (value == null) return false;
@@ -349,16 +349,16 @@ class _MeasurementTileState extends State<MeasurementTile> {
     final t = _norm(item.titulo);
     final inst = _norm(item.instrumento);
     return _containsAny(t, [
-      'visual',
-      'rug',
-      'paralelismo',
-      'anel de rosca',
-      'anel rosca',
-      'anel de rosca passa',
-      'cqf',
-      'simetria',
-      'concentricidade',
-    ]) ||
+          'visual',
+          'rug',
+          'paralelismo',
+          'anel de rosca',
+          'anel rosca',
+          'anel de rosca passa',
+          'cqf',
+          'simetria',
+          'concentricidade',
+        ]) ||
         _containsAny(inst, [
           'visual',
           'rug',
@@ -407,16 +407,16 @@ class _MeasurementTileState extends State<MeasurementTile> {
 
     final mentionsChanfro =
         _containsAny(t, ['chanfro']) ||
-            _containsAny(faixa, ['chanfro']) ||
-            _containsAny(inst, ['chanfro']) ||
-            _containsAny(obs, ['chanfro']);
+        _containsAny(faixa, ['chanfro']) ||
+        _containsAny(inst, ['chanfro']) ||
+        _containsAny(obs, ['chanfro']);
     if (mentionsChanfro) return true;
 
     final mentionsCantosVivos =
         _containsAny(t, cantoTokens) ||
-            _containsAny(faixa, cantoTokens) ||
-            _containsAny(inst, cantoTokens) ||
-            _containsAny(obs, cantoTokens);
+        _containsAny(faixa, cantoTokens) ||
+        _containsAny(inst, cantoTokens) ||
+        _containsAny(obs, cantoTokens);
     if (!mentionsCantosVivos) return false;
 
     final context = _nfd('$t $faixa $inst $obs'.toLowerCase());
@@ -427,7 +427,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
     final angleRange = _resolveItemAngleRange(item);
     final hasAngleRange =
         angleRange != null &&
-            (angleRange.min != null || angleRange.max != null);
+        (angleRange.min != null || angleRange.max != null);
     if (!hasAngleRange) return false;
 
     final hasAngleHint = _hasAngleHint(context, angleRange);
@@ -498,8 +498,8 @@ class _MeasurementTileState extends State<MeasurementTile> {
 
   Color _fgOn(Color bg) =>
       ThemeData.estimateBrightnessForColor(bg) == Brightness.dark
-          ? Colors.white
-          : Colors.black87;
+      ? Colors.white
+      : Colors.black87;
 
   Widget _pill({
     required String text,
@@ -528,12 +528,12 @@ class _MeasurementTileState extends State<MeasurementTile> {
           border: Border.all(color: effectiveBorder, width: selected ? 2 : 1),
           boxShadow: selected
               ? [
-            BoxShadow(
-              color: border.withValues(alpha: 0.35),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ]
+                  BoxShadow(
+                    color: border.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
               : null,
         ),
         child: Text.rich(
@@ -711,6 +711,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
         ? _chanfroMedCtrl!.text.trim()
         : (ctrl != null ? ctrl.text : '');
     final isRepetir3 = !isChanfro && !isRosca && _isRepetirTresPontos(item);
+    final double baseOrder = widget.index * 10.0;
 
     double? valor;
     if (isRosca || isRepetir3) {
@@ -777,14 +778,14 @@ class _MeasurementTileState extends State<MeasurementTile> {
         ? _roscaHelper(status)
         : isChanfro
         ? _chanfroHelper(
-      status: status,
-      hasAngle: hasAngle,
-      hasMedida: hasMedida,
-      medidaValida: medidaValida,
-      anguloValido: anguloValido,
-      medidaStatus: medidaStatus,
-      anguloStatus: anguloStatus,
-    )
+            status: status,
+            hasAngle: hasAngle,
+            hasMedida: hasMedida,
+            medidaValida: medidaValida,
+            anguloValido: anguloValido,
+            medidaStatus: medidaStatus,
+            anguloStatus: anguloStatus,
+          )
         : isRepetir3
         ? _repetirHelper(status)
         : _statusHelper(status);
@@ -874,52 +875,71 @@ class _MeasurementTileState extends State<MeasurementTile> {
               const SizedBox(height: 6),
               Text(helper, style: TextStyle(color: helperColor)),
             ] else if (isChanfro) ...[
-              TextField(
-                controller: _chanfroAngCtrl,
+              _wrapSubmitTraversal(
+                order: baseOrder,
                 focusNode: _chanfroAngleFocusNode,
-                keyboardType: TextInputType.text,
-                decoration: const InputDecoration(
-                  labelText: 'Ângulo (°)',
-                  border: OutlineInputBorder(),
+                child: TextField(
+                  controller: _chanfroAngCtrl,
+                  focusNode: _chanfroAngleFocusNode,
+                  keyboardType: TextInputType.text,
+                  decoration: const InputDecoration(
+                    labelText: 'Ângulo (°)',
+                    border: OutlineInputBorder(),
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                  ],
+                  onChanged: (_) => _handleChanfroChanged(),
+                  textInputAction: TextInputAction.next,
+                  onEditingComplete: () {
+                    final node = _chanfroAngleFocusNode;
+                    if (node != null) {
+                      _handleManualSubmit(node);
+                    }
+                  },
+                  onSubmitted: (_) {
+                    final node = _chanfroAngleFocusNode;
+                    if (node != null) {
+                      _handleManualSubmit(node);
+                    }
+                  },
                 ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.deny(RegExp(r'\s')),
-                ],
-                onChanged: (_) => _handleChanfroChanged(),
-                textInputAction: TextInputAction.next,
-                onSubmitted: (_) {
-                  final next = _chanfroMedFocusNode;
-                  if (next != null && next.canRequestFocus) {
-                    next.requestFocus();
-                  } else if (_chanfroAngleFocusNode != null) {
-                    _handleManualSubmit(_chanfroAngleFocusNode!);
-                  }
-                },
               ),
               const SizedBox(height: 10),
-              TextField(
-                controller: _chanfroMedCtrl,
+              _wrapSubmitTraversal(
+                order: baseOrder + 0.5,
                 focusNode: _chanfroMedFocusNode,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                  signed: false,
+                child: TextField(
+                  controller: _chanfroMedCtrl,
+                  focusNode: _chanfroMedFocusNode,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                    signed: false,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'Medida$unidadeLabel',
+                    border: const OutlineInputBorder(),
+                    helperText: helper,
+                    helperStyle: TextStyle(color: helperColor),
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                  ],
+                  onChanged: (_) => _handleChanfroChanged(),
+                  textInputAction: TextInputAction.next,
+                  onEditingComplete: () {
+                    final node = _chanfroMedFocusNode;
+                    if (node != null) {
+                      _handleManualSubmit(node);
+                    }
+                  },
+                  onSubmitted: (_) {
+                    final node = _chanfroMedFocusNode;
+                    if (node != null) {
+                      _handleManualSubmit(node);
+                    }
+                  },
                 ),
-                decoration: InputDecoration(
-                  labelText: 'Medida$unidadeLabel',
-                  border: const OutlineInputBorder(),
-                  helperText: helper,
-                  helperStyle: TextStyle(color: helperColor),
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.deny(RegExp(r'\s')),
-                ],
-                onChanged: (_) => _handleChanfroChanged(),
-                textInputAction: TextInputAction.next,
-                onSubmitted: (_) {
-                  if (_chanfroMedFocusNode != null) {
-                    _handleManualSubmit(_chanfroMedFocusNode!);
-                  }
-                },
               ),
             ] else if (isRepetir3) ...[
               Wrap(
@@ -932,14 +952,14 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     border: Colors.green.shade600,
                     fg: Colors.green.shade900,
                     selected:
-                    item.status == StatusMedida.ok &&
+                        item.status == StatusMedida.ok &&
                         (item.medicao ?? '').trim().toLowerCase() == 'ok',
                     count: _countFor('OK'),
                     onTap: () {
                       FocusScope.of(context).unfocus();
                       final alreadyOk =
                           item.status == StatusMedida.ok &&
-                              (item.medicao ?? '').trim().toLowerCase() == 'ok';
+                          (item.medicao ?? '').trim().toLowerCase() == 'ok';
                       widget.onSelect(
                         alreadyOk ? StatusMedida.pendente : StatusMedida.ok,
                         alreadyOk ? null : 'OK',
@@ -952,34 +972,45 @@ class _MeasurementTileState extends State<MeasurementTile> {
               const SizedBox(height: 6),
               Text(helper, style: TextStyle(color: helperColor)),
             ] else ...[
-              TextField(
-                controller: ctrl,
+              _wrapSubmitTraversal(
+                order: baseOrder,
                 focusNode: _manualFocusNode,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                  signed: false,
+                child: TextField(
+                  controller: ctrl,
+                  focusNode: _manualFocusNode,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                    signed: false,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'Medição$unidadeLabel',
+                    border: const OutlineInputBorder(),
+                    helperText: helper,
+                    helperStyle: TextStyle(color: helperColor),
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                  ],
+                  onChanged: (txt) {
+                    final v = _parseManualValue(txt);
+                    final novoStatus = item.avaliarStatus(v);
+                    widget.onSelect(novoStatus, txt);
+                    setState(() {});
+                  },
+                  textInputAction: TextInputAction.next,
+                  onEditingComplete: () {
+                    final node = _manualFocusNode;
+                    if (node != null) {
+                      _handleManualSubmit(node);
+                    }
+                  },
+                  onSubmitted: (_) {
+                    final node = _manualFocusNode;
+                    if (node != null) {
+                      _handleManualSubmit(node);
+                    }
+                  },
                 ),
-                decoration: InputDecoration(
-                  labelText: 'Medição$unidadeLabel',
-                  border: const OutlineInputBorder(),
-                  helperText: helper,
-                  helperStyle: TextStyle(color: helperColor),
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.deny(RegExp(r'\s')),
-                ],
-                onChanged: (txt) {
-                  final v = _parseManualValue(txt);
-                  final novoStatus = item.avaliarStatus(v);
-                  widget.onSelect(novoStatus, txt);
-                  setState(() {});
-                },
-                textInputAction: TextInputAction.next,
-                onSubmitted: (_) {
-                  if (_manualFocusNode != null) {
-                    _handleManualSubmit(_manualFocusNode!);
-                  }
-                },
               ),
             ],
           ],
@@ -988,7 +1019,41 @@ class _MeasurementTileState extends State<MeasurementTile> {
     );
   }
 
-  void _handleManualSubmit(FocusNode currentNode) {
+  Widget _wrapSubmitTraversal({
+    required double order,
+    required FocusNode? focusNode,
+    required Widget child,
+  }) {
+    final node = focusNode;
+    if (node == null) {
+      return child;
+    }
+    return FocusTraversalOrder(
+      order: NumericFocusOrder(order),
+      child: Shortcuts(
+        shortcuts: const <ShortcutActivator, Intent>{
+          SingleActivator(LogicalKeyboardKey.enter): NextFocusIntent(),
+          SingleActivator(LogicalKeyboardKey.numpadEnter): NextFocusIntent(),
+        },
+        child: Actions(
+          actions: <Type, Action<Intent>>{
+            NextFocusIntent: CallbackAction<NextFocusIntent>(
+              onInvoke: (intent) {
+                _handleManualSubmit(node);
+                return null;
+              },
+            ),
+          },
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  bool _handleManualSubmit(FocusNode currentNode) {
+    if (!currentNode.hasFocus) {
+      return false;
+    }
     final scope = FocusScope.of(context);
     final before = scope.focusedChild;
     scope.nextFocus();
@@ -1009,12 +1074,18 @@ class _MeasurementTileState extends State<MeasurementTile> {
       }
       after = candidate;
     }
-    if (after == null ||
-        after == before ||
-        identical(after, currentNode) ||
-        after.context?.widget is! EditableText) {
+    final moved =
+        after != null &&
+        after != before &&
+        !identical(after, currentNode) &&
+        after.context?.widget is EditableText;
+
+    if (!moved) {
       scope.unfocus();
     }
+
+    return moved;
+
   }
 
   void _handleChanfroChanged() {
@@ -1102,7 +1173,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     border: Colors.green.shade600,
                     fg: Colors.green.shade900,
                     selected:
-                    item.medicao == 'Aprovado' &&
+                        item.medicao == 'Aprovado' &&
                         item.status == StatusMedida.ok,
                     count: _countFor('Aprovado'),
                     onTap: () => widget.onSelect(StatusMedida.ok, 'Aprovado'),
@@ -1112,7 +1183,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                     bg: Colors.red.shade100,
                     border: Colors.red.shade400,
                     selected:
-                    item.medicao == 'Reprovado' &&
+                        item.medicao == 'Reprovado' &&
                         item.status == StatusMedida.reprovadaAcima,
                     count: _countFor('Reprovado'),
                     onTap: () => widget.onSelect(
@@ -1250,7 +1321,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
                       border: Colors.green.shade600,
                       fg: Colors.green.shade900,
                       selected:
-                      item.medicao == 'OK' &&
+                          item.medicao == 'OK' &&
                           item.status == StatusMedida.ok,
                       count: _countFor('OK'),
                       onTap: () => widget.onSelect(StatusMedida.ok, 'OK'),
