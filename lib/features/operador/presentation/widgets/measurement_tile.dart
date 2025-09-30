@@ -1124,7 +1124,6 @@ class _MeasurementTileState extends State<MeasurementTile> {
       candidate.requestFocus();
       return true;
     }
-
     return false;
   }
 
