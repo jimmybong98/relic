@@ -197,23 +197,24 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                         child: Center(
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 520),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                _buildIntroSection(theme, forceCenter: true),
-                                const SizedBox(height: 20),
-                                Image.asset(
-                                  'assets/images/traco.png',
-                                  height: dividerHeight,
-                                ),
-                                const SizedBox(height: 20),
-                                Expanded(
-                                  child: _MenuGrid(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  _buildIntroSection(theme, forceCenter: true),
+                                  const SizedBox(height: 20),
+                                  Image.asset(
+                                    'assets/images/traco.png',
+                                    height: dividerHeight,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  _MenuGrid(
                                     entries: entries,
                                     forceColumn: true,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 24),
+                                ],
+                              ),
                             ),
                           ),
                         ),
