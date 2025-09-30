@@ -64,20 +64,24 @@ class _StatusOsPageState extends State<StatusOsPage> {
   String? _osSelecionada;
   String? _reSelecionado;
 
-  late final TextEditingController _categoriaController;
-  late final TextEditingController _maquinaController;
-  late final TextEditingController _partnumberController;
-  late final TextEditingController _osController;
-  late final TextEditingController _reController;
+  final TextEditingController _categoriaController = TextEditingController();
+  final TextEditingController _maquinaController = TextEditingController();
+  final TextEditingController _partnumberController = TextEditingController();
+  final TextEditingController _osController = TextEditingController();
+  final TextEditingController _reController = TextEditingController();
+
+  final FocusNode _categoriaFocusNode =
+  FocusNode(debugLabel: 'categoriaDropdown');
+  final FocusNode _maquinaFocusNode =
+  FocusNode(debugLabel: 'maquinaDropdown');
+  final FocusNode _partnumberFocusNode =
+  FocusNode(debugLabel: 'partnumberDropdown');
+  final FocusNode _osFocusNode = FocusNode(debugLabel: 'osDropdown');
+  final FocusNode _reFocusNode = FocusNode(debugLabel: 'reDropdown');
 
   @override
   void initState() {
     super.initState();
-    _categoriaController = TextEditingController();
-    _maquinaController = TextEditingController();
-    _partnumberController = TextEditingController();
-    _osController = TextEditingController();
-    _reController = TextEditingController();
     Future.microtask(_carregar);
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted || _loading) return;
@@ -93,6 +97,11 @@ class _StatusOsPageState extends State<StatusOsPage> {
     _partnumberController.dispose();
     _osController.dispose();
     _reController.dispose();
+    _categoriaFocusNode.dispose();
+    _maquinaFocusNode.dispose();
+    _partnumberFocusNode.dispose();
+    _osFocusNode.dispose();
+    _reFocusNode.dispose();
     super.dispose();
   }
 
@@ -238,11 +247,23 @@ class _StatusOsPageState extends State<StatusOsPage> {
       _partnumberSelecionado = partnumberSelecionado;
       _osSelecionada = osSelecionada;
       _reSelecionado = reSelecionado;
-      _atualizarTextoDropdown(_categoriaController, categoriaSelecionada);
-      _atualizarTextoDropdown(_maquinaController, maquinaSelecionada);
-      _atualizarTextoDropdown(_partnumberController, partnumberSelecionado);
-      _atualizarTextoDropdown(_osController, osSelecionada);
-      _atualizarTextoDropdown(_reController, reSelecionado);
+      _atualizarTextoDropdown(
+        _categoriaController,
+        categoriaSelecionada,
+        _categoriaFocusNode,
+      );
+      _atualizarTextoDropdown(
+        _maquinaController,
+        maquinaSelecionada,
+        _maquinaFocusNode,
+      );
+      _atualizarTextoDropdown(
+        _partnumberController,
+        partnumberSelecionado,
+        _partnumberFocusNode,
+      );
+      _atualizarTextoDropdown(_osController, osSelecionada, _osFocusNode);
+      _atualizarTextoDropdown(_reController, reSelecionado, _reFocusNode);
       _loading = false;
     });
   }
@@ -325,11 +346,19 @@ class _StatusOsPageState extends State<StatusOsPage> {
   void _atualizarTextoDropdown(
       TextEditingController controller,
       String? valorSelecionado,
+      FocusNode focusNode,
       ) {
     final texto = valorSelecionado ?? '';
-    if (controller.text != texto) {
-      controller.text = texto;
-    }
+    if (controller.text == texto) return;
+
+    final shouldUpdate = valorSelecionado != null || !focusNode.hasFocus;
+    if (!shouldUpdate) return;
+
+    controller.value = controller.value.copyWith(
+      text: texto,
+      selection: TextSelection.collapsed(offset: texto.length),
+      composing: TextRange.empty,
+    );
   }
 
   Map<String, int> _totaisGeraisAmostragens() {
@@ -368,8 +397,9 @@ class _StatusOsPageState extends State<StatusOsPage> {
     required String? valor,
     required ValueChanged<String?> onChanged,
     required TextEditingController controller,
+    required FocusNode focusNode,
   }) {
-    _atualizarTextoDropdown(controller, valor);
+    _atualizarTextoDropdown(controller, valor, focusNode);
 
     final entries = <DropdownMenuEntry<String>>[
       const DropdownMenuEntry<String>(value: _todos, label: 'Todos'),
@@ -386,6 +416,11 @@ class _StatusOsPageState extends State<StatusOsPage> {
       enableFilter: true,
       requestFocusOnTap: true,
       initialSelection: valor,
+      focusNode: focusNode,
+      inputDecorationTheme: const InputDecorationTheme(
+        border: OutlineInputBorder(),
+        isDense: true,
+      ),
       onSelected: (selecionado) {
         if (selecionado == null || selecionado == _todos) {
           onChanged(null);
@@ -405,16 +440,25 @@ class _StatusOsPageState extends State<StatusOsPage> {
         opcoes: _categorias,
         valor: _categoriaSelecionada,
         controller: _categoriaController,
+        focusNode: _categoriaFocusNode,
         onChanged: (valor) => _atualizarFiltro(() {
           _categoriaSelecionada = valor;
-          _atualizarTextoDropdown(_categoriaController, _categoriaSelecionada);
+          _atualizarTextoDropdown(
+            _categoriaController,
+            _categoriaSelecionada,
+            _categoriaFocusNode,
+          );
           if (_categoriaSelecionada != null) {
             final maquinasDisponiveis =
             _maquinasPorCategoria[_categoriaSelecionada];
             if (maquinasDisponiveis == null ||
                 !maquinasDisponiveis.contains(_maquinaSelecionada)) {
               _maquinaSelecionada = null;
-              _atualizarTextoDropdown(_maquinaController, _maquinaSelecionada);
+              _atualizarTextoDropdown(
+                _maquinaController,
+                _maquinaSelecionada,
+                _maquinaFocusNode,
+              );
             }
           }
         }),
@@ -424,9 +468,14 @@ class _StatusOsPageState extends State<StatusOsPage> {
         opcoes: _obterMaquinasDisponiveis(),
         valor: _maquinaSelecionada,
         controller: _maquinaController,
+        focusNode: _maquinaFocusNode,
         onChanged: (valor) => _atualizarFiltro(() {
           _maquinaSelecionada = valor;
-          _atualizarTextoDropdown(_maquinaController, _maquinaSelecionada);
+          _atualizarTextoDropdown(
+            _maquinaController,
+            _maquinaSelecionada,
+            _maquinaFocusNode,
+          );
         }),
       ),
       _buildDropdown(
@@ -434,11 +483,13 @@ class _StatusOsPageState extends State<StatusOsPage> {
         opcoes: _partnumbers,
         valor: _partnumberSelecionado,
         controller: _partnumberController,
+        focusNode: _partnumberFocusNode,
         onChanged: (valor) => _atualizarFiltro(() {
           _partnumberSelecionado = valor;
           _atualizarTextoDropdown(
             _partnumberController,
             _partnumberSelecionado,
+            _partnumberFocusNode,
           );
         }),
       ),
@@ -447,9 +498,10 @@ class _StatusOsPageState extends State<StatusOsPage> {
         opcoes: _osOptions,
         valor: _osSelecionada,
         controller: _osController,
+        focusNode: _osFocusNode,
         onChanged: (valor) => _atualizarFiltro(() {
           _osSelecionada = valor;
-          _atualizarTextoDropdown(_osController, _osSelecionada);
+          _atualizarTextoDropdown(_osController, _osSelecionada, _osFocusNode);
         }),
       ),
       _buildDropdown(
@@ -457,9 +509,10 @@ class _StatusOsPageState extends State<StatusOsPage> {
         opcoes: _resOptions,
         valor: _reSelecionado,
         controller: _reController,
+        focusNode: _reFocusNode,
         onChanged: (valor) => _atualizarFiltro(() {
           _reSelecionado = valor;
-          _atualizarTextoDropdown(_reController, _reSelecionado);
+          _atualizarTextoDropdown(_reController, _reSelecionado, _reFocusNode);
         }),
       ),
     ];
@@ -818,8 +871,10 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
               value: slice.value,
               showTitle: false,
               radius: isTouched ? touchedRadius : baseRadius,
-              badgeWidget:
-                  _OsSliceBadge(label: slice.label, visible: isTouched),
+              badgeWidget: _OsSliceBadge(
+                label: slice.label,
+                visible: isTouched,
+              ),
               badgePositionPercentageOffset: badgeOffset,
             ),
           );
@@ -838,8 +893,7 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
                       sectionsSpace: sectionsSpace,
                       centerSpaceRadius: centerSpace,
                       startDegreeOffset: -90,
-                      pieTouchData:
-                          PieTouchData(touchCallback: _handleTouch),
+                      pieTouchData: PieTouchData(touchCallback: _handleTouch),
                     ),
                   ),
                   Positioned.fill(
@@ -871,12 +925,12 @@ class _OsInteractivePieState extends State<_OsInteractivePie> {
                 child: hoveredLabel == null
                     ? const SizedBox.shrink()
                     : Center(
-                        child: Text(
-                          hoveredLabel,
-                          textAlign: TextAlign.center,
-                          style: labelStyle,
-                        ),
-                      ),
+                  child: Text(
+                    hoveredLabel,
+                    textAlign: TextAlign.center,
+                    style: labelStyle,
+                  ),
+                ),
               ),
             ),
           ],
@@ -1148,9 +1202,9 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
     final baseRadius = isDense ? 52.0 : 56.0;
 
     final hoveredLabel =
-        (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
-            ? widget.slices[_touchedIndex].label
-            : null;
+    (_touchedIndex >= 0 && _touchedIndex < widget.slices.length)
+        ? widget.slices[_touchedIndex].label
+        : null;
     final hoveredStyle = theme.textTheme.bodyMedium?.copyWith(
       color: theme.colorScheme.onSurface.withOpacity(0.82),
       fontWeight: FontWeight.w600,
@@ -1182,9 +1236,9 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
               radius: isTouched ? touchedRadius : baseRadiusValue,
               borderSide: isTouched
                   ? BorderSide(
-                      color: theme.colorScheme.onSurface.withOpacity(0.18),
-                      width: 1.4,
-                    )
+                color: theme.colorScheme.onSurface.withOpacity(0.18),
+                width: 1.4,
+              )
                   : const BorderSide(color: Colors.transparent),
             ),
           );
@@ -1239,12 +1293,12 @@ class _InteractivePieWithLegendState extends State<_InteractivePieWithLegend> {
             child: hoveredLabel == null
                 ? const SizedBox.shrink()
                 : Center(
-                    child: Text(
-                      hoveredLabel,
-                      textAlign: TextAlign.center,
-                      style: hoveredStyle,
-                    ),
-                  ),
+              child: Text(
+                hoveredLabel,
+                textAlign: TextAlign.center,
+                style: hoveredStyle,
+              ),
+            ),
           ),
         );
 
@@ -1410,12 +1464,7 @@ List<Color> _buildPalette(ThemeData theme, int count) {
     hue = (hue + goldenRatio) % 1.0;
     final saturation = 0.78;
     final value = 0.88;
-    final color = HSVColor.fromAHSV(
-      1,
-      hue * 360,
-      saturation,
-      value,
-    ).toColor();
+    final color = HSVColor.fromAHSV(1, hue * 360, saturation, value).toColor();
     if (!colors.any((existing) => existing.value == color.value)) {
       colors.add(color);
     }
