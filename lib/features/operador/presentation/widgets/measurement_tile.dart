@@ -1079,26 +1079,44 @@ class _MeasurementTileState extends State<MeasurementTile> {
       return false;
     }
 
-    final scope = FocusScope.of(nodeContext);
     final focusManager = WidgetsBinding.instance.focusManager;
-    final before = focusManager.primaryFocus;
+    final before = focusManager.primaryFocus ?? currentNode;
 
-    FocusNode? after = before;
-    var hops = 0;
-    while (hops++ < 50) {
-      final moved = scope.nextFocus();
-      if (!moved) {
-        break;
+    FocusScopeNode? scope = FocusScope.of(nodeContext);
+    final visitedScopes = <FocusScopeNode>{};
+
+    FocusScopeNode? parentScopeOf(FocusScopeNode node) {
+      FocusNode? parent = node.parent;
+      while (parent != null && parent is! FocusScopeNode) {
+        parent = parent.parent;
+      }
+      return parent is FocusScopeNode ? parent : null;
+    }
+
+    while (scope != null && visitedScopes.add(scope)) {
+      FocusNode? candidate;
+      var hops = 0;
+      while (hops++ < 50) {
+        final moved = scope.nextFocus();
+        if (!moved) {
+          break;
+        }
+
+        candidate = focusManager.primaryFocus ?? scope.focusedChild;
+        if (candidate == null) {
+          continue;
+        }
+
+        if (identical(candidate, before) || identical(candidate, currentNode)) {
+          continue;
+        }
+
+        if (isEditableTarget(candidate)) {
+          return true;
+        }
       }
 
-      after = focusManager.primaryFocus ?? scope.focusedChild;
-      if (after == null || identical(after, before) || identical(after, currentNode)) {
-        break;
-      }
-
-      if (isEditableTarget(after)) {
-        return true;
-      }
+      scope = parentScopeOf(scope);
     }
 
     currentNode.requestFocus();
