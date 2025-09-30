@@ -38,6 +38,9 @@ class _MeasurementTileState extends State<MeasurementTile> {
   TextEditingController? _chanfroAngCtrl;
   TextEditingController? _chanfroMedCtrl;
   String? _roscaSelection;
+  FocusNode? _manualFocusNode;
+  FocusNode? _chanfroAngleFocusNode;
+  FocusNode? _chanfroMedFocusNode;
 
   @override
   void initState() {
@@ -46,9 +49,13 @@ class _MeasurementTileState extends State<MeasurementTile> {
     if (widget.manualEntry) {
       if (_isChanfro(widget.item)) {
         _ensureChanfroControllers();
+        _ensureChanfroFocusNodes();
         _syncChanfroControllers(widget.item.medicao);
       } else {
         _manualCtrl = TextEditingController(text: widget.item.medicao ?? '');
+        if (_usesManualTextField(widget.item)) {
+          _ensureManualFocusNode();
+        }
       }
     }
   }
@@ -62,13 +69,21 @@ class _MeasurementTileState extends State<MeasurementTile> {
     if (widget.manualEntry) {
       if (isChanfro) {
         _disposeManualController();
+        _disposeManualFocusNode();
         _ensureChanfroControllers();
+        _ensureChanfroFocusNodes();
         if (!wasChanfro || oldWidget.item.medicao != widget.item.medicao) {
           _syncChanfroControllers(widget.item.medicao);
         }
       } else {
         _disposeChanfroControllers();
+        _disposeChanfroFocusNodes();
         _manualCtrl ??= TextEditingController();
+        if (_usesManualTextField(widget.item)) {
+          _ensureManualFocusNode();
+        } else {
+          _disposeManualFocusNode();
+        }
         final newText = widget.item.medicao ?? '';
         if (oldWidget.item.medicao != widget.item.medicao &&
             _manualCtrl!.text != newText) {
@@ -82,6 +97,8 @@ class _MeasurementTileState extends State<MeasurementTile> {
     } else {
       _disposeManualController();
       _disposeChanfroControllers();
+      _disposeManualFocusNode();
+      _disposeChanfroFocusNodes();
     }
 
     if (oldWidget.item.medicao != widget.item.medicao) {
@@ -93,6 +110,8 @@ class _MeasurementTileState extends State<MeasurementTile> {
   void dispose() {
     _disposeManualController();
     _disposeChanfroControllers();
+    _disposeManualFocusNode();
+    _disposeChanfroFocusNodes();
     super.dispose();
   }
 
@@ -104,6 +123,27 @@ class _MeasurementTileState extends State<MeasurementTile> {
   void _ensureChanfroControllers() {
     _chanfroAngCtrl ??= TextEditingController();
     _chanfroMedCtrl ??= TextEditingController();
+  }
+
+  void _ensureManualFocusNode() {
+    _manualFocusNode ??= FocusNode();
+  }
+
+  void _disposeManualFocusNode() {
+    _manualFocusNode?.dispose();
+    _manualFocusNode = null;
+  }
+
+  void _ensureChanfroFocusNodes() {
+    _chanfroAngleFocusNode ??= FocusNode();
+    _chanfroMedFocusNode ??= FocusNode();
+  }
+
+  void _disposeChanfroFocusNodes() {
+    _chanfroAngleFocusNode?.dispose();
+    _chanfroAngleFocusNode = null;
+    _chanfroMedFocusNode?.dispose();
+    _chanfroMedFocusNode = null;
   }
 
   void _disposeChanfroControllers() {
@@ -655,8 +695,12 @@ class _MeasurementTileState extends State<MeasurementTile> {
     TextEditingController? ctrl;
     if (!isChanfro) {
       ctrl = _manualCtrl ??= TextEditingController(text: item.medicao ?? '');
+      if (!isRosca && !_isRepetirTresPontos(item)) {
+        _ensureManualFocusNode();
+      }
     } else {
       _ensureChanfroControllers();
+      _ensureChanfroFocusNodes();
     }
 
     final roscaSelection = (_roscaSelection ?? item.medicao ?? '')
@@ -832,6 +876,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
             ] else if (isChanfro) ...[
               TextField(
                 controller: _chanfroAngCtrl,
+                focusNode: _chanfroAngleFocusNode,
                 keyboardType: TextInputType.text,
                 decoration: const InputDecoration(
                   labelText: 'Ângulo (°)',
@@ -841,10 +886,20 @@ class _MeasurementTileState extends State<MeasurementTile> {
                   FilteringTextInputFormatter.deny(RegExp(r'\s')),
                 ],
                 onChanged: (_) => _handleChanfroChanged(),
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) {
+                  final next = _chanfroMedFocusNode;
+                  if (next != null && next.canRequestFocus) {
+                    next.requestFocus();
+                  } else if (_chanfroAngleFocusNode != null) {
+                    _handleManualSubmit(_chanfroAngleFocusNode!);
+                  }
+                },
               ),
               const SizedBox(height: 10),
               TextField(
                 controller: _chanfroMedCtrl,
+                focusNode: _chanfroMedFocusNode,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                   signed: false,
@@ -859,6 +914,12 @@ class _MeasurementTileState extends State<MeasurementTile> {
                   FilteringTextInputFormatter.deny(RegExp(r'\s')),
                 ],
                 onChanged: (_) => _handleChanfroChanged(),
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) {
+                  if (_chanfroMedFocusNode != null) {
+                    _handleManualSubmit(_chanfroMedFocusNode!);
+                  }
+                },
               ),
             ] else if (isRepetir3) ...[
               Wrap(
@@ -893,6 +954,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
             ] else ...[
               TextField(
                 controller: ctrl,
+                focusNode: _manualFocusNode,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                   signed: false,
@@ -912,12 +974,47 @@ class _MeasurementTileState extends State<MeasurementTile> {
                   widget.onSelect(novoStatus, txt);
                   setState(() {});
                 },
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) {
+                  if (_manualFocusNode != null) {
+                    _handleManualSubmit(_manualFocusNode!);
+                  }
+                },
               ),
             ],
           ],
         ),
       ),
     );
+  }
+
+  void _handleManualSubmit(FocusNode currentNode) {
+    final scope = FocusScope.of(context);
+    final before = scope.focusedChild;
+    scope.nextFocus();
+    FocusNode? after = scope.focusedChild;
+    var hops = 0;
+    while (after != null &&
+        after != before &&
+        !identical(after, currentNode) &&
+        after.context?.widget is! EditableText) {
+      scope.nextFocus();
+      hops++;
+      if (hops > 20) {
+        break;
+      }
+      final candidate = scope.focusedChild;
+      if (candidate == after) {
+        break;
+      }
+      after = candidate;
+    }
+    if (after == null ||
+        after == before ||
+        identical(after, currentNode) ||
+        after.context?.widget is! EditableText) {
+      scope.unfocus();
+    }
   }
 
   void _handleChanfroChanged() {
@@ -953,6 +1050,13 @@ class _MeasurementTileState extends State<MeasurementTile> {
 
     widget.onSelect(novoStatus, combined.isEmpty ? null : combined);
     setState(() {});
+  }
+
+  bool _usesManualTextField(MedidaItem item) {
+    if (_isChanfro(item)) return true;
+    if (_isRosca(item)) return false;
+    if (_isRepetirTresPontos(item)) return false;
+    return true;
   }
 
   Widget _buildAutomaticEntry(BuildContext context) {
