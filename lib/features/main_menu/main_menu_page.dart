@@ -73,6 +73,15 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
     }
 
     final theme = Theme.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    final size = mediaQuery.size;
+    final isPortrait = size.height >= size.width;
+    final isPhonePortrait = size.width < 640 && isPortrait;
+    final isTabletWidth = size.width >= 640 && size.width < 1024;
+    final double horizontalPadding = isPhonePortrait ? 20 : 24;
+    final double topPadding = isPhonePortrait ? 24 : (isTabletWidth ? 140 : 48);
+    final double bottomPadding = isPhonePortrait ? 24 : 48;
+    final double dividerHeight = isPhonePortrait ? 10 : 15;
     final entries = [
       _MenuEntry(
         title: 'Preparador',
@@ -93,7 +102,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'Finalizar OS',
         description:
-        'Conclua ordens de serviço garantindo rastreabilidade completa.',
+        'Conclua ordens de serviço garantindo rastreabilidade.',
         iconAsset: 'assets/icons/FOR008.svg',
         accentColor: const Color(0xFF8E7CFF),
         onTap: () => openFlowPage(const FinalizarOsPage()),
@@ -141,30 +150,31 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
               ),
 
               // Logos flutuando sobre as bolhas (Opção 2)
-              Positioned(
-                top: 20,
-                left: 20,
-                child: IgnorePointer(
-                  ignoring: true,
-                  child: Opacity(
-                    opacity: 1,
-                    child: Image.asset(
-                      'assets/images/logotuptech1.png',
-                      width: 150,
+              if (!isPhonePortrait)
+                Positioned(
+                  top: isTabletWidth ? 32 : 20,
+                  left: isTabletWidth ? 20 : 20,
+                  child: IgnorePointer(
+                    ignoring: true,
+                    child: Opacity(
+                      opacity: 1,
+                      child: Image.asset(
+                        'assets/images/logotuptech1.png',
+                        width: isTabletWidth ? 150 : 150,
+                      ),
                     ),
                   ),
                 ),
-              ),
               Positioned(
-                right: 20,
-                bottom: 20,
+                right: isPhonePortrait ? -12 : 20,
+                bottom: isPhonePortrait ? -12 : 20,
                 child: IgnorePointer(
                   ignoring: true,
                   child: Opacity(
                     opacity: 1,
                     child: Image.asset(
                       'assets/images/Relictt.png',
-                      width: 150,
+                      width: isPhonePortrait ? 150 : 150,
                     ),
                   ),
                 ),
@@ -172,83 +182,120 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
 
               Align(
                 alignment: Alignment.topCenter,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 32,
-                  ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1100),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final titleStyle =
-                            theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            );
-                            final subtitleStyle =
-                            theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.white70,
-                            );
+                child: LayoutBuilder(
+                  builder: (context, _) {
+                    final padding = EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      topPadding,
+                      horizontalPadding,
+                      bottomPadding,
+                    );
 
-                            if (constraints.maxWidth < 500) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  const SizedBox(height: 24),
-                                  Text(
-                                    'Bem-vindo ao RELIC - Controle de qualidade',
-                                    textAlign: TextAlign.center,
-                                    style: titleStyle,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'Selecione o módulo desejado para iniciar o seu fluxo de trabalho.',
-                                    textAlign: TextAlign.center,
-                                    style: subtitleStyle,
-                                  ),
-                                ],
-                              );
-                            }
-
-                            return Row(
+                    if (isPhonePortrait) {
+                      return Padding(
+                        padding: padding,
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 520),
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
+                                _buildIntroSection(theme, forceCenter: true),
+                                const SizedBox(height: 20),
+                                Image.asset(
+                                  'assets/images/traco.png',
+                                  height: dividerHeight,
+                                ),
+                                const SizedBox(height: 20),
                                 Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        'Bem-vindo ao RELIC - Controle de qualidade',
-                                        style: titleStyle,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        'Selecione o módulo desejado para iniciar o seu fluxo de trabalho.',
-                                        style: subtitleStyle,
-                                      ),
-                                    ],
+                                  child: _MenuGrid(
+                                    entries: entries,
+                                    forceColumn: true,
                                   ),
                                 ),
                               ],
-                            );
-                          },
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 24),
-                        Image.asset('assets/images/traco.png', height: 15),
-                        const SizedBox(height: 32),
-                        _MenuGrid(entries: entries),
-                      ],
-                    ),
-                  ),
+                      );
+                    }
+
+                    return SingleChildScrollView(
+                      padding: padding,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1100),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildIntroSection(theme),
+                            const SizedBox(height: 24),
+                            Image.asset(
+                              'assets/images/traco.png',
+                              height: dividerHeight,
+                            ),
+                            const SizedBox(height: 32),
+                            _MenuGrid(entries: entries),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildIntroSection(ThemeData theme, {bool forceCenter = false}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final shouldCenter = forceCenter || constraints.maxWidth < 500;
+        final titleStyle = theme.textTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+        );
+        final subtitleStyle = theme.textTheme.bodyMedium?.copyWith(
+          color: Colors.white70,
+        );
+
+        final headline = <Widget>[
+          Text(
+            'Bem-vindo ao RELIC - Controle de qualidade',
+            textAlign: shouldCenter ? TextAlign.center : TextAlign.start,
+            style: titleStyle,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Selecione o módulo desejado para iniciar o seu fluxo de trabalho.',
+            textAlign: shouldCenter ? TextAlign.center : TextAlign.start,
+            style: subtitleStyle,
+          ),
+        ];
+
+        if (shouldCenter) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (!forceCenter) const SizedBox(height: 24),
+              ...headline,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: headline,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -272,20 +319,43 @@ class _MenuEntry {
 }
 
 class _MenuGrid extends StatelessWidget {
-  const _MenuGrid({required this.entries});
+  const _MenuGrid({required this.entries, this.forceColumn = false});
 
   final List<_MenuEntry> entries;
+  final bool forceColumn;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 640) {
+        final shouldUseColumn = forceColumn || constraints.maxWidth < 640;
+
+        if (shouldUseColumn) {
+          final spacing = forceColumn ? 16.0 : 20.0;
+          double? cardMinHeight;
+
+          if (forceColumn &&
+              constraints.hasBoundedHeight &&
+              entries.isNotEmpty) {
+            final totalSpacing = spacing * (entries.length - 1);
+            final heightForCards = constraints.maxHeight - totalSpacing;
+            final computed = heightForCards / entries.length;
+            if (computed.isFinite && computed > 0) {
+              cardMinHeight = computed;
+            }
+          }
+
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              for (final entry in entries) ...[
-                _MenuCard(entry: entry, maxWidth: constraints.maxWidth),
-                const SizedBox(height: 20),
+              for (var i = 0; i < entries.length; i++) ...[
+                _MenuCard(
+                  entry: entries[i],
+                  maxWidth: constraints.maxWidth,
+                  minHeight: cardMinHeight,
+                  isCompact: forceColumn,
+                ),
+                if (i < entries.length - 1) SizedBox(height: spacing),
               ],
             ],
           );
@@ -295,6 +365,7 @@ class _MenuGrid extends StatelessWidget {
         final double cardWidth = width >= 960 ? 320 : (width / 2) - 16;
 
         return Wrap(
+          alignment: WrapAlignment.center,
           spacing: 24,
           runSpacing: 24,
           children: entries
@@ -312,10 +383,17 @@ class _MenuGrid extends StatelessWidget {
 }
 
 class _MenuCard extends StatefulWidget {
-  const _MenuCard({required this.entry, required this.maxWidth});
+  const _MenuCard({
+    required this.entry,
+    required this.maxWidth,
+    this.minHeight,
+    this.isCompact = false,
+  });
 
   final _MenuEntry entry;
   final double maxWidth;
+  final double? minHeight;
+  final bool isCompact;
 
   @override
   State<_MenuCard> createState() => _MenuCardState();
@@ -330,6 +408,17 @@ class _MenuCardState extends State<_MenuCard> {
     final theme = Theme.of(context);
     final accent = widget.entry.accentColor;
     final scale = _pressed ? 0.97 : (_hovering ? 1.02 : 1.0);
+    final cardPadding = EdgeInsets.all(widget.isCompact ? 20 : 24);
+    final iconSize = widget.isCompact ? 32.0 : 36.0;
+    final gapAfterIcon = widget.isCompact ? 20.0 : 24.0;
+    final titleStyle = theme.textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontSize: widget.isCompact ? 18 : null,
+    );
+    final descriptionStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: Colors.white70,
+      fontSize: widget.isCompact ? 14 : null,
+    );
 
     return SizedBox(
       width: widget.maxWidth,
@@ -344,6 +433,7 @@ class _MenuCardState extends State<_MenuCard> {
           scale: scale,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 220),
+            constraints: BoxConstraints(minHeight: widget.minHeight ?? 0),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
@@ -385,7 +475,7 @@ class _MenuCardState extends State<_MenuCard> {
                   onHighlightChanged: (value) =>
                       setState(() => _pressed = value),
                   child: Padding(
-                    padding: const EdgeInsets.all(24),
+                    padding: cardPadding,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -398,25 +488,15 @@ class _MenuCardState extends State<_MenuCard> {
                             padding: const EdgeInsets.all(12),
                             child: SvgPicture.asset(
                               widget.entry.iconAsset,
-                              width: 36,
-                              height: 36,
+                              width: iconSize,
+                              height: iconSize,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 24),
-                        Text(
-                          widget.entry.title,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        SizedBox(height: gapAfterIcon),
+                        Text(widget.entry.title, style: titleStyle),
                         const SizedBox(height: 8),
-                        Text(
-                          widget.entry.description,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white70,
-                          ),
-                        ),
+                        Text(widget.entry.description, style: descriptionStyle),
                       ],
                     ),
                   ),
