@@ -76,11 +76,11 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
         final data = jsonDecode(body);
         final itens = data is List
             ? data
-            .map<MedidaItem>(
-              (e) =>
-              MedidaItem.fromMap((e as Map).cast<String, dynamic>()),
-        )
-            .toList()
+                  .map<MedidaItem>(
+                    (e) =>
+                        MedidaItem.fromMap((e as Map).cast<String, dynamic>()),
+                  )
+                  .toList()
             : <MedidaItem>[];
         final dataInclusao = itens.firstDataInclusao;
         final dataFormatada = dataInclusao != null
@@ -238,8 +238,8 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
       return;
     }
     final pendentes = _medidasSelecionadas.where(
-          (m) =>
-      m.status == StatusMedida.pendente ||
+      (m) =>
+          m.status == StatusMedida.pendente ||
           (m.medicao == null || m.medicao!.trim().isEmpty),
     );
     if (pendentes.isNotEmpty) {
@@ -252,7 +252,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
     }
 
     final naoAprovadas = _medidasSelecionadas.where(
-          (m) => m.status != StatusMedida.ok,
+      (m) => m.status != StatusMedida.ok,
     );
     if (naoAprovadas.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -365,6 +365,9 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
               border: OutlineInputBorder(),
               isDense: true,
             ),
+            textInputAction: TextInputAction.done,
+            onEditingComplete: () => FocusScope.of(context).unfocus(),
+            onSubmitted: (_) => FocusScope.of(context).unfocus(),
           ),
         ],
       ),
@@ -410,132 +413,132 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
               ? const Center(child: CircularProgressIndicator())
               : _erro != null
               ? Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Erro ao carregar medidas:\n${_erro!}',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: _carregarMedidas,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Tentar novamente'),
-              ),
-            ],
-          )
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Erro ao carregar medidas:\n${_erro!}',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: _carregarMedidas,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Tentar novamente'),
+                    ),
+                  ],
+                )
               : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Card(
-                margin: EdgeInsets.zero,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Wrap(
-                    spacing: 24,
-                    runSpacing: 12,
-                    children: [
-                      _buildEditableReChip(),
-                      _buildInfoChip('O.S.', widget.os),
-                      _buildInfoChip('Peça', widget.partnumber),
-                      _buildInfoChip('Operação', widget.operacao),
-                      if (_dataRevisao != null)
-                        _buildInfoChip('Data de revisão', _dataRevisao!),
-                      _buildInfoChip('Máquina', widget.maquina),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (!_medindo) ...[
-                Text(
-                  'Selecione as medidas impactadas pela troca da ferramenta.',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: _todas.isEmpty
-                      ? const Center(
-                    child: Text('Nenhuma medida disponível.'),
-                  )
-                      : ListView.separated(
-                    itemCount: _todas.length,
-                    separatorBuilder: (_, __) =>
-                    const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final item = _todas[index];
-                      final selecionado = _selecionadas.contains(
-                        index,
-                      );
-                      final subtitulo = _subtitleFor(item);
-                      return CheckboxListTile(
-                        value: selecionado,
-                        onChanged: (value) =>
-                            _toggleSelecao(index, value),
-                        title: Text(
-                          item.titulo.isEmpty
-                              ? '(sem título)'
-                              : item.titulo,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Wrap(
+                          spacing: 24,
+                          runSpacing: 12,
+                          children: [
+                            _buildEditableReChip(),
+                            _buildInfoChip('O.S.', widget.os),
+                            _buildInfoChip('Peça', widget.partnumber),
+                            _buildInfoChip('Operação', widget.operacao),
+                            if (_dataRevisao != null)
+                              _buildInfoChip('Data de revisão', _dataRevisao!),
+                            _buildInfoChip('Máquina', widget.maquina),
+                          ],
                         ),
-                        subtitle: subtitulo.isEmpty
-                            ? null
-                            : Text(subtitulo),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.icon(
-                    onPressed: _selecionadas.isEmpty
-                        ? null
-                        : _avancarParaMedicao,
-                    icon: const Icon(Icons.playlist_add_check),
-                    label: const Text('Prosseguir para medição (FOR07)'),
-                  ),
-                ),
-              ] else ...[
-                Text(
-                  'Realize as medições selecionadas (FOR07).',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _medidasSelecionadas.length,
-                    itemBuilder: (context, index) {
-                      final item = _medidasSelecionadas[index];
-                      return MeasurementTile(
-                        index: index,
-                        item: item,
-                        manualEntry: true,
-                        onSelect: (status, medicao) =>
-                            _atualizarMedicao(index, status, medicao),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.icon(
-                    onPressed: _registrando ? null : _registrarMedicoes,
-                    icon: _registrando
-                        ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
                       ),
-                    )
-                        : const Icon(Icons.save_outlined),
-                    label: const Text('Registrar medições'),
-                  ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (!_medindo) ...[
+                      Text(
+                        'Selecione as medidas impactadas pela troca da ferramenta.',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: _todas.isEmpty
+                            ? const Center(
+                                child: Text('Nenhuma medida disponível.'),
+                              )
+                            : ListView.separated(
+                                itemCount: _todas.length,
+                                separatorBuilder: (_, __) =>
+                                    const Divider(height: 1),
+                                itemBuilder: (context, index) {
+                                  final item = _todas[index];
+                                  final selecionado = _selecionadas.contains(
+                                    index,
+                                  );
+                                  final subtitulo = _subtitleFor(item);
+                                  return CheckboxListTile(
+                                    value: selecionado,
+                                    onChanged: (value) =>
+                                        _toggleSelecao(index, value),
+                                    title: Text(
+                                      item.titulo.isEmpty
+                                          ? '(sem título)'
+                                          : item.titulo,
+                                    ),
+                                    subtitle: subtitulo.isEmpty
+                                        ? null
+                                        : Text(subtitulo),
+                                  );
+                                },
+                              ),
+                      ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.icon(
+                          onPressed: _selecionadas.isEmpty
+                              ? null
+                              : _avancarParaMedicao,
+                          icon: const Icon(Icons.playlist_add_check),
+                          label: const Text('Prosseguir para medição (FOR07)'),
+                        ),
+                      ),
+                    ] else ...[
+                      Text(
+                        'Realize as medições selecionadas (FOR07).',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: _medidasSelecionadas.length,
+                          itemBuilder: (context, index) {
+                            final item = _medidasSelecionadas[index];
+                            return MeasurementTile(
+                              index: index,
+                              item: item,
+                              manualEntry: true,
+                              onSelect: (status, medicao) =>
+                                  _atualizarMedicao(index, status, medicao),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.icon(
+                          onPressed: _registrando ? null : _registrarMedicoes,
+                          icon: _registrando
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.save_outlined),
+                          label: const Text('Registrar medições'),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-            ],
-          ),
         ),
       ),
     );
