@@ -1054,38 +1054,78 @@ class _MeasurementTileState extends State<MeasurementTile> {
     if (!currentNode.hasFocus) {
       return false;
     }
-    final scope = FocusScope.of(context);
-    final before = scope.focusedChild;
-    scope.nextFocus();
-    FocusNode? after = scope.focusedChild;
-    var hops = 0;
-    while (after != null &&
-        after != before &&
-        !identical(after, currentNode) &&
-        after.context?.widget is! EditableText) {
-      scope.nextFocus();
-      hops++;
-      if (hops > 20) {
-        break;
-      }
-      final candidate = scope.focusedChild;
-      if (candidate == after) {
-        break;
-      }
-      after = candidate;
-    }
-    final moved =
-        after != null &&
-        after != before &&
-        !identical(after, currentNode) &&
-        after.context?.widget is EditableText;
 
-    if (!moved) {
-      scope.unfocus();
+    final nodeContext = currentNode.context;
+    if (nodeContext == null) {
+      return false;
     }
 
-    return moved;
+    bool isEditableTarget(FocusNode node) {
+      final ctx = node.context;
+      if (ctx == null) return false;
+      if (ctx.widget is EditableText) return true;
+      if (ctx.findAncestorWidgetOfExactType<EditableText>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorStateOfType<EditableTextState>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorWidgetOfExactType<TextField>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorWidgetOfExactType<TextFormField>() != null) {
+        return true;
+      }
+      return false;
+    }
 
+    final focusManager = WidgetsBinding.instance.focusManager;
+    final entries = <_MeasurementFocusEntry>[];
+
+    for (final FocusNode node in focusManager.rootScope.traversalDescendants) {
+      if (node.skipTraversal || !node.canRequestFocus) {
+        continue;
+      }
+      final ctx = node.context;
+      if (ctx == null) {
+        continue;
+      }
+      if (ctx.findAncestorStateOfType<_MeasurementTileState>() == null) {
+        continue;
+      }
+      final order = FocusTraversalOrder.maybeOf(ctx);
+      if (order is! NumericFocusOrder) {
+        continue;
+      }
+      if (!isEditableTarget(node)) {
+        continue;
+      }
+      entries.add(_MeasurementFocusEntry(node: node, order: order.order));
+    }
+
+    if (entries.isEmpty) {
+      return false;
+    }
+
+    entries.sort((a, b) => a.order.compareTo(b.order));
+
+    final currentIndex = entries.indexWhere(
+      (entry) => entry.node == currentNode,
+    );
+    if (currentIndex == -1) {
+      return false;
+    }
+
+    for (var i = currentIndex + 1; i < entries.length; i++) {
+      final candidate = entries[i].node;
+      if (!candidate.canRequestFocus) {
+        continue;
+      }
+      candidate.requestFocus();
+      return true;
+    }
+
+    return false;
   }
 
   void _handleChanfroChanged() {
@@ -1345,4 +1385,11 @@ class _MeasurementTileState extends State<MeasurementTile> {
     }
     return _buildAutomaticEntry(context);
   }
+}
+
+class _MeasurementFocusEntry {
+  const _MeasurementFocusEntry({required this.node, required this.order});
+
+  final FocusNode node;
+  final double order;
 }
