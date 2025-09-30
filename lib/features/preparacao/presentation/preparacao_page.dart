@@ -144,6 +144,11 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
   final _partCtrl = TextEditingController();
   final _opCtrl = TextEditingController();
 
+  final _reFocusNode = FocusNode();
+  final _osFocusNode = FocusNode();
+  final _partFocusNode = FocusNode();
+  final _opFocusNode = FocusNode();
+
   final List<Machine> _maquinas = [];
   final List<String> _categorias = [];
   String? _categoriaSel;
@@ -305,6 +310,10 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     _osCtrl.removeListener(_osSyncListener);
     _partCtrl.removeListener(_partSyncListener);
     _opCtrl.removeListener(_opSyncListener);
+    _reFocusNode.dispose();
+    _osFocusNode.dispose();
+    _partFocusNode.dispose();
+    _opFocusNode.dispose();
     _reCtrl.dispose();
     _osCtrl.dispose();
     _partCtrl.dispose();
@@ -625,6 +634,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     _compactFormBreakpoint;
                                 final reField = TextFormField(
                                   controller: _reCtrl,
+                                  focusNode: _reFocusNode,
                                   textInputAction: TextInputAction.next,
                                   keyboardType: TextInputType.number,
                                   inputFormatters: [
@@ -634,6 +644,15 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'R.E. do Preparador',
                                     border: OutlineInputBorder(),
                                   ),
+                                  onFieldSubmitted: (_) {
+                                    if (flowLocked) {
+                                      FocusScope.of(context).unfocus();
+                                    } else {
+                                      FocusScope.of(
+                                        context,
+                                      ).requestFocus(_osFocusNode);
+                                    }
+                                  },
                                   validator: (v) {
                                     final s = (v ?? '').trim();
                                     if (s.isEmpty) return 'Obrigatório';
@@ -646,6 +665,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                 final osField = TextFormField(
                                   controller: _osCtrl,
                                   enabled: !flowLocked,
+                                  focusNode: _osFocusNode,
                                   textInputAction: TextInputAction.next,
                                   keyboardType: TextInputType.number,
                                   inputFormatters: [
@@ -655,6 +675,15 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'O.S.',
                                     border: OutlineInputBorder(),
                                   ),
+                                  onFieldSubmitted: (_) {
+                                    if (flowLocked) {
+                                      FocusScope.of(context).unfocus();
+                                    } else {
+                                      FocusScope.of(
+                                        context,
+                                      ).requestFocus(_partFocusNode);
+                                    }
+                                  },
                                   validator: (v) {
                                     final s = (v ?? '').trim();
                                     if (s.isEmpty) return 'Obrigatório';
@@ -793,11 +822,21 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                 final partField = TextFormField(
                                   controller: _partCtrl,
                                   enabled: !flowLocked,
+                                  focusNode: _partFocusNode,
                                   textInputAction: TextInputAction.next,
                                   decoration: const InputDecoration(
                                     labelText: 'Código da peça',
                                     border: OutlineInputBorder(),
                                   ),
+                                  onFieldSubmitted: (_) {
+                                    if (flowLocked) {
+                                      FocusScope.of(context).unfocus();
+                                    } else {
+                                      FocusScope.of(
+                                        context,
+                                      ).requestFocus(_opFocusNode);
+                                    }
+                                  },
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
                                       ? 'Obrigatório'
@@ -806,6 +845,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                 final operacaoField = TextFormField(
                                   controller: _opCtrl,
                                   enabled: !flowLocked,
+                                  focusNode: _opFocusNode,
+                                  textInputAction: TextInputAction.done,
                                   keyboardType: TextInputType.number,
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
@@ -814,6 +855,8 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                     labelText: 'Operação',
                                     border: OutlineInputBorder(),
                                   ),
+                                  onFieldSubmitted: (_) =>
+                                      FocusScope.of(context).unfocus(),
                                   validator: (v) {
                                     final s = (v ?? '').trim();
                                     if (s.isEmpty) return 'Obrigatório';
