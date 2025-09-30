@@ -70,12 +70,13 @@ class _StatusOsPageState extends State<StatusOsPage> {
   final TextEditingController _osController = TextEditingController();
   final TextEditingController _reController = TextEditingController();
 
-  final FocusNode _categoriaFocusNode =
-  FocusNode(debugLabel: 'categoriaDropdown');
-  final FocusNode _maquinaFocusNode =
-  FocusNode(debugLabel: 'maquinaDropdown');
-  final FocusNode _partnumberFocusNode =
-  FocusNode(debugLabel: 'partnumberDropdown');
+  final FocusNode _categoriaFocusNode = FocusNode(
+    debugLabel: 'categoriaDropdown',
+  );
+  final FocusNode _maquinaFocusNode = FocusNode(debugLabel: 'maquinaDropdown');
+  final FocusNode _partnumberFocusNode = FocusNode(
+    debugLabel: 'partnumberDropdown',
+  );
   final FocusNode _osFocusNode = FocusNode(debugLabel: 'osDropdown');
   final FocusNode _reFocusNode = FocusNode(debugLabel: 'reDropdown');
 
@@ -348,15 +349,21 @@ class _StatusOsPageState extends State<StatusOsPage> {
       String? valorSelecionado,
       FocusNode focusNode,
       ) {
-    final texto = valorSelecionado ?? '';
-    if (controller.text == texto) return;
+    if (valorSelecionado == null) {
+      if (focusNode.hasFocus || controller.text.isEmpty) return;
+      controller.value = controller.value.copyWith(
+        text: '',
+        selection: const TextSelection.collapsed(offset: 0),
+        composing: TextRange.empty,
+      );
+      return;
+    }
 
-    final shouldUpdate = valorSelecionado != null || !focusNode.hasFocus;
-    if (!shouldUpdate) return;
+    if (controller.text == valorSelecionado) return;
 
     controller.value = controller.value.copyWith(
-      text: texto,
-      selection: TextSelection.collapsed(offset: texto.length),
+      text: valorSelecionado,
+      selection: TextSelection.collapsed(offset: valorSelecionado.length),
       composing: TextRange.empty,
     );
   }
@@ -401,6 +408,18 @@ class _StatusOsPageState extends State<StatusOsPage> {
   }) {
     _atualizarTextoDropdown(controller, valor, focusNode);
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final borderRadius = BorderRadius.circular(8);
+    final enabledBorder = OutlineInputBorder(
+      borderRadius: borderRadius,
+      borderSide: BorderSide(color: colorScheme.outlineVariant, width: 1.2),
+    );
+    final focusedBorder = OutlineInputBorder(
+      borderRadius: borderRadius,
+      borderSide: BorderSide(color: colorScheme.primary, width: 1.6),
+    );
+
     final entries = <DropdownMenuEntry<String>>[
       const DropdownMenuEntry<String>(value: _todos, label: 'Todos'),
       ...opcoes.map(
@@ -410,19 +429,27 @@ class _StatusOsPageState extends State<StatusOsPage> {
 
     return DropdownMenu<String>(
       controller: controller,
-      label: Text(label),
+      label: Text(
+        label,
+        maxLines: 2,
+        softWrap: true,
+        overflow: TextOverflow.visible,
+      ),
       hintText: 'Todos',
       dropdownMenuEntries: entries,
       enableFilter: true,
       requestFocusOnTap: true,
-      initialSelection: valor,
       focusNode: focusNode,
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(),
+      inputDecorationTheme: InputDecorationTheme(
+        border: enabledBorder,
+        enabledBorder: enabledBorder,
+        focusedBorder: focusedBorder,
         isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       onSelected: (selecionado) {
         if (selecionado == null || selecionado == _todos) {
+          controller.clear();
           onChanged(null);
         } else {
           onChanged(selecionado);
@@ -432,8 +459,6 @@ class _StatusOsPageState extends State<StatusOsPage> {
   }
 
   Widget _buildFiltros() {
-    const gap = 12.0;
-
     final dropdowns = <Widget>[
       _buildDropdown(
         label: 'Grupo de máquina',
@@ -526,39 +551,49 @@ class _StatusOsPageState extends State<StatusOsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Filtros', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final itemCount = dropdowns.length;
-                  if (itemCount == 0) {
-                    return const SizedBox.shrink();
-                  }
-
                   final maxWidth = constraints.maxWidth.isFinite
                       ? constraints.maxWidth
                       : MediaQuery.of(context).size.width;
-                  var spacing = gap;
-                  if (itemCount > 1 && maxWidth.isFinite) {
-                    final requiredSpacing = spacing * (itemCount - 1);
-                    if (requiredSpacing > maxWidth) {
-                      spacing = maxWidth / (itemCount - 1 + itemCount);
-                    }
-                  }
-                  final totalSpacing = spacing * (itemCount - 1);
-                  final availableForItems = (maxWidth - totalSpacing).clamp(
-                    0.0,
-                    double.infinity,
-                  );
-                  final itemWidth = itemCount > 0
-                      ? availableForItems / itemCount
-                      : 0.0;
+                  final resolvedMaxWidth = maxWidth.isFinite && maxWidth > 0
+                      ? maxWidth
+                      : MediaQuery.of(context).size.width;
+                  const spacing = 16.0;
+                  const runSpacing = 16.0;
 
-                  return Row(
-                    children: [
-                      for (var i = 0; i < itemCount; i++) ...[
-                        SizedBox(width: itemWidth, child: dropdowns[i]),
-                        if (i < itemCount - 1) SizedBox(width: spacing),
+                  if (resolvedMaxWidth >= 900) {
+                    return Row(
+                      children: [
+                        for (var i = 0; i < dropdowns.length; i++)
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                right: i == dropdowns.length - 1 ? 0 : spacing,
+                              ),
+                              child: dropdowns[i],
+                            ),
+                          ),
                       ],
+                    );
+                  }
+
+                  final maxItemWidth = math.min(320.0, resolvedMaxWidth);
+                  final minItemWidth = math.min(200.0, maxItemWidth);
+
+                  return Wrap(
+                    spacing: spacing,
+                    runSpacing: runSpacing,
+                    children: [
+                      for (final dropdown in dropdowns)
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth: minItemWidth,
+                            maxWidth: maxItemWidth,
+                          ),
+                          child: dropdown,
+                        ),
                     ],
                   );
                 },
@@ -720,7 +755,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
                     Center(
                       child: Image.asset(
                         'assets/images/traco.png',
-                        height: 12,
+                        width: 2000,
                         fit: BoxFit.contain,
                       ),
                     ),

@@ -193,7 +193,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                               color: Colors.white70,
                             );
 
-                            if (constraints.maxWidth < 760) {
+                            if (constraints.maxWidth < 500) {
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
