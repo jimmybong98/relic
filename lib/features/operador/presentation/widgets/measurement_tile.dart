@@ -1060,23 +1060,46 @@ class _MeasurementTileState extends State<MeasurementTile> {
       return false;
     }
 
+    bool isEditableTarget(FocusNode node) {
+      final ctx = node.context;
+      if (ctx == null) return false;
+      if (ctx.widget is EditableText) return true;
+      if (ctx.findAncestorWidgetOfExactType<EditableText>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorStateOfType<EditableTextState>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorWidgetOfExactType<TextField>() != null) {
+        return true;
+      }
+      if (ctx.findAncestorWidgetOfExactType<TextFormField>() != null) {
+        return true;
+      }
+      return false;
+    }
+
     final scope = FocusScope.of(nodeContext);
     final focusManager = WidgetsBinding.instance.focusManager;
     final before = focusManager.primaryFocus;
 
-    FocusNode? after;
+    FocusNode? after = before;
     var hops = 0;
-    do {
-      scope.nextFocus();
+    while (hops++ < 50) {
+      final moved = scope.nextFocus();
+      if (!moved) {
+        break;
+      }
+
       after = focusManager.primaryFocus ?? scope.focusedChild;
       if (after == null || identical(after, before) || identical(after, currentNode)) {
         break;
       }
-      if (after.context?.widget is EditableText) {
+
+      if (isEditableTarget(after)) {
         return true;
       }
-      hops++;
-    } while (hops <= 50);
+    }
 
     currentNode.requestFocus();
     return false;
