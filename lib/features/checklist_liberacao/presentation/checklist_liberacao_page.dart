@@ -4,10 +4,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../screens/main/components/side_menu.dart';
 import '../../../services/checklist_liberacao_service.dart';
 import '../../../services/machine_service.dart';
+import '../../shared/providers/search_flow_form_provider.dart';
 
 import '../../../widgets/window_bar.dart';
 
@@ -184,14 +186,16 @@ const List<ChecklistGroup> _checklistGroups = [
   ),
 ];
 
-class ChecklistLiberacaoPage extends StatefulWidget {
+class ChecklistLiberacaoPage extends ConsumerStatefulWidget {
   const ChecklistLiberacaoPage({super.key});
 
   @override
-  State<ChecklistLiberacaoPage> createState() => _ChecklistLiberacaoPageState();
+  ConsumerState<ChecklistLiberacaoPage> createState() =>
+      _ChecklistLiberacaoPageState();
 }
 
-class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
+class _ChecklistLiberacaoPageState
+    extends ConsumerState<ChecklistLiberacaoPage> {
   final _formKey = GlobalKey<FormState>();
   final _reController = TextEditingController();
   final Map<String, ChecklistAnswer?> _answers = {};
@@ -509,6 +513,7 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
         respostas: respostas,
       );
       if (!mounted) return;
+      ref.read(sharedSearchFormProvider.notifier).completeChecklist();
       _showSnackBar('Checklist registrado com sucesso!', erro: false);
       setState(() {
         _answers.clear();

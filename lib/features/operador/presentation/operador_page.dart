@@ -505,6 +505,24 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     ).showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
+  void _showChecklistRequiredSnackBar(SharedSearchFormState shared) {
+    if (!mounted) return;
+    final osAtual = shared.os.trim();
+    final motivo = (shared.checklistReason ?? '').trim();
+    final buffer = StringBuffer('Checklist inicial pendente');
+    if (osAtual.isNotEmpty) {
+      buffer.write(' para a O.S. $osAtual');
+    }
+    buffer.write('.');
+    if (motivo.isNotEmpty) {
+      buffer.write(' Motivo: $motivo.');
+    }
+    buffer.write(' Preencha o checklist antes de retomar a amostragem.');
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(buffer.toString())));
+  }
+
   bool _ensureFlowConsistency() {
     final shared = ref.read(sharedSearchFormProvider);
     if (_flowMatchesCurrentForm(shared)) {
@@ -693,6 +711,16 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Jornada pausada. Motivo: $motivo')),
         );
+        final motivoLower = motivo.trim().toLowerCase();
+        if (motivoLower == 'fim do turno' || motivoLower == 'fim de turno') {
+          ref
+              .read(sharedSearchFormProvider.notifier)
+              .requireChecklist(reason: motivo);
+        } else if (motivoLower == 'troca de ferramenta') {
+          ref
+              .read(sharedSearchFormProvider.notifier)
+              .requireChecklist(reason: motivo);
+        }
         if (motivo == 'Fim do Turno') {
           ref.read(sharedSearchFormProvider.notifier).clear();
           setState(() {
@@ -1020,8 +1048,33 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         : null;
     final flowState = ref.watch(sharedSearchFormProvider);
     final flowLocked = flowState.isActive;
+    final requiresChecklist = flowState.requiresChecklist;
+    final checklistReason = (flowState.checklistReason ?? '').trim();
     final flowProcessName = flowState.processDisplayName;
     final flowOs = flowState.os.trim();
+    String? lockMessage;
+    IconData lockIcon = Icons.lock;
+    if (flowLocked) {
+      if (requiresChecklist) {
+        final buffer = StringBuffer('Checklist inicial pendente');
+        if (flowOs.isNotEmpty) {
+          buffer.write(' para a O.S. $flowOs');
+        }
+        buffer.write('.');
+        if (checklistReason.isNotEmpty) {
+          buffer.write(' Motivo: $checklistReason.');
+        }
+        buffer.write(
+          ' Abra o menu principal e preencha o checklist antes de retomar a amostragem.',
+        );
+        lockMessage = buffer.toString();
+        lockIcon = Icons.fact_check;
+      } else {
+        lockMessage = flowOs.isEmpty
+            ? 'Existe um fluxo de $flowProcessName em andamento. Finalize a O.S. atual para iniciar outra.'
+            : 'Fluxo de $flowProcessName ativo para a O.S. $flowOs. Finalize a O.S. atual para iniciar outra.';
+      }
+    }
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final actionBottomPadding = bottomInset > 0 ? bottomInset + 16.0 : 16.0;
     final reOk = _reCtrl.text.trim().isNotEmpty;
@@ -1063,7 +1116,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         osOk &&
         maquinaOk &&
         todasRespondidas &&
-        !_registrando;
+        !_registrando &&
+        !requiresChecklist;
 
     return Scaffold(
       appBar: WindowBar(
@@ -1097,7 +1151,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (flowLocked)
+                      if (lockMessage != null)
                         Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(12),
@@ -1111,16 +1165,14 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Icon(
-                                Icons.lock,
+                                lockIcon,
                                 size: 18,
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  flowOs.isEmpty
-                                      ? 'Existe um fluxo de $flowProcessName em andamento. Finalize a O.S. atual para iniciar outra.'
-                                      : 'Fluxo de $flowProcessName ativo para a O.S. $flowOs. Finalize a O.S. atual para iniciar outra.',
+                                  lockMessage!,
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ),
@@ -1370,6 +1422,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                 width: double.infinity,
                                 child: FilledButton.icon(
                                   onPressed: () async {
+                                    if (requiresChecklist) {
+                                      _showChecklistRequiredSnackBar(flowState);
+                                      return;
+                                    }
                                     if (_formKey.currentState!.validate()) {
                                       if (!_ensureFlowConsistency()) return;
                                       FocusScope.of(context).unfocus();

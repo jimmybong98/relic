@@ -36,6 +36,8 @@ class SharedSearchFormState {
     this.categoria,
     this.maquina,
     this.process,
+    this.requiresChecklist = false,
+    this.checklistReason,
   });
 
   final bool isActive;
@@ -45,6 +47,8 @@ class SharedSearchFormState {
   final String? categoria;
   final String? maquina;
   final SearchFlowProcess? process;
+  final bool requiresChecklist;
+  final String? checklistReason;
 
   static const _sentinel = Object();
   static String? _normalizeOptional(String? value) {
@@ -52,6 +56,7 @@ class SharedSearchFormState {
     if (trimmed == null || trimmed.isEmpty) return null;
     return trimmed;
   }
+
   factory SharedSearchFormState.fromMap(Map<dynamic, dynamic> map) {
     String _readString(dynamic value) => (value ?? '').toString().trim();
     String? _readOptional(dynamic value) {
@@ -67,6 +72,8 @@ class SharedSearchFormState {
       categoria: _readOptional(map['categoria']),
       maquina: _readOptional(map['maquina']),
       process: _parseProcess(map['process']),
+      requiresChecklist: map['requiresChecklist'] == true,
+      checklistReason: _readOptional(map['checklistReason']),
     );
   }
 
@@ -79,6 +86,8 @@ class SharedSearchFormState {
       'categoria': categoria,
       'maquina': maquina,
       'process': process?.name,
+      'requiresChecklist': requiresChecklist,
+      'checklistReason': checklistReason,
     };
   }
 
@@ -90,6 +99,8 @@ class SharedSearchFormState {
     Object? categoria = _sentinel,
     Object? maquina = _sentinel,
     Object? process = _sentinel,
+    bool? requiresChecklist,
+    Object? checklistReason = _sentinel,
   }) {
     return SharedSearchFormState(
       isActive: isActive ?? this.isActive,
@@ -101,6 +112,10 @@ class SharedSearchFormState {
       process: process == _sentinel
           ? this.process
           : process as SearchFlowProcess?,
+      requiresChecklist: requiresChecklist ?? this.requiresChecklist,
+      checklistReason: checklistReason == _sentinel
+          ? this.checklistReason
+          : checklistReason as String?,
     );
   }
 
@@ -115,7 +130,9 @@ class SharedSearchFormState {
   bool equals(SharedSearchFormState other) {
     return isActive == other.isActive &&
         matches(other) &&
-        process == other.process;
+        process == other.process &&
+        requiresChecklist == other.requiresChecklist &&
+        checklistReason == other.checklistReason;
   }
 
   bool matchesValues({
@@ -143,6 +160,8 @@ extension SharedSearchFormStateDisplay on SharedSearchFormState {
       process ?? SearchFlowProcess.amostragem;
 
   String get processDisplayName => effectiveProcess.displayName;
+
+  bool get hasChecklistRequirement => requiresChecklist;
 }
 
 SharedSearchFormState _restoreInitialState(Box<Map> box) {
@@ -201,6 +220,8 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
       categoria: SharedSearchFormState._normalizeOptional(categoria),
       maquina: SharedSearchFormState._normalizeOptional(maquina),
       process: process,
+      requiresChecklist: false,
+      checklistReason: null,
     );
 
     if (_isActive && state.matches(candidate) == false) {
@@ -247,6 +268,30 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
     if (_isActive == false) return;
     if (maquina == state.maquina) return;
     _updateState(state.copyWith(maquina: maquina));
+  }
+
+  void requireChecklist({String? reason}) {
+    if (_isActive == false) return;
+    final normalizedReason = SharedSearchFormState._normalizeOptional(reason);
+    if (state.requiresChecklist && state.checklistReason == normalizedReason) {
+      return;
+    }
+    _updateState(
+      state.copyWith(
+        requiresChecklist: true,
+        checklistReason: normalizedReason,
+      ),
+    );
+  }
+
+  void completeChecklist() {
+    if (_isActive == false) return;
+    if (!state.requiresChecklist && state.checklistReason == null) {
+      return;
+    }
+    _updateState(
+      state.copyWith(requiresChecklist: false, checklistReason: null),
+    );
   }
 
   void clear() {

@@ -2118,8 +2118,6 @@ def _registrar_pausa_operador(
         "troca de os",
         "troca_os",
         "troca os",
-        "fim do turno",
-        "fim de turno",
     }:
         cur.execute(
             "UPDATE ordem_servico SET status=%s WHERE os=%s",
