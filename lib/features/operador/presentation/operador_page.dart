@@ -782,6 +782,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           setState(() {
             _reCtrl.clear();
           });
+          await _retornarAoMenuPrincipal();
+        }
+        if (motivoLower == 'fim do turno' || motivoLower == 'fim de turno') {
+          await _retornarAoMenuPrincipal();
         }
         if (motivoLower == 'fim do turno' || motivoLower == 'fim de turno') {
           await _retornarAoMenuPrincipal();
