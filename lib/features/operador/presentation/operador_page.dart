@@ -246,8 +246,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
   ) {
     final previousChecklistRe = previous?.normalizedChecklistRe;
     final nextChecklistRe = next.normalizedChecklistRe;
+    final shouldSyncChecklistRe =
+        next.effectiveProcess == SearchFlowProcess.amostragem;
 
-    if (previousChecklistRe != nextChecklistRe) {
+    if (shouldSyncChecklistRe && previousChecklistRe != nextChecklistRe) {
       final target = nextChecklistRe ?? '';
       if (target.isEmpty) {
         if (_reCtrl.text.trim().isNotEmpty) {
