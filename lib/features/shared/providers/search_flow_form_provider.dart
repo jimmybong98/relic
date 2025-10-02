@@ -172,8 +172,12 @@ extension SharedSearchFormStateDisplay on SharedSearchFormState {
 
   bool get hasChecklistRequirement => requiresChecklist;
 
-  String? get normalizedChecklistRe =>
-      SharedSearchFormState._normalizeOptional(checklistRe);
+  String? get normalizedChecklistRe {
+    if (effectiveProcess != SearchFlowProcess.amostragem) {
+      return null;
+    }
+    return SharedSearchFormState._normalizeOptional(checklistRe);
+  }
 }
 
 SharedSearchFormState _restoreInitialState(Box<Map> box) {

@@ -17,6 +17,7 @@ class TrocaFerramentaPage extends StatefulWidget {
   final String partnumber;
   final String operacao;
   final String maquina;
+  final String? checklistRe;
 
   const TrocaFerramentaPage({
     super.key,
@@ -25,6 +26,7 @@ class TrocaFerramentaPage extends StatefulWidget {
     required this.partnumber,
     required this.operacao,
     required this.maquina,
+    this.checklistRe,
   });
 
   @override
@@ -283,7 +285,7 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
     }
 
     final uri = buildApiUri('/preparador/resultado');
-    final body = jsonEncode({
+    final payload = <String, dynamic>{
       're': reAtual,
       'os': widget.os,
       'partnumber': normalizeCode(widget.partnumber),
@@ -291,7 +293,13 @@ class _TrocaFerramentaPageState extends State<TrocaFerramentaPage> {
       'maquina': widget.maquina,
       'contexto': 'troca_ferramenta',
       'itens': itens,
-    });
+    };
+    final checklistRe = (widget.checklistRe ?? '').trim();
+    if (checklistRe.isNotEmpty) {
+      payload['re_checklist'] = checklistRe;
+    }
+
+    final body = jsonEncode(payload);
 
     setState(() => _registrando = true);
     try {
