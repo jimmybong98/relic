@@ -425,14 +425,22 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       });
     }
 
-    final body = jsonEncode({
+    final sharedFlow = ref.read(sharedSearchFormProvider);
+    final checklistRe = (sharedFlow.checklistRe ?? '').trim();
+
+    final payload = <String, dynamic>{
       're': _reCtrl.text.trim(),
       'os': _osCtrl.text.trim(),
       'partnumber': normalizeCode(_partCtrl.text),
       'operacao': normalizeCode(_opCtrl.text),
       'maquina': _maquinaSel,
       'itens': itens,
-    });
+    };
+    if (checklistRe.isNotEmpty) {
+      payload['re_checklist'] = checklistRe;
+    }
+
+    final body = jsonEncode(payload);
 
     final uri = buildApiUri('/preparador/resultado');
 
