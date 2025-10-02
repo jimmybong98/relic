@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:admin/constants.dart';
+import 'package:admin/features/checklist_liberacao/presentation/checklist_liberacao_page.dart';
 import 'package:admin/features/export_relatorios/presentation/status_os_page.dart';
 import 'package:admin/screens/main/components/side_menu.dart';
 import 'package:admin/widgets/window_bar.dart';
@@ -44,6 +45,15 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
         ref.read(sharedSearchFormProvider.notifier).clear();
       }
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+    }
+
+    void openChecklist() {
+      final shared = ref.read(sharedSearchFormProvider);
+      if (!shared.isActive) {
+        ref.read(sharedSearchFormProvider.notifier).clear();
+      }
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const ChecklistLiberacaoPage()));
     }
 
     Future<void> openAdmin() async {
@@ -92,6 +102,15 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
         : (isPhonePortrait ? 24 : 48);
     final double dividerHeight = isPhonePortrait ? 8 : 15;
     final entries = [
+      _MenuEntry(
+        title: 'Liberação',
+        description:
+            'Preencha o checklist obrigatório antes das liberações de máquina.',
+        iconAsset: 'assets/icons/xxx.svg',
+        accentColor: const Color(0xFF4DD0E1),
+        onTap: openChecklist,
+        semanticLabel: 'Acessar checklist de liberação',
+      ),
       _MenuEntry(
         title: 'FOR07',
         description:

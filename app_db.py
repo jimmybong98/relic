@@ -388,12 +388,26 @@ def _ensure_schema():
                   re VARCHAR(64) NOT NULL,
                   grupo_maquina VARCHAR(128) NOT NULL,
                   maquina VARCHAR(128) NOT NULL,
+                  status VARCHAR(16) NOT NULL DEFAULT 'ativo',
+                  expired_at TIMESTAMP NULL DEFAULT NULL,
                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                   KEY idx_checklist_re (re),
                   KEY idx_checklist_maquina (maquina),
                   KEY idx_checklist_created (created_at)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """
+            )
+            _ensure_column(
+                c,
+                "checklist_liberacao",
+                "status",
+                "VARCHAR(16) NOT NULL DEFAULT 'ativo'",
+            )
+            _ensure_column(
+                c,
+                "checklist_liberacao",
+                "expired_at",
+                "TIMESTAMP NULL DEFAULT NULL",
             )
             cur.execute(
                 """
@@ -1007,6 +1021,65 @@ def _maquina_liberada(
             )
 
 
+def _has_checklist_ativo(conn, re: Optional[str], maquina: str) -> bool:
+    maquina = _norm(maquina)
+    if not maquina:
+        return False
+
+    re_filtro = _norm(re) if re else None
+    with conn.cursor() as cur:
+        if re_filtro:
+            cur.execute(
+                """
+                SELECT id
+                  FROM checklist_liberacao
+                 WHERE maquina=%s
+                   AND re=%s
+                   AND status='ativo'
+                 ORDER BY created_at DESC
+                 LIMIT 1
+                """,
+                (maquina, re_filtro),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT id
+                  FROM checklist_liberacao
+                 WHERE maquina=%s
+                   AND status='ativo'
+                 ORDER BY created_at DESC
+                 LIMIT 1
+                """,
+                (maquina,),
+            )
+        return cur.fetchone() is not None
+
+
+def _expirar_checklists(conn, maquina: str, re: Optional[str] = None) -> int:
+    maquina = _norm(maquina)
+    if not maquina:
+        return 0
+
+    re_filtro = _norm(re) if re else None
+    sql = (
+        """
+        UPDATE checklist_liberacao
+           SET status='expirado', expired_at=COALESCE(expired_at, CURRENT_TIMESTAMP)
+         WHERE maquina=%s
+           AND status='ativo'
+        """
+    )
+    params: List[str] = [maquina]
+    if re_filtro:
+        sql += " AND re=%s"
+        params.append(re_filtro)
+
+    with conn.cursor() as cur:
+        cur.execute(sql, params)
+        return cur.rowcount
+
+
 # ========= Rotas de Leitura =========
 # ========= Supervisão =========
 
@@ -1273,6 +1346,17 @@ def resultado_preparador():
                         ),
                         409,
                     )
+
+            if not _has_checklist_ativo(c, re_prep, maquina):
+                return (
+                    jsonify(
+                        {
+                            "code": "checklist_obrigatorio",
+                            "error": "Checklist de liberação obrigatório antes de liberar a máquina.",
+                        }
+                    ),
+                    409,
+                )
 
             ok, fonte, detalhe = _maquina_liberada(c, os_num, part, op, maquina)
             if ok and contexto_tipo != "troca_ferramenta":
@@ -1783,6 +1867,17 @@ def operador_registrar():
                 if not cur.fetchone():
                     return jsonify({"error": "máquina não cadastrada"}), 400
 
+            if not _has_checklist_ativo(c, re_op, maquina):
+                return (
+                    jsonify(
+                        {
+                            "code": "checklist_obrigatorio",
+                            "error": "Checklist de liberação obrigatório antes de registrar amostragens.",
+                        }
+                    ),
+                    409,
+                )
+
             titulo_idx_map = {}
             with c.cursor() as cur:
                 cur.execute(
@@ -2021,6 +2116,7 @@ def operador_fim_jornada():
     part = _norm_part(payload.get("partnumber"))
     op = _norm_op(payload.get("operacao"))
     motivo = _norm(payload.get("motivo"))
+    maquina = _norm(payload.get("maquina"))
     if not os_num or not re_op:
         return jsonify({"error": "Campos 'os' e 're' são obrigatórios"}), 400
     if not motivo:
@@ -2029,6 +2125,8 @@ def operador_fim_jornada():
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 _registrar_pausa_operador(cur, os_num, re_op, part, op, motivo)
+                if maquina and "turno" in (motivo or "").lower():
+                    _expirar_checklists(c, maquina)
             c.commit()
         return jsonify({"status": "ok"})
     except Exception as e:
