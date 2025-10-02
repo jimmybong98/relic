@@ -514,6 +514,16 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     return false;
   }
 
+  Future<void> _retornarAoMenuPrincipal() async {
+    if (!mounted) return;
+    await Future.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).popUntil((route) => route.isFirst);
+  }
+
   @override
   void dispose() {
     _cancelAmostragemMonitor();
@@ -685,6 +695,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           SnackBar(content: Text('Jornada pausada. Motivo: $motivo')),
         );
         if (motivo == 'Fim do Turno') {
+          ref.read(sharedSearchFormProvider.notifier).clear();
+          unawaited(_retornarAoMenuPrincipal());
           setState(() {
             _reCtrl.clear();
           });
@@ -745,6 +757,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
             ),
           ),
         );
+        unawaited(_retornarAoMenuPrincipal());
       } else {
         String mensagem = 'Falha: ${resp.statusCode} ${resp.body}';
         try {
