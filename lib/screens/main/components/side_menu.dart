@@ -9,7 +9,6 @@ import 'package:admin/features/finalizar_os/presentation/finalizar_os_page.dart'
 import 'package:admin/features/cadastro_itens/presentation/cadastro_itens_page.dart';
 import 'package:admin/features/cadastro_preparadores/presentation/cadastro_preparadores_page.dart';
 import 'package:admin/features/export_relatorios/presentation/export_relatorios_page.dart';
-import 'package:admin/features/export_relatorios/presentation/visualizar_relatorios_page.dart';
 import 'package:admin/features/export_relatorios/presentation/tempo_os_page.dart';
 import 'package:admin/features/export_relatorios/presentation/status_os_page.dart';
 import 'package:admin/features/cadastro_maquinas/presentation/cadastro_maquinas_page.dart';
@@ -198,6 +197,15 @@ class SideMenu extends ConsumerWidget {
         break;
       case SideMenuSection.mainMenu:
         items.addAll([
+          DrawerListTile(
+            title: 'Checklist de liberação',
+            svgSrc: 'assets/icons/xxx.svg',
+            press: () => _navigate(
+              context,
+              ref,
+              const ChecklistLiberacaoPage(),
+            ),
+          ),
           DrawerListTile(
             title: 'Preparador',
             svgSrc: 'assets/icons/menu_setting.svg',

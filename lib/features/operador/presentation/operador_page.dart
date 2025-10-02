@@ -670,6 +670,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       'os': _osCtrl.text.trim(),
       'partnumber': normalizeCode(_partCtrl.text),
       'operacao': normalizeCode(_opCtrl.text),
+      'maquina': _maquinaSel,
       'motivo': motivo, // Adiciona o motivo selecionado
     });
 
@@ -686,6 +687,12 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         if (motivo == 'Fim do Turno') {
           setState(() {
             _reCtrl.clear();
+          });
+          final flowNotifier = ref.read(sharedSearchFormProvider.notifier);
+          final navigator = Navigator.of(context, rootNavigator: true);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            flowNotifier.clear();
+            navigator.popUntil((route) => route.isFirst);
           });
         }
         return true;
