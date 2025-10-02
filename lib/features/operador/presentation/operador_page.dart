@@ -687,6 +687,14 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           setState(() {
             _reCtrl.clear();
           });
+          ref.read(sharedSearchFormProvider.notifier).clear();
+          Future.microtask(() {
+            if (!mounted) return;
+            Navigator.of(
+              context,
+              rootNavigator: true,
+            ).popUntil((route) => route.isFirst);
+          });
         }
         return true;
       } else {
