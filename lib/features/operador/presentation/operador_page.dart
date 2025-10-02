@@ -722,6 +722,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
               .requireChecklist(reason: motivo);
         }
         if (motivo == 'Fim do Turno') {
+          ref.read(sharedSearchFormProvider.notifier).clear();
           setState(() {
             _reCtrl.clear();
           });
