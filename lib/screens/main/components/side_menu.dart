@@ -34,6 +34,21 @@ class SideMenu extends ConsumerWidget {
 
   String _flowLockedMessage(SharedSearchFormState shared) {
     final osAtual = shared.os.trim();
+    if (shared.requiresChecklist) {
+      final motivo = (shared.checklistReason ?? '').trim();
+      final buffer = StringBuffer('Checklist inicial pendente');
+      if (osAtual.isNotEmpty) {
+        buffer.write(' para a O.S. $osAtual');
+      }
+      buffer.write('.');
+      if (motivo.isNotEmpty) {
+        buffer.write(' Motivo: $motivo.');
+      }
+      buffer.write(
+        ' Preencha o checklist inicial antes de retomar a amostragem.',
+      );
+      return buffer.toString();
+    }
     return osAtual.isEmpty
         ? 'Finalize a O.S. em andamento antes de iniciar outra.'
         : 'Finalize a O.S. $osAtual antes de iniciar outra.';
@@ -113,7 +128,12 @@ class SideMenu extends ConsumerWidget {
         DrawerListTile(
           title: 'Checklist de liberação',
           svgSrc: 'assets/icons/menu_task.svg',
-          press: () => _navigate(context, ref, const ChecklistLiberacaoPage()),
+          press: () => _navigate(
+            context,
+            ref,
+            const ChecklistLiberacaoPage(),
+            allowDuringActiveFlow: true,
+          ),
         ),
         DrawerListTile(
           title: 'Tempo por OS',
