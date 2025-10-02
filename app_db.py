@@ -383,6 +383,38 @@ def _ensure_schema():
             )
             cur.execute(
                 """
+                CREATE TABLE IF NOT EXISTS checklist_liberacao (
+                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                  re VARCHAR(64) NOT NULL,
+                  grupo_maquina VARCHAR(128) NOT NULL,
+                  maquina VARCHAR(128) NOT NULL,
+                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  KEY idx_checklist_re (re),
+                  KEY idx_checklist_maquina (maquina),
+                  KEY idx_checklist_created (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """
+            )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS checklist_liberacao_item (
+                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                  checklist_id BIGINT NOT NULL,
+                  ordem INT NOT NULL,
+                  grupo VARCHAR(128) NOT NULL,
+                  pergunta TEXT NOT NULL,
+                  resposta VARCHAR(16) NOT NULL,
+                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  KEY idx_cl_item_checklist (checklist_id),
+                  CONSTRAINT fk_cl_item_checklist
+                    FOREIGN KEY (checklist_id)
+                    REFERENCES checklist_liberacao(id)
+                    ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """
+            )
+            cur.execute(
+                """
                   CREATE TABLE IF NOT EXISTS maquinas (
                     codigo VARCHAR(64) NOT NULL PRIMARY KEY,
                     categoria VARCHAR(128) DEFAULT NULL,
@@ -2912,6 +2944,83 @@ def update_machine(codigo: str):
             )
         c.commit()
     return jsonify({"status": "ok", "codigo": new_codigo, "categoria": categoria})
+
+
+@app.route("/checklist/liberacao", methods=["POST"])
+def registrar_checklist_liberacao():
+    data = request.get_json(silent=True) or {}
+    re = (data.get("re") or "").strip()
+    grupo_maquina = (data.get("grupo_maquina") or "").strip()
+    maquina = (data.get("maquina") or "").strip()
+    respostas_raw = data.get("respostas")
+
+    if not re:
+        return jsonify({"error": "campo 're' obrigatório"}), 400
+    if not grupo_maquina:
+        return jsonify({"error": "campo 'grupo_maquina' obrigatório"}), 400
+    if not maquina:
+        return jsonify({"error": "campo 'maquina' obrigatório"}), 400
+    if not isinstance(respostas_raw, list) or not respostas_raw:
+        return jsonify({"error": "lista de respostas obrigatória"}), 400
+    if not re.isdigit():
+        return jsonify({"error": "campo 're' deve conter apenas números"}), 400
+
+    allowed_answers = {"sim", "nao", "nao_aplica"}
+    respostas_formatadas: List[Tuple[int, str, str, str]] = []
+    for idx, raw in enumerate(respostas_raw):
+        if not isinstance(raw, dict):
+            continue
+        pergunta = (raw.get("pergunta") or "").strip()
+        grupo_resposta = (raw.get("grupo") or grupo_maquina).strip()
+        resposta = (raw.get("resposta") or "").strip().lower()
+        ordem_raw = raw.get("ordem")
+        try:
+            ordem = int(ordem_raw)
+        except (TypeError, ValueError):
+            ordem = idx
+
+        if not pergunta or resposta not in allowed_answers:
+            continue
+        if not grupo_resposta:
+            grupo_resposta = grupo_maquina
+
+        respostas_formatadas.append(
+            (
+                ordem,
+                grupo_resposta[:128],
+                pergunta[:1024],
+                resposta,
+            )
+        )
+
+    if not respostas_formatadas:
+        return jsonify({"error": "nenhuma resposta válida informada"}), 400
+
+    respostas_formatadas.sort(key=lambda item: item[0])
+    with _conn_db(DB_NAME) as c:
+        with c.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO checklist_liberacao (re, grupo_maquina, maquina)
+                VALUES (%s, %s, %s)
+                """,
+                (re[:64], grupo_maquina[:128], maquina[:128]),
+            )
+            checklist_id = cur.lastrowid
+            cur.executemany(
+                """
+                INSERT INTO checklist_liberacao_item
+                  (checklist_id, ordem, grupo, pergunta, resposta)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                [
+                    (checklist_id, ordem, grupo, pergunta, resposta)
+                    for ordem, grupo, pergunta, resposta in respostas_formatadas
+                ],
+            )
+        c.commit()
+
+    return jsonify({"status": "ok", "id": checklist_id})
 
 
 @app.route("/relatorios/sql")

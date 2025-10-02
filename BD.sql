@@ -110,6 +110,22 @@ CREATE TABLE `preparador_liberacao_item` (
   `observacao` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `checklist_liberacao` (
+  `id` bigint(20) NOT NULL,
+  `re` varchar(64) NOT NULL,
+  `grupo_maquina` varchar(128) NOT NULL,
+  `maquina` varchar(128) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `checklist_liberacao_item` (
+  `id` bigint(20) NOT NULL,
+  `checklist_id` bigint(20) NOT NULL,
+  `ordem` int(11) NOT NULL,
+  `grupo` varchar(128) NOT NULL,
+  `pergunta` text NOT NULL,
+  `resposta` varchar(16) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `preparador_registro` (
   `id` bigint(20) NOT NULL,
   `os` varchar(64) NOT NULL,
@@ -514,6 +530,22 @@ ALTER TABLE `preparador_liberacao_item`
   ADD UNIQUE KEY `uq_pl_item` (`liberacao_id`,`idx_medida`);
 
 --
+-- Índices para tabela `checklist_liberacao`
+--
+ALTER TABLE `checklist_liberacao`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_checklist_re` (`re`),
+  ADD KEY `idx_checklist_maquina` (`maquina`),
+  ADD KEY `idx_checklist_created` (`created_at`);
+
+--
+-- Índices para tabela `checklist_liberacao_item`
+--
+ALTER TABLE `checklist_liberacao_item`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_cl_item_checklist` (`checklist_id`);
+
+--
 -- Índices para tabela `preparador_registro`
 --
 ALTER TABLE `preparador_registro`
@@ -577,6 +609,18 @@ ALTER TABLE `preparador_liberacao_item`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT de tabela `checklist_liberacao`
+--
+ALTER TABLE `checklist_liberacao`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `checklist_liberacao_item`
+--
+ALTER TABLE `checklist_liberacao_item`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de tabela `preparador_registro`
 --
 ALTER TABLE `preparador_registro`
@@ -633,6 +677,12 @@ ALTER TABLE `preparador_liberacao`
 --
 ALTER TABLE `preparador_liberacao_item`
   ADD CONSTRAINT `fk_pl_item_pl` FOREIGN KEY (`liberacao_id`) REFERENCES `preparador_liberacao` (`id`) ON DELETE CASCADE;
+
+--
+-- Limitadores para a tabela `checklist_liberacao_item`
+--
+ALTER TABLE `checklist_liberacao_item`
+  ADD CONSTRAINT `fk_cl_item_checklist` FOREIGN KEY (`checklist_id`) REFERENCES `checklist_liberacao` (`id`) ON DELETE CASCADE;
 
 --
 -- Limitadores para a tabela `preparador_registro`
