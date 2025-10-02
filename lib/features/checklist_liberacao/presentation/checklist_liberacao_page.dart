@@ -416,6 +416,9 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
+                dataRowMinHeight: 78,
+                dataRowMaxHeight: 120,
+                headingRowHeight: 60,
                 columns: [
                   const DataColumn(label: Text('Pergunta')),
                   DataColumn(
