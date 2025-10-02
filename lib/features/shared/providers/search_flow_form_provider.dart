@@ -38,6 +38,7 @@ class SharedSearchFormState {
     this.process,
     this.requiresChecklist = false,
     this.checklistReason,
+    this.checklistRe,
   });
 
   final bool isActive;
@@ -49,6 +50,7 @@ class SharedSearchFormState {
   final SearchFlowProcess? process;
   final bool requiresChecklist;
   final String? checklistReason;
+  final String? checklistRe;
 
   static const _sentinel = Object();
   static String? _normalizeOptional(String? value) {
@@ -74,6 +76,7 @@ class SharedSearchFormState {
       process: _parseProcess(map['process']),
       requiresChecklist: map['requiresChecklist'] == true,
       checklistReason: _readOptional(map['checklistReason']),
+      checklistRe: _readOptional(map['checklistRe']),
     );
   }
 
@@ -88,6 +91,7 @@ class SharedSearchFormState {
       'process': process?.name,
       'requiresChecklist': requiresChecklist,
       'checklistReason': checklistReason,
+      'checklistRe': checklistRe,
     };
   }
 
@@ -101,6 +105,7 @@ class SharedSearchFormState {
     Object? process = _sentinel,
     bool? requiresChecklist,
     Object? checklistReason = _sentinel,
+    Object? checklistRe = _sentinel,
   }) {
     return SharedSearchFormState(
       isActive: isActive ?? this.isActive,
@@ -116,6 +121,9 @@ class SharedSearchFormState {
       checklistReason: checklistReason == _sentinel
           ? this.checklistReason
           : checklistReason as String?,
+      checklistRe: checklistRe == _sentinel
+          ? this.checklistRe
+          : checklistRe as String?,
     );
   }
 
@@ -132,7 +140,8 @@ class SharedSearchFormState {
         matches(other) &&
         process == other.process &&
         requiresChecklist == other.requiresChecklist &&
-        checklistReason == other.checklistReason;
+        checklistReason == other.checklistReason &&
+        checklistRe == other.checklistRe;
   }
 
   bool matchesValues({
@@ -162,6 +171,10 @@ extension SharedSearchFormStateDisplay on SharedSearchFormState {
   String get processDisplayName => effectiveProcess.displayName;
 
   bool get hasChecklistRequirement => requiresChecklist;
+
+  String? get normalizedChecklistRe =>
+      SharedSearchFormState._normalizeOptional(checklistRe);
+
 }
 
 SharedSearchFormState _restoreInitialState(Box<Map> box) {
@@ -212,6 +225,7 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
     String? maquina,
     SearchFlowProcess process = SearchFlowProcess.amostragem,
   }) {
+    final existingChecklistRe = state.checklistRe;
     final candidate = SharedSearchFormState(
       isActive: true,
       os: os.trim(),
@@ -222,6 +236,8 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
       process: process,
       requiresChecklist: false,
       checklistReason: null,
+      checklistRe: existingChecklistRe,
+
     );
 
     if (_isActive && state.matches(candidate) == false) {
@@ -270,7 +286,8 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
     _updateState(state.copyWith(maquina: maquina));
   }
 
-  void requireChecklist({String? reason}) {
+  void requireChecklist({String? reason, bool clearChecklistRe = true}) {
+
     if (_isActive == false) return;
     final normalizedReason = SharedSearchFormState._normalizeOptional(reason);
     if (state.requiresChecklist && state.checklistReason == normalizedReason) {
@@ -280,17 +297,25 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
       state.copyWith(
         requiresChecklist: true,
         checklistReason: normalizedReason,
+        checklistRe: clearChecklistRe ? null : state.checklistRe,
       ),
     );
   }
 
-  void completeChecklist() {
+  void completeChecklist({String? checklistRe}) {
     if (_isActive == false) return;
-    if (!state.requiresChecklist && state.checklistReason == null) {
+    final normalizedRe = SharedSearchFormState._normalizeOptional(checklistRe);
+    if (!state.requiresChecklist &&
+        state.checklistReason == null &&
+        normalizedRe == state.checklistRe) {
       return;
     }
     _updateState(
-      state.copyWith(requiresChecklist: false, checklistReason: null),
+      state.copyWith(
+        requiresChecklist: false,
+        checklistReason: null,
+        checklistRe: normalizedRe,
+      ),
     );
   }
 
