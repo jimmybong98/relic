@@ -174,7 +174,6 @@ extension SharedSearchFormStateDisplay on SharedSearchFormState {
 
   String? get normalizedChecklistRe =>
       SharedSearchFormState._normalizeOptional(checklistRe);
-
 }
 
 SharedSearchFormState _restoreInitialState(Box<Map> box) {
@@ -237,7 +236,6 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
       requiresChecklist: false,
       checklistReason: null,
       checklistRe: existingChecklistRe,
-
     );
 
     if (_isActive && state.matches(candidate) == false) {
@@ -287,7 +285,6 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
   }
 
   void requireChecklist({String? reason, bool clearChecklistRe = true}) {
-
     if (_isActive == false) return;
     final normalizedReason = SharedSearchFormState._normalizeOptional(reason);
     if (state.requiresChecklist && state.checklistReason == normalizedReason) {
