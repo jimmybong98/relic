@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../../screens/main/components/side_menu.dart';
 import '../../../services/checklist_liberacao_service.dart';
 import '../../../services/machine_service.dart';
+
 import '../../../widgets/window_bar.dart';
 
 enum ChecklistAnswer { sim, nao, naoAplica }
@@ -206,6 +207,7 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
     super.initState();
     _carregarMaquinas();
   }
+
 
   @override
   void dispose() {
@@ -410,6 +412,7 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -565,6 +568,7 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                       ),
                     ],
                   ),
+
                 ),
               ),
             ),
