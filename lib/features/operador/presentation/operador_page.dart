@@ -755,11 +755,13 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         );
         final motivoLower = motivo.trim().toLowerCase();
         bool clearedRe = false;
+
         if (motivoLower == 'fim do turno' || motivoLower == 'fim de turno') {
           ref
               .read(sharedSearchFormProvider.notifier)
               .requireChecklist(reason: motivo);
           clearedRe = true;
+
         } else if (motivoLower == 'troca de ferramenta') {
           ref
               .read(sharedSearchFormProvider.notifier)
@@ -770,6 +772,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           setState(() {
             _reCtrl.clear();
           });
+          await _retornarAoMenuPrincipal();
         }
         if (motivoLower == 'fim do turno' || motivoLower == 'fim de turno') {
           await _retornarAoMenuPrincipal();
