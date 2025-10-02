@@ -754,24 +754,37 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           SnackBar(content: Text('Jornada pausada. Motivo: $motivo')),
         );
         final motivoLower = motivo.trim().toLowerCase();
+        final exigeChecklist =
+            motivoLower == 'fim do turno' ||
+            motivoLower == 'fim de turno' ||
+            motivoLower == 'troca de ferramenta';
         bool clearedRe = false;
-
-        if (motivoLower == 'fim do turno' || motivoLower == 'fim de turno') {
-          ref
-              .read(sharedSearchFormProvider.notifier)
-              .requireChecklist(reason: motivo);
-          clearedRe = true;
-
-        } else if (motivoLower == 'troca de ferramenta') {
-          ref
-              .read(sharedSearchFormProvider.notifier)
-              .requireChecklist(reason: motivo);
-          clearedRe = true;
+        if (exigeChecklist) {
+          final notifier = ref.read(sharedSearchFormProvider.notifier);
+          final categoriaAtual = _categoriaSel;
+          final maquinaAtual = _maquinaSelecionadaValida() ? _maquinaSel : null;
+          final manteveFluxoAtivo = notifier.beginFlow(
+            os: _osCtrl.text.trim(),
+            partNumber: _partCtrl.text.trim(),
+            operacao: _opCtrl.text.trim(),
+            categoria: categoriaAtual,
+            maquina: maquinaAtual,
+            process: SearchFlowProcess.amostragem,
+          );
+          if (manteveFluxoAtivo) {
+            notifier.requireChecklist(reason: motivo);
+            clearedRe = true;
+          } else {
+            _showFlowBlockedSnackBar(ref.read(sharedSearchFormProvider));
+          }
         }
         if (clearedRe) {
           setState(() {
             _reCtrl.clear();
           });
+          await _retornarAoMenuPrincipal();
+        }
+        if (motivoLower == 'fim do turno' || motivoLower == 'fim de turno') {
           await _retornarAoMenuPrincipal();
         }
         if (motivoLower == 'fim do turno' || motivoLower == 'fim de turno') {
@@ -1277,9 +1290,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                         FilteringTextInputFormatter.digitsOnly,
                                       ],
                                       readOnly: normalizedChecklistRe != null,
-                                      enabled: normalizedChecklistRe != null
-                                          ? true
-                                          : !flowLocked,
+                                      enabled: true,
                                       decoration: const InputDecoration(
                                         labelText:
                                             'R.E. do Preparador', // ajuste o texto se for Operador
