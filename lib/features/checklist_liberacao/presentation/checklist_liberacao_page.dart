@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -53,6 +54,8 @@ class ChecklistGroup {
   final String title;
   final List<ChecklistQuestion> questions;
 }
+
+const double _answerColumnWidth = 88;
 
 const List<ChecklistGroup> _checklistGroups = [
   ChecklistGroup(
@@ -134,7 +137,7 @@ const List<ChecklistGroup> _checklistGroups = [
       ChecklistQuestion(
         id: 'maquinas_itens_emergencia',
         text:
-            'Os itens de emergência (botão, seta, luz gira-gira) estão funcionando?',
+        'Os itens de emergência (botão, seta, luz gira-gira) estão funcionando?',
       ),
       ChecklistQuestion(
         id: 'maquinas_comandos_protecao',
@@ -157,7 +160,7 @@ const List<ChecklistGroup> _checklistGroups = [
       ChecklistQuestion(
         id: 'instrumentos_recursos',
         text:
-            'Todos os recursos de medição necessários estão disponíveis na máquina?',
+        'Todos os recursos de medição necessários estão disponíveis na máquina?',
       ),
       ChecklistQuestion(
         id: 'instrumentos_centesimal',
@@ -166,7 +169,7 @@ const List<ChecklistGroup> _checklistGroups = [
       ChecklistQuestion(
         id: 'instrumentos_milesimal',
         text:
-            'Para dispositivos com relógio milesimal está partindo do 0 com o padrão?',
+        'Para dispositivos com relógio milesimal está partindo do 0 com o padrão?',
       ),
       ChecklistQuestion(
         id: 'instrumentos_local_limpo',
@@ -276,101 +279,120 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
     final selectedAnswer = _answers[questionId];
     final isSelected = selectedAnswer == value;
 
-    return Center(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _atualizarResposta(questionId, value),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Radio<ChecklistAnswer>(
-                value: value,
-                groupValue: selectedAnswer,
-                onChanged: (answer) {
-                  if (answer != null) {
-                    _atualizarResposta(questionId, answer);
-                  }
-                },
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
-              ),
-              const SizedBox(height: 6),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                transitionBuilder: (child, animation) => ScaleTransition(
-                  scale: CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutBack,
-                  ),
-                  child: child,
-                ),
-                child: isSelected
-                    ? _buildAnswerFeedbackIcon(
-                        questionId: questionId,
-                        answer: value,
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: InkResponse(
+          onTap: () => _atualizarResposta(questionId, value),
+          customBorder: const CircleBorder(),
+          radius: 24,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            child: _buildAnswerIcon(
+              questionId: questionId,
+              answer: value,
+              isSelected: isSelected,
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildAnswerFeedbackIcon({
+  Widget _buildAnswerIcon({
     required String questionId,
     required ChecklistAnswer answer,
+    required bool isSelected,
   }) {
-    IconData iconData;
-    Color color;
+    final iconData = _iconDataForAnswer(answer);
+    final activeColor = _colorForAnswer(answer);
+    final inactiveColor = Colors.blueGrey.shade500;
 
-    switch (answer) {
-      case ChecklistAnswer.sim:
-        iconData = Icons.check_circle_rounded;
-        color = Colors.greenAccent.shade400;
-        break;
-      case ChecklistAnswer.nao:
-        iconData = Icons.cancel_rounded;
-        color = Colors.redAccent.shade200;
-        break;
-      case ChecklistAnswer.naoAplica:
-        iconData = Icons.help_center_rounded;
-        color = Colors.blueGrey.shade300;
-        break;
-    }
-
-    return Container(
+    return AnimatedContainer(
       key: ValueKey('${questionId}_${answer.name}'),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        boxShadow: [
+        boxShadow: isSelected
+            ? [
           BoxShadow(
-            color: color.withOpacity(0.45),
+            color: activeColor.withOpacity(0.4),
             blurRadius: 12,
-            spreadRadius: 2,
+            spreadRadius: 1,
           ),
-        ],
+        ]
+            : null,
       ),
-      padding: const EdgeInsets.all(2),
-      child: Icon(iconData, color: color, size: 26),
+      child: Icon(
+        iconData,
+        color: isSelected ? activeColor : inactiveColor,
+        size: 26,
+      ),
     );
   }
 
-  DataRow _buildQuestionRow(ChecklistQuestion question) {
-    return DataRow(
-      cells: [
-        DataCell(
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: Text(question.text),
-          ),
+  IconData _iconDataForAnswer(ChecklistAnswer answer) {
+    switch (answer) {
+      case ChecklistAnswer.sim:
+        return Icons.check_circle_rounded;
+      case ChecklistAnswer.nao:
+        return Icons.cancel_rounded;
+      case ChecklistAnswer.naoAplica:
+        return Icons.help_center_rounded;
+    }
+  }
+
+  Color _colorForAnswer(ChecklistAnswer answer) {
+    switch (answer) {
+      case ChecklistAnswer.sim:
+        return Colors.greenAccent.shade400;
+      case ChecklistAnswer.nao:
+        return Colors.redAccent.shade200;
+      case ChecklistAnswer.naoAplica:
+        return Colors.blueAccent.shade200;
+    }
+  }
+
+  TableRow _buildQuestionRow(ChecklistQuestion question) {
+    return TableRow(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Text(question.text),
         ),
-        DataCell(_buildRadioCell(question.id, ChecklistAnswer.sim)),
-        DataCell(_buildRadioCell(question.id, ChecklistAnswer.nao)),
-        DataCell(_buildRadioCell(question.id, ChecklistAnswer.naoAplica)),
+        _buildRadioCell(question.id, ChecklistAnswer.sim),
+        _buildRadioCell(question.id, ChecklistAnswer.nao),
+        _buildRadioCell(question.id, ChecklistAnswer.naoAplica),
+      ],
+    );
+  }
+
+  TableRow _buildHeaderRow(BuildContext context) {
+    final textStyle = Theme.of(context)
+        .textTheme
+        .labelLarge
+        ?.copyWith(fontWeight: FontWeight.w600);
+    return TableRow(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant,
+      ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Text('Pergunta', style: textStyle),
+        ),
+        for (final answer in ChecklistAnswer.values)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: Text(
+                answer.label,
+                style: textStyle,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -386,21 +408,41 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
           children: [
             Text(group.title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Pergunta')),
-                  DataColumn(label: Text('Sim')),
-                  DataColumn(label: Text('Não')),
-                  DataColumn(label: Text('N/A')),
-                ],
-                rows: group.questions.map(_buildQuestionRow).toList(),
-                headingRowColor: MaterialStateProperty.resolveWith(
-                  (states) => Theme.of(context).colorScheme.surfaceVariant,
+            SizedBox(
+              width: double.infinity,
+              child: Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(),
+                  1: FixedColumnWidth(_answerColumnWidth),
+                  2: FixedColumnWidth(_answerColumnWidth),
+                  3: FixedColumnWidth(_answerColumnWidth),
+                },
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                border: TableBorder(
+                  top: BorderSide(
+                    color: Theme.of(context).dividerColor.withOpacity(0.4),
+                  ),
+                  left: BorderSide(
+                    color: Theme.of(context).dividerColor.withOpacity(0.4),
+                  ),
+                  right: BorderSide(
+                    color: Theme.of(context).dividerColor.withOpacity(0.4),
+                  ),
+                  bottom: BorderSide(
+                    color: Theme.of(context).dividerColor.withOpacity(0.4),
+                  ),
+                  horizontalInside: BorderSide(
+                    color: Theme.of(context).dividerColor.withOpacity(0.2),
+                  ),
+                  verticalInside: BorderSide(
+                    color: Theme.of(context).dividerColor.withOpacity(0.2),
+                  ),
                 ),
-                horizontalMargin: 12,
-                columnSpacing: 24,
+                children: [
+                  _buildHeaderRow(context),
+                  for (final question in group.questions)
+                    _buildQuestionRow(question),
+                ],
               ),
             ),
           ],
@@ -490,6 +532,13 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth > 880;
+          final double availableWidth = math.max(
+            0,
+            math.min(constraints.maxWidth - 48, 1000),
+          );
+          final double fieldWidth = isWide
+              ? math.min((availableWidth - 48) / 3, 280)
+              : double.infinity;
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Center(
@@ -506,7 +555,7 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                         runSpacing: 16,
                         children: [
                           SizedBox(
-                            width: isWide ? 240 : double.infinity,
+                            width: isWide ? fieldWidth : null,
                             child: TextFormField(
                               controller: _reController,
                               decoration: const InputDecoration(
@@ -531,7 +580,7 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                             ),
                           ),
                           SizedBox(
-                            width: isWide ? 240 : double.infinity,
+                            width: isWide ? fieldWidth : null,
                             child: DropdownButtonFormField<String>(
                               value: _grupoSelecionado,
                               decoration: InputDecoration(
@@ -539,36 +588,36 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                                 border: const OutlineInputBorder(),
                                 suffixIcon: _loadingMaquinas
                                     ? const Padding(
-                                        padding: EdgeInsets.all(8),
-                                        child: SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                      )
+                                  padding: EdgeInsets.all(8),
+                                  child: SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
                                     : null,
                               ),
                               items: _grupos
                                   .map(
                                     (grupo) => DropdownMenuItem(
-                                      value: grupo,
-                                      child: Text(grupo),
-                                    ),
-                                  )
+                                  value: grupo,
+                                  child: Text(grupo),
+                                ),
+                              )
                                   .toList(),
                               onChanged: _loadingMaquinas
                                   ? null
                                   : (value) {
-                                      setState(() {
-                                        _grupoSelecionado = value;
-                                        _maquinaSelecionada = null;
-                                      });
-                                    },
+                                setState(() {
+                                  _grupoSelecionado = value;
+                                  _maquinaSelecionada = null;
+                                });
+                              },
                               validator: (value) {
                                 if ((_grupos.isNotEmpty ||
-                                        _grupoSelecionado != null) &&
+                                    _grupoSelecionado != null) &&
                                     (value == null || value.isEmpty)) {
                                   return 'Selecione um grupo de máquinas';
                                 }
@@ -577,7 +626,7 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                             ),
                           ),
                           SizedBox(
-                            width: isWide ? 240 : double.infinity,
+                            width: isWide ? fieldWidth : null,
                             child: DropdownButtonFormField<String>(
                               value: _maquinaSelecionada,
                               decoration: const InputDecoration(
@@ -587,18 +636,18 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                               items: _maquinasDisponiveis
                                   .map(
                                     (maquina) => DropdownMenuItem(
-                                      value: maquina,
-                                      child: Text(maquina),
-                                    ),
-                                  )
+                                  value: maquina,
+                                  child: Text(maquina),
+                                ),
+                              )
                                   .toList(),
                               onChanged: _maquinasDisponiveis.isEmpty
                                   ? null
                                   : (value) {
-                                      setState(
-                                        () => _maquinaSelecionada = value,
-                                      );
-                                    },
+                                setState(
+                                      () => _maquinaSelecionada = value,
+                                );
+                              },
                               validator: (value) {
                                 if (_maquinasDisponiveis.isEmpty) {
                                   return 'Selecione um grupo para listar as máquinas';
@@ -623,12 +672,12 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                           onPressed: _salvando ? null : _salvar,
                           icon: _salvando
                               ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
                               : const Icon(Icons.save_outlined),
                           label: Text(
                             _salvando ? 'Salvando...' : 'Salvar checklist',

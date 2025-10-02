@@ -160,7 +160,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
               // Logos flutuando sobre as bolhas (Opção 2)
                 Positioned(
                   top: isPhonePortrait ? 20 : 20,
-                  left: isPhonePortrait ? 15 : 20,
+                  left: isPhonePortrait ? 5 : 10,
                   child: IgnorePointer(
                     ignoring: true,
                     child: Opacity(
@@ -174,7 +174,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
                 ),
               Positioned(
                 right: isPhonePortrait ? 20 : 20,
-                bottom: isPhonePortrait ? 20 : 20,
+                bottom: isPhonePortrait ? 20 : 30,
                 child: IgnorePointer(
                   ignoring: true,
                   child: Opacity(
