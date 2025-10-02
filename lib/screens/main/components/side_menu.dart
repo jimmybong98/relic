@@ -17,6 +17,7 @@ import 'package:admin/features/login/login_page.dart';
 import 'package:admin/features/users/users_page.dart';
 import 'package:admin/services/auth_service.dart';
 import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
+import 'package:admin/features/checklist_liberacao/presentation/checklist_liberacao_page.dart';
 
 enum SideMenuSection { mainMenu, dashboard, preparador, operador, finalizar }
 
@@ -39,20 +40,20 @@ class SideMenu extends ConsumerWidget {
   }
 
   void _showFlowLockedMessage(
-      BuildContext context,
-      SharedSearchFormState shared,
-      ) {
+    BuildContext context,
+    SharedSearchFormState shared,
+  ) {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(_flowLockedMessage(shared))));
   }
 
   void _navigate(
-      BuildContext context,
-      WidgetRef ref,
-      Widget page, {
-        bool allowDuringActiveFlow = false,
-      }) {
+    BuildContext context,
+    WidgetRef ref,
+    Widget page, {
+    bool allowDuringActiveFlow = false,
+  }) {
     final navigator = Navigator.of(context, rootNavigator: true);
     final shared = ref.read(sharedSearchFormProvider);
     final hasActiveFlow = shared.isActive;
@@ -108,6 +109,11 @@ class SideMenu extends ConsumerWidget {
           title: 'Exportar relatórios',
           svgSrc: 'assets/icons/menu_doc.svg',
           press: () => _navigate(context, ref, const ExportRelatoriosPage()),
+        ),
+        DrawerListTile(
+          title: 'Checklist de liberação',
+          svgSrc: 'assets/icons/menu_task.svg',
+          press: () => _navigate(context, ref, const ChecklistLiberacaoPage()),
         ),
         DrawerListTile(
           title: 'Tempo por OS',
