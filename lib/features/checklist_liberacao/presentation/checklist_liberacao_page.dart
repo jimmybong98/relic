@@ -513,9 +513,7 @@ class _ChecklistLiberacaoPageState
         respostas: respostas,
       );
       if (!mounted) return;
-      ref
-          .read(sharedSearchFormProvider.notifier)
-          .completeChecklist(checklistRe: _reController.text.trim());
+      ref.read(sharedSearchFormProvider.notifier).completeChecklist();
       _showSnackBar('Checklist registrado com sucesso!', erro: false);
       setState(() {
         _answers.clear();
