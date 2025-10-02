@@ -1,12 +1,15 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../screens/main/components/side_menu.dart';
 import '../../../services/checklist_liberacao_service.dart';
 import '../../../services/machine_service.dart';
+import '../../shared/providers/search_flow_form_provider.dart';
 
 import '../../../widgets/window_bar.dart';
 
@@ -137,7 +140,7 @@ const List<ChecklistGroup> _checklistGroups = [
       ChecklistQuestion(
         id: 'maquinas_itens_emergencia',
         text:
-        'Os itens de emergência (botão, seta, luz gira-gira) estão funcionando?',
+            'Os itens de emergência (botão, seta, luz gira-gira) estão funcionando?',
       ),
       ChecklistQuestion(
         id: 'maquinas_comandos_protecao',
@@ -160,7 +163,7 @@ const List<ChecklistGroup> _checklistGroups = [
       ChecklistQuestion(
         id: 'instrumentos_recursos',
         text:
-        'Todos os recursos de medição necessários estão disponíveis na máquina?',
+            'Todos os recursos de medição necessários estão disponíveis na máquina?',
       ),
       ChecklistQuestion(
         id: 'instrumentos_centesimal',
@@ -169,7 +172,7 @@ const List<ChecklistGroup> _checklistGroups = [
       ChecklistQuestion(
         id: 'instrumentos_milesimal',
         text:
-        'Para dispositivos com relógio milesimal está partindo do 0 com o padrão?',
+            'Para dispositivos com relógio milesimal está partindo do 0 com o padrão?',
       ),
       ChecklistQuestion(
         id: 'instrumentos_local_limpo',
@@ -183,14 +186,16 @@ const List<ChecklistGroup> _checklistGroups = [
   ),
 ];
 
-class ChecklistLiberacaoPage extends StatefulWidget {
+class ChecklistLiberacaoPage extends ConsumerStatefulWidget {
   const ChecklistLiberacaoPage({super.key});
 
   @override
-  State<ChecklistLiberacaoPage> createState() => _ChecklistLiberacaoPageState();
+  ConsumerState<ChecklistLiberacaoPage> createState() =>
+      _ChecklistLiberacaoPageState();
 }
 
-class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
+class _ChecklistLiberacaoPageState
+    extends ConsumerState<ChecklistLiberacaoPage> {
   final _formKey = GlobalKey<FormState>();
   final _reController = TextEditingController();
   final Map<String, ChecklistAnswer?> _answers = {};
@@ -260,6 +265,16 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
     }
   }
 
+  Future<void> _voltarParaMenuPrincipal() async {
+    if (!mounted) return;
+    await Future.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).popUntil((route) => route.isFirst);
+  }
+
   void _showSnackBar(String message, {bool erro = true}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -317,12 +332,12 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
         shape: BoxShape.circle,
         boxShadow: isSelected
             ? [
-          BoxShadow(
-            color: activeColor.withOpacity(0.4),
-            blurRadius: 12,
-            spreadRadius: 1,
-          ),
-        ]
+                BoxShadow(
+                  color: activeColor.withOpacity(0.4),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ]
             : null,
       ),
       child: Icon(
@@ -370,10 +385,9 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
   }
 
   TableRow _buildHeaderRow(BuildContext context) {
-    final textStyle = Theme.of(context)
-        .textTheme
-        .labelLarge
-        ?.copyWith(fontWeight: FontWeight.w600);
+    final textStyle = Theme.of(
+      context,
+    ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600);
     return TableRow(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceVariant,
@@ -386,12 +400,7 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
         for (final answer in ChecklistAnswer.values)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Center(
-              child: Text(
-                answer.label,
-                style: textStyle,
-              ),
-            ),
+            child: Center(child: Text(answer.label, style: textStyle)),
           ),
       ],
     );
@@ -504,6 +513,9 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
         respostas: respostas,
       );
       if (!mounted) return;
+      ref
+          .read(sharedSearchFormProvider.notifier)
+          .completeChecklist(checklistRe: _reController.text.trim());
       _showSnackBar('Checklist registrado com sucesso!', erro: false);
       setState(() {
         _answers.clear();
@@ -513,6 +525,7 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
         _autovalidateMode = AutovalidateMode.disabled;
       });
       form.reset();
+      unawaited(_voltarParaMenuPrincipal());
     } catch (error) {
       if (!mounted) return;
       final message = error.toString().replaceFirst('Exception: ', '');
@@ -588,36 +601,36 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                                 border: const OutlineInputBorder(),
                                 suffixIcon: _loadingMaquinas
                                     ? const Padding(
-                                  padding: EdgeInsets.all(8),
-                                  child: SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                )
+                                        padding: EdgeInsets.all(8),
+                                        child: SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      )
                                     : null,
                               ),
                               items: _grupos
                                   .map(
                                     (grupo) => DropdownMenuItem(
-                                  value: grupo,
-                                  child: Text(grupo),
-                                ),
-                              )
+                                      value: grupo,
+                                      child: Text(grupo),
+                                    ),
+                                  )
                                   .toList(),
                               onChanged: _loadingMaquinas
                                   ? null
                                   : (value) {
-                                setState(() {
-                                  _grupoSelecionado = value;
-                                  _maquinaSelecionada = null;
-                                });
-                              },
+                                      setState(() {
+                                        _grupoSelecionado = value;
+                                        _maquinaSelecionada = null;
+                                      });
+                                    },
                               validator: (value) {
                                 if ((_grupos.isNotEmpty ||
-                                    _grupoSelecionado != null) &&
+                                        _grupoSelecionado != null) &&
                                     (value == null || value.isEmpty)) {
                                   return 'Selecione um grupo de máquinas';
                                 }
@@ -636,18 +649,18 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                               items: _maquinasDisponiveis
                                   .map(
                                     (maquina) => DropdownMenuItem(
-                                  value: maquina,
-                                  child: Text(maquina),
-                                ),
-                              )
+                                      value: maquina,
+                                      child: Text(maquina),
+                                    ),
+                                  )
                                   .toList(),
                               onChanged: _maquinasDisponiveis.isEmpty
                                   ? null
                                   : (value) {
-                                setState(
-                                      () => _maquinaSelecionada = value,
-                                );
-                              },
+                                      setState(
+                                        () => _maquinaSelecionada = value,
+                                      );
+                                    },
                               validator: (value) {
                                 if (_maquinasDisponiveis.isEmpty) {
                                   return 'Selecione um grupo para listar as máquinas';
@@ -672,12 +685,12 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                           onPressed: _salvando ? null : _salvar,
                           icon: _salvando
                               ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
-                          )
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : const Icon(Icons.save_outlined),
                           label: Text(
                             _salvando ? 'Salvando...' : 'Salvar checklist',

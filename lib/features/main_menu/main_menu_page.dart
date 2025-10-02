@@ -30,9 +30,26 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
   Widget build(BuildContext context) {
     void showFlowLockedMessage(SharedSearchFormState shared) {
       final osAtual = shared.os.trim();
-      final mensagem = osAtual.isEmpty
-          ? 'Finalize a O.S. em andamento antes de iniciar outra.'
-          : 'Finalize a O.S. $osAtual antes de iniciar outra.';
+      String mensagem;
+      if (shared.requiresChecklist) {
+        final motivo = (shared.checklistReason ?? '').trim();
+        final buffer = StringBuffer('Checklist inicial pendente');
+        if (osAtual.isNotEmpty) {
+          buffer.write(' para a O.S. $osAtual');
+        }
+        buffer.write('.');
+        if (motivo.isNotEmpty) {
+          buffer.write(' Motivo: $motivo.');
+        }
+        buffer.write(
+          ' Preencha o checklist inicial antes de retomar a amostragem.',
+        );
+        mensagem = buffer.toString();
+      } else {
+        mensagem = osAtual.isEmpty
+            ? 'Finalize a O.S. em andamento antes de iniciar outra.'
+            : 'Finalize a O.S. $osAtual antes de iniciar outra.';
+      }
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
         ..showSnackBar(SnackBar(content: Text(mensagem)));
@@ -95,7 +112,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'FOR07',
         description:
-        'Organize recursos, prepare itens e acompanhe o fluxo inicial.',
+            'Organize recursos, prepare itens e acompanhe o fluxo inicial.',
         iconAsset: 'assets/icons/FOR007.svg',
         accentColor: primaryColor,
         onTap: () => openFlowPage(const PreparacaoPage()),
@@ -103,7 +120,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'FOR09-14',
         description:
-        'Registre atividades de produção e mantenha o time sincronizado.',
+            'Registre atividades de produção e mantenha o time sincronizado.',
         iconAsset: 'assets/icons/Amostragem.svg',
         accentColor: const Color(0xFFF6A560),
         onTap: () => openFlowPage(const OperadorPage()),
@@ -118,7 +135,7 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
       _MenuEntry(
         title: 'Área de supervisão',
         description:
-        'Realize cadastros, visualize indicadores e relatórios estratégicos em tempo real.',
+            'Realize cadastros, visualize indicadores e relatórios estratégicos em tempo real.',
         iconAsset: 'assets/icons/Dashboard.svg',
         accentColor: accentColor,
         onTap: () => openAdmin(),
@@ -158,20 +175,20 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
               ),
 
               // Logos flutuando sobre as bolhas (Opção 2)
-                Positioned(
-                  top: isPhonePortrait ? 20 : 20,
-                  left: isPhonePortrait ? 5 : 10,
-                  child: IgnorePointer(
-                    ignoring: true,
-                    child: Opacity(
-                      opacity: 1,
-                      child: Image.asset(
-                        'assets/images/logotuptech1.png',
-                        width: isTabletWidth ? 150 : 150,
-                      ),
+              Positioned(
+                top: isPhonePortrait ? 20 : 20,
+                left: isPhonePortrait ? 5 : 10,
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: Opacity(
+                    opacity: 1,
+                    child: Image.asset(
+                      'assets/images/logotuptech1.png',
+                      width: isTabletWidth ? 150 : 150,
                     ),
                   ),
                 ),
+              ),
               Positioned(
                 right: isPhonePortrait ? 20 : 20,
                 bottom: isPhonePortrait ? 20 : 30,
@@ -273,10 +290,10 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
   }
 
   Widget _buildIntroSection(
-      ThemeData theme, {
-        bool forceCenter = false,
-        bool showSubtitle = true,
-      }) {
+    ThemeData theme, {
+    bool forceCenter = false,
+    bool showSubtitle = true,
+  }) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final shouldCenter = forceCenter || constraints.maxWidth < 500;
@@ -451,7 +468,8 @@ class _MenuGrid extends StatelessWidget {
                   isCompact: forceColumn,
                   density: density,
                   minDensityFloor: minDensity,
-                  hideDescription: alwaysHideDescriptions ||
+                  hideDescription:
+                      alwaysHideDescriptions ||
                       (hideDescriptionsWhenTight &&
                           density <= minDensity + 0.04),
                 ),
@@ -471,10 +489,10 @@ class _MenuGrid extends StatelessWidget {
           children: entries
               .map(
                 (entry) => _MenuCard(
-              entry: entry,
-              maxWidth: cardWidth.clamp(260.0, 360.0).toDouble(),
-            ),
-          )
+                  entry: entry,
+                  maxWidth: cardWidth.clamp(260.0, 360.0).toDouble(),
+                ),
+              )
               .toList(),
         );
       },
@@ -568,9 +586,9 @@ class _MenuCardState extends State<_MenuCard> {
             duration: const Duration(milliseconds: 220),
             constraints: widget.minHeight != null
                 ? BoxConstraints(
-              minHeight: widget.minHeight!,
-              maxHeight: widget.minHeight!,
-            )
+                    minHeight: widget.minHeight!,
+                    maxHeight: widget.minHeight!,
+                  )
                 : const BoxConstraints(),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
@@ -581,13 +599,13 @@ class _MenuCardState extends State<_MenuCard> {
               ),
               gradient: _hovering
                   ? LinearGradient(
-                colors: [
-                  accent.withOpacity(0.22),
-                  theme.colorScheme.surface.withOpacity(0.85),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
+                      colors: [
+                        accent.withOpacity(0.22),
+                        theme.colorScheme.surface.withOpacity(0.85),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
                   : null,
               color: _hovering
                   ? null

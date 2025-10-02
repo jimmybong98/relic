@@ -244,6 +244,20 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     SharedSearchFormState? previous,
     SharedSearchFormState next,
   ) {
+    final previousChecklistRe = previous?.normalizedChecklistRe;
+    final nextChecklistRe = next.normalizedChecklistRe;
+
+    if (previousChecklistRe != nextChecklistRe) {
+      final target = nextChecklistRe ?? '';
+      if (target.isEmpty) {
+        if (_reCtrl.text.trim().isNotEmpty) {
+          _reCtrl.text = '';
+        }
+      } else if (_reCtrl.text.trim() != target) {
+        _reCtrl.text = target;
+      }
+    }
+
     if (!next.isActive ||
         next.effectiveProcess != SearchFlowProcess.amostragem) {
       _activeAmostragemFlow = null;
@@ -505,6 +519,48 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     ).showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
+  void _showChecklistRequiredSnackBar(SharedSearchFormState shared) {
+    if (!mounted) return;
+    final osAtual = shared.os.trim();
+    final motivo = (shared.checklistReason ?? '').trim();
+    final buffer = StringBuffer('Checklist inicial pendente');
+    if (osAtual.isNotEmpty) {
+      buffer.write(' para a O.S. $osAtual');
+    }
+    buffer.write('.');
+    if (motivo.isNotEmpty) {
+      buffer.write(' Motivo: $motivo.');
+    }
+    buffer.write(' Preencha o checklist antes de retomar a amostragem.');
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(buffer.toString())));
+  }
+
+  bool _ensureChecklistReMatches(
+    SharedSearchFormState flow, {
+    bool showSnackBar = true,
+  }) {
+    final expected = flow.normalizedChecklistRe;
+    if (expected == null || expected.isEmpty) {
+      return true;
+    }
+    final current = _reCtrl.text.trim();
+    if (current == expected) {
+      return true;
+    }
+    if (!mounted) return false;
+    if (showSnackBar) {
+      final message =
+          'Utilize o R.E. $expected informado no checklist inicial para retomar a amostragem.';
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    }
+    FocusScope.of(context).requestFocus(_reFocusNode);
+    return false;
+  }
+
   bool _ensureFlowConsistency() {
     final shared = ref.read(sharedSearchFormProvider);
     if (_flowMatchesCurrentForm(shared)) {
@@ -512,6 +568,16 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
     _showFlowBlockedSnackBar(shared);
     return false;
+  }
+
+  Future<void> _retornarAoMenuPrincipal() async {
+    if (!mounted) return;
+    await Future.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).popUntil((route) => route.isFirst);
   }
 
   @override
@@ -544,6 +610,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           content: Text('Preencha RE, O.S. e máquina para registrar.'),
         ),
       );
+      return;
+    }
+
+    if (!_ensureChecklistReMatches(ref.read(sharedSearchFormProvider))) {
       return;
     }
 
@@ -683,10 +753,26 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Jornada pausada. Motivo: $motivo')),
         );
-        if (motivo == 'Fim do Turno') {
+        final motivoLower = motivo.trim().toLowerCase();
+        bool clearedRe = false;
+        if (motivoLower == 'fim do turno' || motivoLower == 'fim de turno') {
+          ref
+              .read(sharedSearchFormProvider.notifier)
+              .requireChecklist(reason: motivo);
+          clearedRe = true;
+        } else if (motivoLower == 'troca de ferramenta') {
+          ref
+              .read(sharedSearchFormProvider.notifier)
+              .requireChecklist(reason: motivo);
+          clearedRe = true;
+        }
+        if (clearedRe) {
           setState(() {
             _reCtrl.clear();
           });
+        }
+        if (motivoLower == 'fim do turno' || motivoLower == 'fim de turno') {
+          await _retornarAoMenuPrincipal();
         }
         return true;
       } else {
@@ -738,6 +824,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
             ),
           ),
         );
+        await _retornarAoMenuPrincipal();
       } else {
         String mensagem = 'Falha: ${resp.statusCode} ${resp.body}';
         try {
@@ -1007,8 +1094,34 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         : null;
     final flowState = ref.watch(sharedSearchFormProvider);
     final flowLocked = flowState.isActive;
+    final requiresChecklist = flowState.requiresChecklist;
+    final checklistReason = (flowState.checklistReason ?? '').trim();
     final flowProcessName = flowState.processDisplayName;
     final flowOs = flowState.os.trim();
+    final normalizedChecklistRe = flowState.normalizedChecklistRe;
+    String? lockMessage;
+    IconData lockIcon = Icons.lock;
+    if (flowLocked) {
+      if (requiresChecklist) {
+        final buffer = StringBuffer('Checklist inicial pendente');
+        if (flowOs.isNotEmpty) {
+          buffer.write(' para a O.S. $flowOs');
+        }
+        buffer.write('.');
+        if (checklistReason.isNotEmpty) {
+          buffer.write(' Motivo: $checklistReason.');
+        }
+        buffer.write(
+          ' Abra o menu principal e preencha o checklist antes de retomar a amostragem.',
+        );
+        lockMessage = buffer.toString();
+        lockIcon = Icons.fact_check;
+      } else {
+        lockMessage = flowOs.isEmpty
+            ? 'Existe um fluxo de $flowProcessName em andamento. Finalize a O.S. atual para iniciar outra.'
+            : 'Fluxo de $flowProcessName ativo para a O.S. $flowOs. Finalize a O.S. atual para iniciar outra.';
+      }
+    }
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final actionBottomPadding = bottomInset > 0 ? bottomInset + 16.0 : 16.0;
     final reOk = _reCtrl.text.trim().isNotEmpty;
@@ -1050,7 +1163,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         osOk &&
         maquinaOk &&
         todasRespondidas &&
-        !_registrando;
+        !_registrando &&
+        !requiresChecklist &&
+        (normalizedChecklistRe == null ||
+            normalizedChecklistRe == _reCtrl.text.trim());
 
     return Scaffold(
       appBar: WindowBar(
@@ -1084,7 +1200,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (flowLocked)
+                      if (lockMessage != null)
                         Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(12),
@@ -1098,16 +1214,14 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Icon(
-                                Icons.lock,
+                                lockIcon,
                                 size: 18,
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  flowOs.isEmpty
-                                      ? 'Existe um fluxo de $flowProcessName em andamento. Finalize a O.S. atual para iniciar outra.'
-                                      : 'Fluxo de $flowProcessName ativo para a O.S. $flowOs. Finalize a O.S. atual para iniciar outra.',
+                                  lockMessage!,
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ),
@@ -1159,6 +1273,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                       inputFormatters: [
                                         FilteringTextInputFormatter.digitsOnly,
                                       ],
+                                      readOnly: normalizedChecklistRe != null,
+                                      enabled: normalizedChecklistRe != null
+                                          ? true
+                                          : !flowLocked,
                                       decoration: const InputDecoration(
                                         labelText:
                                             'R.E. do Preparador', // ajuste o texto se for Operador
@@ -1357,6 +1475,13 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                 width: double.infinity,
                                 child: FilledButton.icon(
                                   onPressed: () async {
+                                    if (requiresChecklist) {
+                                      _showChecklistRequiredSnackBar(flowState);
+                                      return;
+                                    }
+                                    if (!_ensureChecklistReMatches(flowState)) {
+                                      return;
+                                    }
                                     if (_formKey.currentState!.validate()) {
                                       if (!_ensureFlowConsistency()) return;
                                       FocusScope.of(context).unfocus();
@@ -1374,9 +1499,33 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
                                               _opCtrl.text,
                                             ),
                                           );
-                                      if (mounted) {
-                                        setState(() => _mostrarResumo = true);
+                                      if (!mounted) return;
+                                      final asyncMedidas = ref.read(
+                                        medidasOperadorControllerProvider,
+                                      );
+                                      if (!asyncMedidas.hasValue) {
+                                        return;
                                       }
+                                      final iniciouFluxo = ref
+                                          .read(
+                                            sharedSearchFormProvider.notifier,
+                                          )
+                                          .beginFlow(
+                                            os: _osCtrl.text.trim(),
+                                            partNumber: _partCtrl.text.trim(),
+                                            operacao: _opCtrl.text.trim(),
+                                            categoria: categoriaValue,
+                                            maquina: maquinaValue,
+                                            process:
+                                                SearchFlowProcess.amostragem,
+                                          );
+                                      if (!iniciouFluxo) {
+                                        _showFlowBlockedSnackBar(
+                                          ref.read(sharedSearchFormProvider),
+                                        );
+                                        return;
+                                      }
+                                      setState(() => _mostrarResumo = true);
                                     }
                                   },
                                   icon: const Icon(Icons.search),
