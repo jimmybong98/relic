@@ -1469,6 +1469,12 @@ def resultado_preparador():
                         ),
                     )
 
+                novo_status_os = "liberada" if all_ok else "aberta"
+                cur.execute(
+                    "UPDATE ordem_servico SET status=%s WHERE os=%s",
+                    (novo_status_os, os_num),
+                )
+
                 if contexto_tipo == "troca_ferramenta":
                     cur.execute(
                         """
@@ -2012,6 +2018,30 @@ def _registrar_pausa_operador(
         (os_num, part or None, op or None, re_op, motivo or None),
     )
 
+    motivo_norm = (motivo or "").strip().lower()
+    if motivo_norm in {
+        "troca de os",
+        "troca_os",
+        "troca os",
+        "fim do turno",
+        "fim de turno",
+    }:
+        cur.execute(
+            "UPDATE ordem_servico SET status=%s WHERE os=%s",
+            ("pausada", os_num),
+        )
+        cur.execute(
+            """
+            UPDATE preparador_liberacao
+               SET status_geral=%s
+             WHERE os=%s
+               AND LOWER(COALESCE(status_geral, '')) IN (
+                   'liberada', 'liberado', 'ok', 'aprovada', 'aprovado'
+               )
+            """,
+            ("Pausada", os_num),
+        )
+
 
 @app.route("/operador/fim_jornada", methods=["POST"])
 def operador_fim_jornada():
@@ -2061,6 +2091,12 @@ def operador_troca_os():
                             }),
                             409,
                         )
+
+                cur.execute(
+                    "INSERT INTO ordem_servico (os) VALUES (%s)"
+                    " ON DUPLICATE KEY UPDATE os = VALUES(os)",
+                    (os_num,),
+                )
 
                 _registrar_pausa_operador(cur, os_num, re_op, part, op, motivo)
                 cur.execute(
