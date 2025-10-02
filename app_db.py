@@ -2062,6 +2062,12 @@ def operador_troca_os():
                             409,
                         )
 
+                cur.execute(
+                    "INSERT INTO ordem_servico (os) VALUES (%s)"
+                    " ON DUPLICATE KEY UPDATE os = VALUES(os)",
+                    (os_num,),
+                )
+
                 _registrar_pausa_operador(cur, os_num, re_op, part, op, motivo)
                 cur.execute(
                     "UPDATE ordem_servico SET status=%s WHERE os=%s",
