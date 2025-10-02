@@ -670,6 +670,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       'os': _osCtrl.text.trim(),
       'partnumber': normalizeCode(_partCtrl.text),
       'operacao': normalizeCode(_opCtrl.text),
+      'maquina': _maquinaSel,
       'motivo': motivo, // Adiciona o motivo selecionado
     });
 
