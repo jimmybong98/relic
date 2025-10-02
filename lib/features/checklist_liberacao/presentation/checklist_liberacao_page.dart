@@ -277,89 +277,76 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
     final isSelected = selectedAnswer == value;
 
     return Center(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+      child: InkResponse(
         onTap: () => _atualizarResposta(questionId, value),
+        customBorder: const CircleBorder(),
+        radius: 24,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Radio<ChecklistAnswer>(
-                value: value,
-                groupValue: selectedAnswer,
-                onChanged: (answer) {
-                  if (answer != null) {
-                    _atualizarResposta(questionId, answer);
-                  }
-                },
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
-              ),
-              const SizedBox(height: 6),
-              SizedBox(
-                height: 28,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  transitionBuilder: (child, animation) => ScaleTransition(
-                    scale: CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutBack,
-                    ),
-                    child: child,
-                  ),
-                  child: isSelected
-                      ? _buildAnswerFeedbackIcon(
-                          questionId: questionId,
-                          answer: value,
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ),
-            ],
+          child: _buildAnswerIcon(
+            questionId: questionId,
+            answer: value,
+            isSelected: isSelected,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildAnswerFeedbackIcon({
+  Widget _buildAnswerIcon({
     required String questionId,
     required ChecklistAnswer answer,
+    required bool isSelected,
   }) {
-    IconData iconData;
-    Color color;
+    final iconData = _iconDataForAnswer(answer);
+    final activeColor = _colorForAnswer(answer);
+    final inactiveColor = Colors.blueGrey.shade500;
 
-    switch (answer) {
-      case ChecklistAnswer.sim:
-        iconData = Icons.check_circle_rounded;
-        color = Colors.greenAccent.shade400;
-        break;
-      case ChecklistAnswer.nao:
-        iconData = Icons.cancel_rounded;
-        color = Colors.redAccent.shade200;
-        break;
-      case ChecklistAnswer.naoAplica:
-        iconData = Icons.help_center_rounded;
-        color = Colors.blueGrey.shade300;
-        break;
-    }
-
-    return Container(
+    return AnimatedContainer(
       key: ValueKey('${questionId}_${answer.name}'),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.45),
-            blurRadius: 12,
-            spreadRadius: 2,
-          ),
-        ],
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: activeColor.withOpacity(0.4),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
       ),
-      padding: const EdgeInsets.all(2),
-      child: Icon(iconData, color: color, size: 24),
+      child: Icon(
+        iconData,
+        color: isSelected ? activeColor : inactiveColor,
+        size: 26,
+      ),
     );
+  }
+
+  IconData _iconDataForAnswer(ChecklistAnswer answer) {
+    switch (answer) {
+      case ChecklistAnswer.sim:
+        return Icons.check_circle_rounded;
+      case ChecklistAnswer.nao:
+        return Icons.cancel_rounded;
+      case ChecklistAnswer.naoAplica:
+        return Icons.help_center_rounded;
+    }
+  }
+
+  Color _colorForAnswer(ChecklistAnswer answer) {
+    switch (answer) {
+      case ChecklistAnswer.sim:
+        return Colors.greenAccent.shade400;
+      case ChecklistAnswer.nao:
+        return Colors.redAccent.shade200;
+      case ChecklistAnswer.naoAplica:
+        return Colors.blueAccent.shade200;
+    }
   }
 
   DataRow _buildQuestionRow(ChecklistQuestion question) {
@@ -404,8 +391,8 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                 ),
                 horizontalMargin: 12,
                 columnSpacing: 24,
-                dataRowMinHeight: 76,
-                dataRowMaxHeight: 86,
+                dataRowMinHeight: 64,
+                dataRowMaxHeight: 72,
               ),
             ),
           ],
