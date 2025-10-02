@@ -2134,6 +2134,30 @@ def _registrar_pausa_operador(
             """,
             ("Pausada", os_num),
         )
+    elif motivo_norm in {
+        "fim do turno",
+        "fim_de_turno",
+        "fim de turno",
+        "fim turno",
+    }:
+        cur.execute(
+            """
+            UPDATE ordem_servico
+               SET status=%s
+             WHERE os=%s
+               AND LOWER(COALESCE(status, ''))='pausada'
+            """,
+            ("liberada", os_num),
+        )
+        cur.execute(
+            """
+            UPDATE preparador_liberacao
+               SET status_geral=%s
+             WHERE os=%s
+               AND LOWER(COALESCE(status_geral, '')) IN ('pausada', 'pausado')
+            """,
+            ("Liberada", os_num),
+        )
 
 
 @app.route("/operador/fim_jornada", methods=["POST"])
