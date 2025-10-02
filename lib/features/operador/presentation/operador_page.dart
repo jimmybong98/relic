@@ -695,10 +695,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         );
         if (motivo == 'Fim do Turno') {
           ref.read(sharedSearchFormProvider.notifier).clear();
-          unawaited(_retornarAoMenuPrincipal());
           setState(() {
             _reCtrl.clear();
           });
+          await _retornarAoMenuPrincipal();
         }
         return true;
       } else {
@@ -750,7 +750,8 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
             ),
           ),
         );
-        unawaited(_retornarAoMenuPrincipal());
+        await _retornarAoMenuPrincipal();
+
       } else {
         String mensagem = 'Falha: ${resp.statusCode} ${resp.body}';
         try {
