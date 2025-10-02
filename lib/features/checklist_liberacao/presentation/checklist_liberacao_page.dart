@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -482,6 +483,13 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth > 880;
+          final double availableWidth = math.max(
+            0,
+            math.min(constraints.maxWidth - 48, 1000),
+          );
+          final double fieldWidth = isWide
+              ? math.min((availableWidth - 48) / 3, 280)
+              : double.infinity;
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Center(
@@ -498,7 +506,7 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                         runSpacing: 16,
                         children: [
                           SizedBox(
-                            width: isWide ? 240 : double.infinity,
+                            width: isWide ? fieldWidth : null,
                             child: TextFormField(
                               controller: _reController,
                               decoration: const InputDecoration(
@@ -523,7 +531,7 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                             ),
                           ),
                           SizedBox(
-                            width: isWide ? 240 : double.infinity,
+                            width: isWide ? fieldWidth : null,
                             child: DropdownButtonFormField<String>(
                               value: _grupoSelecionado,
                               decoration: InputDecoration(
@@ -569,7 +577,7 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                             ),
                           ),
                           SizedBox(
-                            width: isWide ? 240 : double.infinity,
+                            width: isWide ? fieldWidth : null,
                             child: DropdownButtonFormField<String>(
                               value: _maquinaSelecionada,
                               decoration: const InputDecoration(
