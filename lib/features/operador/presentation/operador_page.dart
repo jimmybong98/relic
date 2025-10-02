@@ -751,6 +751,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           ),
         );
         await _retornarAoMenuPrincipal();
+
       } else {
         String mensagem = 'Falha: ${resp.statusCode} ${resp.body}';
         try {
