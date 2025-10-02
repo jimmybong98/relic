@@ -113,7 +113,12 @@ class SideMenu extends ConsumerWidget {
         DrawerListTile(
           title: 'Checklist de liberação',
           svgSrc: 'assets/icons/menu_task.svg',
-          press: () => _navigate(context, ref, const ChecklistLiberacaoPage()),
+          press: () => _navigate(
+            context,
+            ref,
+            const ChecklistLiberacaoPage(),
+            allowDuringActiveFlow: true,
+          ),
         ),
         DrawerListTile(
           title: 'Tempo por OS',
