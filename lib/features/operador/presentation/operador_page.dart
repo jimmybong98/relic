@@ -694,6 +694,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           SnackBar(content: Text('Jornada pausada. Motivo: $motivo')),
         );
         if (motivo == 'Fim do Turno') {
+          ref.read(sharedSearchFormProvider.notifier).clear();
           setState(() {
             _reCtrl.clear();
           });
