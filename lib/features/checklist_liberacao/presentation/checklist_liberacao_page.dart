@@ -208,7 +208,6 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
     _carregarMaquinas();
   }
 
-
   @override
   void dispose() {
     _reController.dispose();
@@ -274,18 +273,89 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
   }
 
   Widget _buildRadioCell(String questionId, ChecklistAnswer value) {
+    final selectedAnswer = _answers[questionId];
+    final isSelected = selectedAnswer == value;
+
     return Center(
-      child: Radio<ChecklistAnswer>(
-        value: value,
-        groupValue: _answers[questionId],
-        onChanged: (answer) {
-          if (answer != null) {
-            _atualizarResposta(questionId, answer);
-          }
-        },
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _atualizarResposta(questionId, value),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Radio<ChecklistAnswer>(
+                value: value,
+                groupValue: selectedAnswer,
+                onChanged: (answer) {
+                  if (answer != null) {
+                    _atualizarResposta(questionId, answer);
+                  }
+                },
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+              const SizedBox(height: 6),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                transitionBuilder: (child, animation) => ScaleTransition(
+                  scale: CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutBack,
+                  ),
+                  child: child,
+                ),
+                child: isSelected
+                    ? _buildAnswerFeedbackIcon(
+                        questionId: questionId,
+                        answer: value,
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildAnswerFeedbackIcon({
+    required String questionId,
+    required ChecklistAnswer answer,
+  }) {
+    IconData iconData;
+    Color color;
+
+    switch (answer) {
+      case ChecklistAnswer.sim:
+        iconData = Icons.check_circle_rounded;
+        color = Colors.greenAccent.shade400;
+        break;
+      case ChecklistAnswer.nao:
+        iconData = Icons.cancel_rounded;
+        color = Colors.redAccent.shade200;
+        break;
+      case ChecklistAnswer.naoAplica:
+        iconData = Icons.help_center_rounded;
+        color = Colors.blueGrey.shade300;
+        break;
+    }
+
+    return Container(
+      key: ValueKey('${questionId}_${answer.name}'),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.45),
+            blurRadius: 12,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Icon(iconData, color: color, size: 26),
     );
   }
 
@@ -411,7 +481,6 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -568,7 +637,6 @@ class _ChecklistLiberacaoPageState extends State<ChecklistLiberacaoPage> {
                       ),
                     ],
                   ),
-
                 ),
               ),
             ),
