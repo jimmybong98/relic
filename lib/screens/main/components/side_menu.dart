@@ -184,12 +184,12 @@ class SideMenu extends ConsumerWidget {
       case SideMenuSection.preparador:
         items.addAll([
           DrawerListTile(
-            title: 'Operador',
+            title: 'Amostragem',
             svgSrc: 'assets/icons/menu_profile.svg',
             press: () => _navigate(context, ref, const OperadorPage()),
           ),
           DrawerListTile(
-            title: 'Finalizar OS',
+            title: 'Finalização de OS',
             svgSrc: 'assets/icons/menu_doc.svg',
             press: () => _navigate(context, ref, const FinalizarOsPage()),
           ),
@@ -198,12 +198,12 @@ class SideMenu extends ConsumerWidget {
       case SideMenuSection.operador:
         items.addAll([
           DrawerListTile(
-            title: 'Preparador',
+            title: 'Liberação de máquina',
             svgSrc: 'assets/icons/menu_setting.svg',
             press: () => _navigate(context, ref, const PreparacaoPage()),
           ),
           DrawerListTile(
-            title: 'Finalizar OS',
+            title: 'Finalização de OS',
             svgSrc: 'assets/icons/menu_doc.svg',
             press: () => _navigate(context, ref, const FinalizarOsPage()),
           ),
@@ -212,12 +212,12 @@ class SideMenu extends ConsumerWidget {
       case SideMenuSection.finalizar:
         items.addAll([
           DrawerListTile(
-            title: 'Preparador',
+            title: 'Liberação de máquina',
             svgSrc: 'assets/icons/menu_setting.svg',
             press: () => _navigate(context, ref, const PreparacaoPage()),
           ),
           DrawerListTile(
-            title: 'Operador',
+            title: 'Amostragem',
             svgSrc: 'assets/icons/menu_profile.svg',
             press: () => _navigate(context, ref, const OperadorPage()),
           ),
@@ -226,17 +226,17 @@ class SideMenu extends ConsumerWidget {
       case SideMenuSection.mainMenu:
         items.addAll([
           DrawerListTile(
-            title: 'Preparador',
+            title: 'Liberação de máquina',
             svgSrc: 'assets/icons/menu_setting.svg',
             press: () => _navigate(context, ref, const PreparacaoPage()),
           ),
           DrawerListTile(
-            title: 'Operador',
+            title: 'Amostragem',
             svgSrc: 'assets/icons/menu_profile.svg',
             press: () => _navigate(context, ref, const OperadorPage()),
           ),
           DrawerListTile(
-            title: 'Finalizar OS',
+            title: 'Finalização de OS',
             svgSrc: 'assets/icons/menu_doc.svg',
             press: () => _navigate(context, ref, const FinalizarOsPage()),
           ),
@@ -274,12 +274,12 @@ class SideMenu extends ConsumerWidget {
         items.addAll([
           DrawerListTile(
             title: 'Liberação de máquina',
-            svgSrc: 'assets/icons/liberacao.svg',
-            press: () => Navigator.of(context).pop(),
+            svgSrc: 'assets/icons/menu_setting.svg',
+            press: () => _navigate(context, ref, const PreparacaoPage()),
           ),
           DrawerListTile(
             title: 'Amostragem',
-            svgSrc: 'assets/icons/Amostragem.svg',
+            svgSrc: 'assets/icons/menu_profile.svg',
             press: () => _navigate(context, ref, const OperadorPage()),
           ),
         ]);
