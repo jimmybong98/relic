@@ -16,7 +16,10 @@ class ProfileButton extends ConsumerWidget {
       onSelected: (value) {
         if (value == 'logout') {
           ref.read(authServiceProvider.notifier).logout();
-          Navigator.of(context).pop();
+          final navigator = Navigator.of(context);
+          if (navigator.canPop()) {
+            navigator.pop();
+          }
         } else if (value == 'manage') {
           Navigator.of(
             context,

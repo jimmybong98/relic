@@ -133,28 +133,12 @@ class SideMenu extends ConsumerWidget {
           press: () => _navigate(context, ref, const ExportRelatoriosPage()),
         ),
         DrawerListTile(
-          title: 'Checklist de liberação',
-          svgSrc: 'assets/icons/menu_task.svg',
-          press: () => _navigate(
-            context,
-            ref,
-            const ChecklistLiberacaoPage(),
-            allowDuringActiveFlow: true,
-          ),
-        ),
-        DrawerListTile(
           title: 'Tempo por OS',
           svgSrc: 'assets/icons/menu_doc.svg',
           press: () => _navigate(context, ref, const TempoOsPage()),
         ),
-        DrawerListTile(
-          title: 'Status das OS',
-          svgSrc: 'assets/icons/menu_doc.svg',
-          press: () => _navigate(context, ref, const StatusOsPage()),
-        ),
       ]);
     }
-
     switch (current) {
       case SideMenuSection.dashboard:
         items.addAll([
@@ -162,12 +146,6 @@ class SideMenu extends ConsumerWidget {
             title: 'Cadastro/Edição de itens',
             svgSrc: 'assets/icons/menu_store.svg',
             press: () => _navigate(context, ref, const CadastroItensPage()),
-          ),
-          DrawerListTile(
-            title: 'Cadastro de Preparadores',
-            svgSrc: 'assets/icons/menu_profile.svg',
-            press: () =>
-                _navigate(context, ref, const CadastroPreparadoresPage()),
           ),
           DrawerListTile(
             title: 'Cadastro de Máquinas',

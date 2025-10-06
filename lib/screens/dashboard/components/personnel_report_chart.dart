@@ -1826,11 +1826,11 @@ class _PersonnelReportChartState extends State<PersonnelReportChart> {
             items: const [
               DropdownMenuItem(
                 value: 'operador',
-                child: Text('Verificação do Processo'),
+                child: Text('Verificação do Processo - FOR09-14'),
               ),
               DropdownMenuItem(
                 value: 'preparador',
-                child: Text('Liberação/Finalização'),
+                child: Text('Liberação/Finalização - FOR08'),
               ),
             ],
             onChanged: (v) {

@@ -18,6 +18,7 @@ from openpyxl import Workbook
 # --------- MySQL ----------
 import pymysql
 from pymysql.cursors import DictCursor
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
 CORS(app)
@@ -3023,19 +3024,56 @@ def exportar_relatorio_excel():
         return jsonify({"error": f"Falha ao exportar relatório: {e}"}), 500
 
 
+def _verify_and_upgrade_password(
+        conn, username: str, provided: str, stored: Optional[str]
+) -> bool:
+    """Valida a senha e migra registros legados em texto puro."""
+    if not stored:
+        return False
+
+    try:
+        if check_password_hash(stored, provided):
+            return True
+    except (TypeError, ValueError):
+        # Valor armazenado não é um hash reconhecido; trataremos como texto puro.
+        pass
+
+    if stored == provided:
+        hashed = generate_password_hash(provided)
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE usuarios SET password=%s WHERE username=%s",
+                (hashed, username),
+            )
+        conn.commit()
+        return True
+    return False
+
+
+def _hash_password(password: str) -> str:
+    """Gera o hash seguro para a senha informada."""
+    return generate_password_hash(password)
+
+
 def _is_admin_request() -> bool:
     """Check HTTP Basic credentials and confirm admin user."""
     auth = request.authorization
     if not auth:
         return False
-    with _conn_db(DB_NAME) as c:
-        with c.cursor() as cur:
+    with _conn_db(DB_NAME) as conn:
+        with conn.cursor() as cur:
             cur.execute(
-                "SELECT is_admin FROM usuarios WHERE username=%s AND password=%s",
-                (auth.username, auth.password),
+                "SELECT password, is_admin FROM usuarios WHERE username=%s",
+                (auth.username,),
             )
             row = cur.fetchone()
-    return bool(row and row.get("is_admin"))
+        if not row:
+            return False
+        if not _verify_and_upgrade_password(
+                conn, auth.username, auth.password, row.get("password")
+        ):
+            return False
+        return bool(row.get("is_admin"))
 
 
 @app.route("/login", methods=["POST"])
@@ -3043,15 +3081,18 @@ def login():
     data = request.get_json(silent=True) or {}
     username = (data.get("username") or "").strip()
     password = (data.get("password") or "").strip()
-    with _conn_db(DB_NAME) as c:
-        with c.cursor() as cur:
+    with _conn_db(DB_NAME) as conn:
+        with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, username, is_admin FROM usuarios WHERE username=%s AND password=%s",
-                (username, password),
+                "SELECT id, username, password, is_admin FROM usuarios WHERE username=%s",
+                (username,),
             )
             user = cur.fetchone()
-    if user:
-        return jsonify({"user": user})
+        if user and _verify_and_upgrade_password(
+                conn, username, password, user.get("password")
+        ):
+            user = {k: v for k, v in user.items() if k != "password"}
+            return jsonify({"user": user})
     return jsonify({"error": "credenciais inválidas"}), 401
 
 
@@ -3076,7 +3117,7 @@ def usuarios():
         with c.cursor() as cur:
             cur.execute(
                 "INSERT INTO usuarios (username, password, is_admin) VALUES (%s, %s, %s)",
-                (username, password, is_admin),
+                (username, _hash_password(password), is_admin),
             )
         c.commit()
     return jsonify({"status": "ok"})
