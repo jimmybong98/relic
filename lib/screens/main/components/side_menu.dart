@@ -19,7 +19,14 @@ import 'package:admin/services/auth_service.dart';
 import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
 import 'package:admin/features/checklist_liberacao/presentation/checklist_liberacao_page.dart';
 
-enum SideMenuSection { mainMenu, dashboard, preparador, operador, finalizar }
+enum SideMenuSection {
+  mainMenu,
+  dashboard,
+  preparador,
+  operador,
+  finalizar,
+  checklistLiberacao,
+}
 
 class SideMenu extends ConsumerWidget {
   const SideMenu({super.key, required this.current});
@@ -262,6 +269,21 @@ class SideMenu extends ConsumerWidget {
             },
           ),
         ]);
+        break;
+      case SideMenuSection.checklistLiberacao:
+        items.addAll([
+          DrawerListTile(
+            title: 'Liberação de máquina',
+            svgSrc: 'assets/icons/liberacao.svg',
+            press: () => Navigator.of(context).pop(),
+          ),
+          DrawerListTile(
+            title: 'Amostragem',
+            svgSrc: 'assets/icons/Amostragem.svg',
+            press: () => _navigate(context, ref, const OperadorPage()),
+          ),
+        ]);
+        break;
     }
 
     return Drawer(
