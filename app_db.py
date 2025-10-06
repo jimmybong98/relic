@@ -3024,23 +3024,20 @@ def exportar_relatorio_excel():
         return jsonify({"error": f"Falha ao exportar relatório: {e}"}), 500
 
 
-def _hash_password(password: str) -> str:
-    """Gera o hash seguro para a senha informada."""
-    return generate_password_hash(password)
-
-
-def _is_password_hashed(stored: Optional[str]) -> bool:
-    return isinstance(stored, str) and stored.startswith("pbkdf2:")
-
-
 def _verify_and_upgrade_password(
     conn, username: str, provided: str, stored: Optional[str]
 ) -> bool:
     """Valida a senha e migra registros legados em texto puro."""
     if not stored:
         return False
-    if _is_password_hashed(stored):
-        return check_password_hash(stored, provided)
+
+    try:
+        if check_password_hash(stored, provided):
+            return True
+    except (TypeError, ValueError):
+        # Valor armazenado não é um hash reconhecido; trataremos como texto puro.
+        pass
+
     if stored == provided:
         hashed = generate_password_hash(provided)
         with conn.cursor() as cur:
@@ -3051,6 +3048,11 @@ def _verify_and_upgrade_password(
         conn.commit()
         return True
     return False
+
+
+def _hash_password(password: str) -> str:
+    """Gera o hash seguro para a senha informada."""
+    return generate_password_hash(password)
 
 
 def _is_admin_request() -> bool:
