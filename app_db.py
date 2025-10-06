@@ -2086,6 +2086,7 @@ def _registrar_pausa_operador(
             )
 
 
+
 @app.route("/operador/fim_jornada", methods=["POST"])
 def operador_fim_jornada():
     payload = request.get_json(silent=True) or {}
