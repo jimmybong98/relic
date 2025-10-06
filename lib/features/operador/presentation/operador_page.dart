@@ -246,8 +246,10 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
   ) {
     final previousChecklistRe = previous?.normalizedChecklistRe;
     final nextChecklistRe = next.normalizedChecklistRe;
+    final shouldSyncChecklistRe =
+        next.effectiveProcess == SearchFlowProcess.amostragem;
 
-    if (previousChecklistRe != nextChecklistRe) {
+    if (shouldSyncChecklistRe && previousChecklistRe != nextChecklistRe) {
       final target = nextChecklistRe ?? '';
       if (target.isEmpty) {
         if (_reCtrl.text.trim().isNotEmpty) {
@@ -886,6 +888,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       return;
     }
 
+    final sharedFlow = ref.read(sharedSearchFormProvider);
     final sucesso = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => TrocaFerramentaPage(
@@ -894,6 +897,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           partnumber: part,
           operacao: operacao,
           maquina: maquina,
+          checklistRe: sharedFlow.checklistRe,
         ),
       ),
     );
