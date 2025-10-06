@@ -541,7 +541,7 @@ class _ChecklistLiberacaoPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const WindowBar(title: 'Checklist de liberação', showMenu: true),
-      drawer: const SideMenu(current: SideMenuSection.dashboard),
+      drawer: const SideMenu(current: SideMenuSection.checklistLiberacao),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth > 880;
