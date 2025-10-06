@@ -726,6 +726,55 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     }
   }
 
+  Future<bool> _registrarTrocaTurno() async {
+    if (_reCtrl.text.trim().isEmpty || _osCtrl.text.trim().isEmpty) {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Preencha RE e O.S. para registrar a troca de turno.'),
+        ),
+      );
+      return false;
+    }
+
+    if (!_ensureFlowConsistency()) return false;
+
+    final notifier = ref.read(sharedSearchFormProvider.notifier);
+    final categoriaAtual = _categoriaSel;
+    final maquinaAtual = _maquinaSelecionadaValida() ? _maquinaSel : null;
+    final manteveFluxoAtivo = notifier.beginFlow(
+      os: _osCtrl.text.trim(),
+      partNumber: _partCtrl.text.trim(),
+      operacao: _opCtrl.text.trim(),
+      categoria: categoriaAtual,
+      maquina: maquinaAtual,
+      process: SearchFlowProcess.amostragem,
+    );
+
+    if (!manteveFluxoAtivo) {
+      _showFlowBlockedSnackBar(ref.read(sharedSearchFormProvider));
+      return false;
+    }
+
+    notifier.requireChecklist(reason: 'Troca de turno');
+
+    if (mounted) {
+      setState(() {
+        _reCtrl.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Troca de turno registrada. Realize o checklist inicial para retomar a amostragem.',
+          ),
+        ),
+      );
+    }
+
+    await _retornarAoMenuPrincipal();
+    return true;
+  }
+
   Future<bool> _fimJornada(String motivo) async {
     if (_reCtrl.text.trim().isEmpty || _osCtrl.text.trim().isEmpty) {
       if (!mounted) return false;
@@ -759,6 +808,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         final exigeChecklist =
             motivoLower == 'fim do turno' ||
             motivoLower == 'fim de turno' ||
+            motivoLower == 'troca de turno' ||
             motivoLower == 'troca de ferramenta';
         bool clearedRe = false;
         if (exigeChecklist) {
@@ -911,6 +961,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     const motivos = <String>[
       'Banheiro',
       'Refeição',
+      'Troca de turno',
       'Fim do Turno',
       'Manutenção',
       'Falta de Material',
@@ -979,6 +1030,11 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
     );
 
     if (confirmado != true) return;
+
+    if (motivo.trim().toLowerCase() == 'troca de turno') {
+      await _registrarTrocaTurno();
+      return;
+    }
 
     await _fimJornada(motivo);
   }
