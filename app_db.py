@@ -1348,7 +1348,7 @@ def resultado_preparador():
                         409,
                     )
 
-            if not _has_checklist_ativo(c, re_prep, maquina):
+            if not _has_checklist_ativo(c, None, maquina):
                 return (
                     jsonify(
                         {
