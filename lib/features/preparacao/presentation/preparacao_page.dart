@@ -194,10 +194,6 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       _categoriaSel = shared.categoria;
       _maquinaSel = shared.maquina;
     }
-    final checklistRe = shared.normalizedChecklistRe;
-    if (checklistRe != null && checklistRe.isNotEmpty) {
-      _reCtrl.text = checklistRe;
-    }
 
     _osSyncListener = () {
       ref.read(sharedSearchFormProvider.notifier).setOs(_osCtrl.text);
