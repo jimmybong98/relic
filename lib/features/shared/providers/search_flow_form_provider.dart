@@ -304,8 +304,22 @@ class SharedSearchFormController extends StateNotifier<SharedSearchFormState> {
   }
 
   void completeChecklist({String? checklistRe}) {
-    if (_isActive == false) return;
     final normalizedRe = SharedSearchFormState._normalizeOptional(checklistRe);
+    if (_isActive == false) {
+      if (!state.requiresChecklist &&
+          state.checklistReason == null &&
+          normalizedRe == state.checklistRe) {
+        return;
+      }
+      _updateState(
+        state.copyWith(
+          requiresChecklist: false,
+          checklistReason: null,
+          checklistRe: normalizedRe,
+        ),
+      );
+      return;
+    }
     if (!state.requiresChecklist &&
         state.checklistReason == null &&
         normalizedRe == state.checklistRe) {
