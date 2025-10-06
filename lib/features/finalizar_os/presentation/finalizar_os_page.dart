@@ -410,9 +410,6 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
       });
     }
 
-    final sharedFlow = ref.read(sharedSearchFormProvider);
-    final checklistRe = (sharedFlow.checklistRe ?? '').trim();
-
     final reAtual = _reCtrl.text.trim();
     final payload = <String, dynamic>{
       're': reAtual,
@@ -422,9 +419,6 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
       'maquina': _maquinaSel,
       'itens': itens,
     };
-    if (checklistRe.isNotEmpty && checklistRe == reAtual) {
-      payload['re_checklist'] = checklistRe;
-    }
 
     final body = jsonEncode(payload);
 

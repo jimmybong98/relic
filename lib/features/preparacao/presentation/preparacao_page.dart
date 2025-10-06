@@ -425,9 +425,6 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       });
     }
 
-    final sharedFlow = ref.read(sharedSearchFormProvider);
-    final checklistRe = (sharedFlow.checklistRe ?? '').trim();
-
     final reAtual = _reCtrl.text.trim();
     final payload = <String, dynamic>{
       're': reAtual,
@@ -437,9 +434,6 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       'maquina': _maquinaSel,
       'itens': itens,
     };
-    if (checklistRe.isNotEmpty && checklistRe == reAtual) {
-      payload['re_checklist'] = checklistRe;
-    }
 
     final body = jsonEncode(payload);
 
