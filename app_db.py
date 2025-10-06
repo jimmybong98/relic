@@ -2047,22 +2047,44 @@ def _registrar_pausa_operador(
     }:
         cur.execute(
             """
-            UPDATE ordem_servico
-               SET status=%s
+            SELECT id
+              FROM preparador_liberacao
              WHERE os=%s
-               AND LOWER(COALESCE(status, ''))='pausada'
-            """,
-            ("liberada", os_num),
+               AND LOWER(TRIM(COALESCE(status_geral, ''))) IN ('pausada', 'pausado')
+        """,
+            (os_num,),
         )
-        cur.execute(
-            """
-            UPDATE preparador_liberacao
-               SET status_geral=%s
-             WHERE os=%s
-               AND LOWER(COALESCE(status_geral, '')) IN ('pausada', 'pausado')
-            """,
-            ("Liberada", os_num),
-        )
+        pausadas = [row.get("id") for row in cur.fetchall() if row.get("id")]
+        for liberacao_id in pausadas:
+            cur.execute(
+                """
+                SELECT COALESCE(status, '') AS status
+                  FROM preparador_liberacao_item
+                 WHERE liberacao_id=%s
+                """,
+                (liberacao_id,),
+            )
+            status_raw = [
+                (row.get("status") or "").strip().lower()
+                for row in cur.fetchall()
+                if (row.get("status") or "").strip()
+            ]
+            if not status_raw:
+                novo_status = "Liberada"
+            else:
+                partes = []
+                for status in status_raw:
+                    for parte in status.split("|"):
+                        partes.append(_strip_side_prefix(parte))
+                all_ok = partes and all(
+                    parte in ("ok", "aprovado") for parte in partes
+                )
+                novo_status = "Liberada" if all_ok else "Pendente"
+            cur.execute(
+                "UPDATE preparador_liberacao SET status_geral=%s WHERE id=%s",
+                (novo_status, liberacao_id),
+            )
+
 
 
 @app.route("/operador/fim_jornada", methods=["POST"])
