@@ -808,8 +808,7 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
         final exigeChecklist =
             motivoLower == 'fim do turno' ||
             motivoLower == 'fim de turno' ||
-            motivoLower == 'troca de turno' ||
-            motivoLower == 'troca de ferramenta';
+            motivoLower == 'troca de turno';
         bool clearedRe = false;
         if (exigeChecklist) {
           final notifier = ref.read(sharedSearchFormProvider.notifier);
@@ -959,10 +958,9 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
 
   Future<void> _showFimJornadaDialog() async {
     const motivos = <String>[
+      'Troca de turno',
       'Banheiro',
       'Refeição',
-      'Troca de turno',
-      'Fim do Turno',
       'Manutenção',
       'Falta de Material',
       'Problema de Qualidade',

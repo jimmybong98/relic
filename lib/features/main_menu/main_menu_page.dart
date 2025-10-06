@@ -120,9 +120,9 @@ class _MainMenuPageState extends ConsumerState<MainMenuPage> {
     final double dividerHeight = isPhonePortrait ? 8 : 15;
     final entries = [
       _MenuEntry(
-        title: 'Liberação',
+        title: 'FOR31',
         description:
-        'Preencha o checklist obrigatório antes das liberações de máquina.',
+        'Preencha o checklist obrigatório para liberação do posto de trabalho.',
         iconAsset: 'assets/icons/Checklist.svg',
         accentColor: const Color(0xFF4DD0E1),
         onTap: openChecklist,

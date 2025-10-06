@@ -140,7 +140,7 @@ const List<ChecklistGroup> _checklistGroups = [
       ChecklistQuestion(
         id: 'maquinas_itens_emergencia',
         text:
-            'Os itens de emergência (botão, seta, luz gira-gira) estão funcionando?',
+        'Os itens de emergência (botão, seta, luz gira-gira) estão funcionando?',
       ),
       ChecklistQuestion(
         id: 'maquinas_comandos_protecao',
@@ -163,7 +163,7 @@ const List<ChecklistGroup> _checklistGroups = [
       ChecklistQuestion(
         id: 'instrumentos_recursos',
         text:
-            'Todos os recursos de medição necessários estão disponíveis na máquina?',
+        'Todos os recursos de medição necessários estão disponíveis na máquina?',
       ),
       ChecklistQuestion(
         id: 'instrumentos_centesimal',
@@ -172,7 +172,7 @@ const List<ChecklistGroup> _checklistGroups = [
       ChecklistQuestion(
         id: 'instrumentos_milesimal',
         text:
-            'Para dispositivos com relógio milesimal está partindo do 0 com o padrão?',
+        'Para dispositivos com relógio milesimal está partindo do 0 com o padrão?',
       ),
       ChecklistQuestion(
         id: 'instrumentos_local_limpo',
@@ -332,12 +332,12 @@ class _ChecklistLiberacaoPageState
         shape: BoxShape.circle,
         boxShadow: isSelected
             ? [
-                BoxShadow(
-                  color: activeColor.withOpacity(0.4),
-                  blurRadius: 12,
-                  spreadRadius: 1,
-                ),
-              ]
+          BoxShadow(
+            color: activeColor.withOpacity(0.4),
+            blurRadius: 12,
+            spreadRadius: 1,
+          ),
+        ]
             : null,
       ),
       child: Icon(
@@ -601,36 +601,36 @@ class _ChecklistLiberacaoPageState
                                 border: const OutlineInputBorder(),
                                 suffixIcon: _loadingMaquinas
                                     ? const Padding(
-                                        padding: EdgeInsets.all(8),
-                                        child: SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                      )
+                                  padding: EdgeInsets.all(8),
+                                  child: SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
                                     : null,
                               ),
                               items: _grupos
                                   .map(
                                     (grupo) => DropdownMenuItem(
-                                      value: grupo,
-                                      child: Text(grupo),
-                                    ),
-                                  )
+                                  value: grupo,
+                                  child: Text(grupo),
+                                ),
+                              )
                                   .toList(),
                               onChanged: _loadingMaquinas
                                   ? null
                                   : (value) {
-                                      setState(() {
-                                        _grupoSelecionado = value;
-                                        _maquinaSelecionada = null;
-                                      });
-                                    },
+                                setState(() {
+                                  _grupoSelecionado = value;
+                                  _maquinaSelecionada = null;
+                                });
+                              },
                               validator: (value) {
                                 if ((_grupos.isNotEmpty ||
-                                        _grupoSelecionado != null) &&
+                                    _grupoSelecionado != null) &&
                                     (value == null || value.isEmpty)) {
                                   return 'Selecione um grupo de máquinas';
                                 }
@@ -649,18 +649,18 @@ class _ChecklistLiberacaoPageState
                               items: _maquinasDisponiveis
                                   .map(
                                     (maquina) => DropdownMenuItem(
-                                      value: maquina,
-                                      child: Text(maquina),
-                                    ),
-                                  )
+                                  value: maquina,
+                                  child: Text(maquina),
+                                ),
+                              )
                                   .toList(),
                               onChanged: _maquinasDisponiveis.isEmpty
                                   ? null
                                   : (value) {
-                                      setState(
-                                        () => _maquinaSelecionada = value,
-                                      );
-                                    },
+                                setState(
+                                      () => _maquinaSelecionada = value,
+                                );
+                              },
                               validator: (value) {
                                 if (_maquinasDisponiveis.isEmpty) {
                                   return 'Selecione um grupo para listar as máquinas';
@@ -685,12 +685,12 @@ class _ChecklistLiberacaoPageState
                           onPressed: _salvando ? null : _salvar,
                           icon: _salvando
                               ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
                               : const Icon(Icons.save_outlined),
                           label: Text(
                             _salvando ? 'Salvando...' : 'Salvar checklist',
