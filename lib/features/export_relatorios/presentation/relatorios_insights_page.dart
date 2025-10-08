@@ -8,10 +8,10 @@ import '../../../services/report_service.dart';
 
 const String _statusTodos = '__all__';
 const Map<String, String> _statusLabels = {
-  'ok': 'OK',
-  'alerta_abaixo': 'Alerta (Abaixo)',
-  'alerta_acima': 'Alerta (Acima)',
   'reprovada_abaixo': 'Reprovada (Abaixo)',
+  'alerta_abaixo': 'Alerta (Abaixo)',
+  'ok': 'OK',
+  'alerta_acima': 'Alerta (Acima)',
   'reprovada_acima': 'Reprovada (Acima)',
 };
 

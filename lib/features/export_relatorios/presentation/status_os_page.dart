@@ -734,7 +734,7 @@ class _StatusOsPageState extends State<StatusOsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const WindowBar(title: 'Status das OS', showMenu: true),
+      appBar: const WindowBar(title: 'Dashboard', showMenu: true),
       drawer: const SideMenu(current: SideMenuSection.dashboard),
       body: SafeArea(
         child: LayoutBuilder(
@@ -750,8 +750,6 @@ class _StatusOsPageState extends State<StatusOsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    OperatorReportChart(backgroundColor: cardColor),
-                    const SizedBox(height: 24),
                     Center(
                       child: Image.asset(
                         'assets/images/traco.png',
