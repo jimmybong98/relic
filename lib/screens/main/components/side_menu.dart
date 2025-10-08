@@ -7,17 +7,15 @@ import 'package:admin/features/preparacao/presentation/preparacao_page.dart';
 import 'package:admin/features/operador/presentation/operador_page.dart';
 import 'package:admin/features/finalizar_os/presentation/finalizar_os_page.dart';
 import 'package:admin/features/cadastro_itens/presentation/cadastro_itens_page.dart';
-import 'package:admin/features/cadastro_preparadores/presentation/cadastro_preparadores_page.dart';
 import 'package:admin/features/export_relatorios/presentation/export_relatorios_page.dart';
-import 'package:admin/features/export_relatorios/presentation/visualizar_relatorios_page.dart';
-import 'package:admin/features/export_relatorios/presentation/tempo_os_page.dart';
 import 'package:admin/features/export_relatorios/presentation/status_os_page.dart';
+import 'package:admin/features/export_relatorios/presentation/tempo_os_page.dart';
+import 'package:admin/features/export_relatorios/presentation/relatorios_insights_page.dart';
 import 'package:admin/features/cadastro_maquinas/presentation/cadastro_maquinas_page.dart';
 import 'package:admin/features/login/login_page.dart';
 import 'package:admin/features/users/users_page.dart';
 import 'package:admin/services/auth_service.dart';
 import 'package:admin/features/shared/providers/search_flow_form_provider.dart';
-import 'package:admin/features/checklist_liberacao/presentation/checklist_liberacao_page.dart';
 
 enum SideMenuSection {
   mainMenu,
@@ -136,6 +134,11 @@ class SideMenu extends ConsumerWidget {
           title: 'Tempo por OS',
           svgSrc: 'assets/icons/menu_doc.svg',
           press: () => _navigate(context, ref, const TempoOsPage()),
+        ),
+        DrawerListTile(
+          title: 'Insights de relatórios',
+          svgSrc: 'assets/icons/menu_doc.svg',
+          press: () => _navigate(context, ref, const RelatoriosInsightsPage()),
         ),
       ]);
     }
