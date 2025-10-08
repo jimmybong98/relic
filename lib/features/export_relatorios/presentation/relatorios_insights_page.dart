@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -5,8 +6,8 @@ import 'package:flutter/material.dart';
 import '../../../screens/main/components/side_menu.dart';
 import 'package:admin/widgets/window_bar.dart';
 import '../../../services/report_service.dart';
+import '../../../services/machine_service.dart';
 
-const String _statusTodos = '__all__';
 const Map<String, String> _statusLabels = {
   'reprovada_abaixo': 'Reprovada (Abaixo)',
   'alerta_abaixo': 'Alerta (Abaixo)',
@@ -23,6 +24,9 @@ const Map<String, Color> _statusColors = {
   'reprovada_acima': Color(0xFFEF5350),
 };
 
+const String _grupoTodos = '__grupo_all__';
+const String _maquinaTodas = '__maquina_all__';
+
 /// Página com indicadores adicionais e rankings de desempenho das O.S.
 class RelatoriosInsightsPage extends StatefulWidget {
   const RelatoriosInsightsPage({super.key});
@@ -34,11 +38,15 @@ class RelatoriosInsightsPage extends StatefulWidget {
 class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
   final _osController = TextEditingController();
   final _reController = TextEditingController();
-  final _statusController = TextEditingController();
-  final FocusNode _statusFocusNode = FocusNode();
+  final _grupoController = TextEditingController();
+  final _maquinaController = TextEditingController();
+  final FocusNode _grupoFocusNode = FocusNode();
+  final FocusNode _maquinaFocusNode = FocusNode();
 
   bool _loading = true;
-  String _statusFiltro = _statusTodos;
+  bool _loadingMaquinas = false;
+  String? _grupoFiltro;
+  String? _maquinaFiltro;
 
   List<_OsResumo> _todos = const <_OsResumo>[];
   List<_OsResumo> _filtrados = const <_OsResumo>[];
@@ -49,13 +57,19 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
   List<_RankingEntry> _rankingMaquinas = const <_RankingEntry>[];
   List<_RankingEntry> _rankingPartnumbers = const <_RankingEntry>[];
   List<_OsResumo> _criticos = const <_OsResumo>[];
+  List<String> _grupos = const <String>[];
+  Map<String, List<String>> _maquinasPorGrupo = const <String, List<String>>{};
+  Map<String, String> _grupoPorMaquina = const <String, String>{};
 
   @override
   void initState() {
     super.initState();
     _osController.addListener(_onFiltroAtualizado);
     _reController.addListener(_onFiltroAtualizado);
-    Future.microtask(_carregar);
+    Future.microtask(() {
+      _carregar();
+      _carregarMaquinas();
+    });
   }
 
   @override
@@ -66,8 +80,10 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
     _reController
       ..removeListener(_onFiltroAtualizado)
       ..dispose();
-    _statusController.dispose();
-    _statusFocusNode.dispose();
+    _grupoController.dispose();
+    _maquinaController.dispose();
+    _grupoFocusNode.dispose();
+    _maquinaFocusNode.dispose();
     super.dispose();
   }
 
@@ -85,6 +101,60 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
       _aplicarIndicadores(indicadores);
       _loading = false;
     });
+  }
+
+  Future<void> _carregarMaquinas() async {
+    setState(() => _loadingMaquinas = true);
+    try {
+      final lista = await MachineService().fetchMaquinas();
+      final maquinasPorGrupo = <String, SplayTreeSet<String>>{};
+      for (final maquina in lista) {
+        final grupo = maquina.categoria.trim();
+        final codigo = maquina.codigo.trim();
+        if (grupo.isEmpty || codigo.isEmpty) continue;
+        maquinasPorGrupo.putIfAbsent(grupo, SplayTreeSet.new).add(codigo);
+      }
+
+      if (!mounted) return;
+
+      final gruposOrdenados = maquinasPorGrupo.keys.toList()..sort();
+      final mapaOrdenado = {
+        for (final entry in maquinasPorGrupo.entries)
+          entry.key: entry.value.toList(growable: false),
+      };
+      final grupoPorMaquina = <String, String>{
+        for (final entry in maquinasPorGrupo.entries)
+          for (final codigo in entry.value) codigo: entry.key,
+      };
+
+      bool filtrosAlterados = false;
+      setState(() {
+        _grupos = gruposOrdenados;
+        _maquinasPorGrupo = mapaOrdenado;
+        _grupoPorMaquina = grupoPorMaquina;
+        if (_grupoFiltro != null &&
+            !_maquinasPorGrupo.containsKey(_grupoFiltro)) {
+          _grupoFiltro = null;
+          filtrosAlterados = true;
+        }
+        final maquinasValidas = _grupoFiltro == null
+            ? const <String>[]
+            : _maquinasPorGrupo[_grupoFiltro] ?? const <String>[];
+        if (_maquinaFiltro != null &&
+            !maquinasValidas.contains(_maquinaFiltro)) {
+          _maquinaFiltro = null;
+          filtrosAlterados = true;
+        }
+      });
+      if (filtrosAlterados) {
+        _onFiltroAtualizado();
+      }
+    } catch (_) {
+      if (!mounted) return;
+    } finally {
+      if (!mounted) return;
+      setState(() => _loadingMaquinas = false);
+    }
   }
 
   void _onFiltroAtualizado() {
@@ -107,7 +177,8 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
   _Indicadores _gerarIndicadores(List<_OsResumo> base) {
     final osFiltro = _osController.text.trim().toLowerCase();
     final reFiltro = _reController.text.trim().toLowerCase();
-    final statusFiltro = _statusFiltro;
+    final grupoFiltro = _grupoFiltro?.trim().toLowerCase();
+    final maquinaFiltro = _maquinaFiltro?.trim().toLowerCase();
 
     final filtrados = base
         .where((item) {
@@ -118,10 +189,21 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
               item.reAmostragens.keys.any(
                 (re) => re.toLowerCase().contains(reFiltro),
               );
-          final matchStatus = statusFiltro == _statusTodos
+          final gruposItem = _gruposRelacionados(item)
+              .map((e) => e.trim().toLowerCase())
+              .where((e) => e.isNotEmpty)
+              .toSet();
+          final maquinasItem = item.maquinas
+              .map((e) => e.trim().toLowerCase())
+              .where((e) => e.isNotEmpty)
+              .toSet();
+          final matchGrupo = grupoFiltro == null
               ? true
-              : (item.statusCounts[statusFiltro] ?? 0) > 0;
-          return matchOs && matchRe && matchStatus;
+              : gruposItem.contains(grupoFiltro);
+          final matchMaquina = maquinaFiltro == null
+              ? true
+              : maquinasItem.contains(maquinaFiltro);
+          return matchOs && matchRe && matchGrupo && matchMaquina;
         })
         .toList(growable: false);
 
@@ -206,27 +288,52 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
     return entries.take(8).toList(growable: false);
   }
 
-  void _sincronizarStatusController() {
-    if (_statusFocusNode.hasFocus) {
-      return;
+  Iterable<String> _gruposRelacionados(_OsResumo item) {
+    if (item.categorias.isNotEmpty) {
+      return item.categorias;
     }
-    if (_statusFiltro == _statusTodos) {
-      if (_statusController.text.isNotEmpty) {
-        _statusController.text = '';
+    if (_grupoPorMaquina.isEmpty) {
+      return const Iterable<String>.empty();
+    }
+    final relacionados = <String>{};
+    for (final maquina in item.maquinas) {
+      final chave = maquina.trim();
+      final grupo = _grupoPorMaquina[chave] ?? _grupoPorMaquina[maquina];
+      if (grupo != null && grupo.isNotEmpty) {
+        relacionados.add(grupo);
       }
-    } else {
-      final label = _statusLabels[_statusFiltro] ?? _statusFiltro;
-      if (_statusController.text != label) {
-        _statusController.text = label;
+    }
+    return relacionados;
+  }
+
+  void _sincronizarFiltrosDependentes() {
+    if (!_grupoFocusNode.hasFocus) {
+      if (_grupoFiltro == null) {
+        if (_grupoController.text.isNotEmpty) {
+          _grupoController.text = '';
+        }
+      } else if (_grupoController.text != _grupoFiltro) {
+        _grupoController.text = _grupoFiltro!;
+      }
+    }
+    if (!_maquinaFocusNode.hasFocus) {
+      if (_maquinaFiltro == null) {
+        if (_maquinaController.text.isNotEmpty) {
+          _maquinaController.text = '';
+        }
+      } else if (_maquinaController.text != _maquinaFiltro) {
+        _maquinaController.text = _maquinaFiltro!;
       }
     }
   }
 
   void _limparFiltros() {
-    _statusFiltro = _statusTodos;
     _osController.text = '';
     _reController.text = '';
-    _statusController.text = '';
+    _grupoFiltro = null;
+    _maquinaFiltro = null;
+    _grupoController.text = '';
+    _maquinaController.text = '';
     _onFiltroAtualizado();
   }
 
@@ -288,12 +395,20 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
   }
 
   Widget _buildFiltros(BuildContext context) {
-    _sincronizarStatusController();
-    final entries = <DropdownMenuEntry<String>>[
-      const DropdownMenuEntry<String>(value: _statusTodos, label: 'Todos'),
-      ..._statusLabels.entries.map(
-        (entry) =>
-            DropdownMenuEntry<String>(value: entry.key, label: entry.value),
+    _sincronizarFiltrosDependentes();
+    final grupoEntries = <DropdownMenuEntry<String>>[
+      const DropdownMenuEntry<String>(value: _grupoTodos, label: 'Todos'),
+      ..._grupos.map(
+        (grupo) => DropdownMenuEntry<String>(value: grupo, label: grupo),
+      ),
+    ];
+    final maquinasDisponiveis = _grupoFiltro == null
+        ? const <String>[]
+        : _maquinasPorGrupo[_grupoFiltro] ?? const <String>[];
+    final maquinaEntries = <DropdownMenuEntry<String>>[
+      const DropdownMenuEntry<String>(value: _maquinaTodas, label: 'Todas'),
+      ...maquinasDisponiveis.map(
+        (maquina) => DropdownMenuEntry<String>(value: maquina, label: maquina),
       ),
     ];
 
@@ -330,36 +445,79 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
             SizedBox(
               width: 220,
               child: DropdownMenu<String>(
-                controller: _statusController,
-                focusNode: _statusFocusNode,
-                label: const Text('Status'),
+                controller: _grupoController,
+                focusNode: _grupoFocusNode,
+                label: const Text('Grupo de máquina'),
                 hintText: 'Todos',
                 enableFilter: false,
-                dropdownMenuEntries: entries,
+                dropdownMenuEntries: grupoEntries,
                 inputDecorationTheme: const InputDecorationTheme(
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 onSelected: (value) {
-                  if (value == null || value == _statusTodos) {
-                    _statusFiltro = _statusTodos;
-                    if (!_statusFocusNode.hasFocus) {
-                      _statusController.text = '';
+                  if (value == null || value == _grupoTodos) {
+                    _grupoFiltro = null;
+                    if (!_grupoFocusNode.hasFocus) {
+                      _grupoController.text = '';
                     }
                   } else {
-                    _statusFiltro = value;
-                    final label = _statusLabels[value] ?? value;
-                    if (_statusController.text != label) {
-                      _statusController.text = label;
+                    _grupoFiltro = value;
+                    if (_grupoController.text != value) {
+                      _grupoController.text = value;
+                    }
+                  }
+                  final maquinasValidas = _grupoFiltro == null
+                      ? const <String>[]
+                      : _maquinasPorGrupo[_grupoFiltro] ?? const <String>[];
+                  if (_maquinaFiltro != null &&
+                      !maquinasValidas.contains(_maquinaFiltro)) {
+                    _maquinaFiltro = null;
+                    if (!_maquinaFocusNode.hasFocus) {
+                      _maquinaController.text = '';
                     }
                   }
                   _onFiltroAtualizado();
                 },
               ),
             ),
-            if (_statusFiltro != _statusTodos ||
-                _osController.text.isNotEmpty ||
-                _reController.text.isNotEmpty)
+            SizedBox(
+              width: 220,
+              child: DropdownMenu<String>(
+                controller: _maquinaController,
+                focusNode: _maquinaFocusNode,
+                label: const Text('Máquina'),
+                hintText: _loadingMaquinas
+                    ? 'Carregando...'
+                    : _grupoFiltro == null
+                    ? 'Selecione um grupo'
+                    : 'Todas',
+                enableFilter: false,
+                dropdownMenuEntries: maquinaEntries,
+                inputDecorationTheme: const InputDecorationTheme(
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onSelected: (value) {
+                  if (value == null || value == _maquinaTodas) {
+                    _maquinaFiltro = null;
+                    if (!_maquinaFocusNode.hasFocus) {
+                      _maquinaController.text = '';
+                    }
+                  } else {
+                    _maquinaFiltro = value;
+                    if (_maquinaController.text != value) {
+                      _maquinaController.text = value;
+                    }
+                  }
+                  _onFiltroAtualizado();
+                },
+              ),
+            ),
+            if (_osController.text.isNotEmpty ||
+                _reController.text.isNotEmpty ||
+                _grupoFiltro != null ||
+                _maquinaFiltro != null)
               FilledButton.tonalIcon(
                 onPressed: _limparFiltros,
                 icon: const Icon(Icons.close),
