@@ -11,6 +11,9 @@ class Report {
   /// Friendly text describing the allowed measurement range.
   final String faixaTexto;
 
+  /// Machine where the sampling or event was recorded.
+  final String maquina;
+
   /// Registration number (RE) of the preparer who handled this report.
   final String rePreparador;
 
@@ -39,6 +42,7 @@ class Report {
     required this.status,
     required this.createdAt,
     this.faixaTexto = '',
+    this.maquina = '',
     this.rePreparador = '',
     this.reOperador = '',
     this.idxMedida,
@@ -56,6 +60,7 @@ class Report {
       status: (json['status_geral'] ?? json['status'])?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',
       faixaTexto: (json['faixa_texto'] ?? json['faixaTexto'])?.toString() ?? '',
+      maquina: json['maquina']?.toString() ?? '',
       rePreparador: json['re_preparador']?.toString() ?? '',
       reOperador: json['re_operador']?.toString() ?? '',
       idxMedida: json['idx_medida'] != null
