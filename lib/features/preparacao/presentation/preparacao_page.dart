@@ -29,12 +29,12 @@ class PreparacaoPage extends ConsumerStatefulWidget {
 }
 
 final medidasPreparadorControllerProvider =
-    StateNotifierProvider.autoDispose<
-      MedidasPreparadorController,
-      AsyncValue<List<MedidaItem>>
-    >((ref) {
-      return MedidasPreparadorController(ref);
-    });
+StateNotifierProvider.autoDispose<
+    MedidasPreparadorController,
+    AsyncValue<List<MedidaItem>>
+>((ref) {
+  return MedidasPreparadorController(ref);
+});
 
 class MedidasPreparadorController
     extends StateNotifier<AsyncValue<List<MedidaItem>>> {
@@ -57,24 +57,24 @@ class MedidasPreparadorController
       final normalizados = itens
           .map(
             (m) => MedidaItem(
-              indice: m.indice,
-              titulo: m.titulo,
-              faixaTexto: m.faixaTexto,
-              minimo: m.minimo,
-              maximo: m.maximo,
-              unidade: m.unidade,
-              status: StatusMedida.pendente,
-              medicao: null,
-              observacao: m.observacao,
-              periodicidade: m.periodicidade,
-              instrumento: m.instrumento,
-              dataInclusao: m.dataInclusao,
-              tolerancias: m.tolerancias,
-              contagens: m.contagens,
-              anguloMinimo: m.anguloMinimo,
-              anguloMaximo: m.anguloMaximo,
-            ),
-          )
+          indice: m.indice,
+          titulo: m.titulo,
+          faixaTexto: m.faixaTexto,
+          minimo: m.minimo,
+          maximo: m.maximo,
+          unidade: m.unidade,
+          status: StatusMedida.pendente,
+          medicao: null,
+          observacao: m.observacao,
+          periodicidade: m.periodicidade,
+          instrumento: m.instrumento,
+          dataInclusao: m.dataInclusao,
+          tolerancias: m.tolerancias,
+          contagens: m.contagens,
+          anguloMinimo: m.anguloMinimo,
+          anguloMaximo: m.anguloMaximo,
+        ),
+      )
           .toList();
 
       state = AsyncValue.data(normalizados);
@@ -237,7 +237,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
 
           if (_categoriaSel != null) {
             final possuiMaquina = _maquinas.any(
-              (m) => m.categoria == _categoriaSel && m.codigo == _maquinaSel,
+                  (m) => m.categoria == _categoriaSel && m.codigo == _maquinaSel,
             );
             if (!possuiMaquina && _maquinaSel != null) {
               _maquinaSel = null;
@@ -396,9 +396,9 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     final reprovadas = medidas
         .where(
           (m) =>
-              m.status == StatusMedida.reprovadaAbaixo ||
-              m.status == StatusMedida.reprovadaAcima,
-        )
+      m.status == StatusMedida.reprovadaAbaixo ||
+          m.status == StatusMedida.reprovadaAcima,
+    )
         .toList();
     if (reprovadas.isNotEmpty) {
       if (!mounted) return;
@@ -425,20 +425,15 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
       });
     }
 
-    final sharedFlow = ref.read(sharedSearchFormProvider);
-    final checklistRe = (sharedFlow.checklistRe ?? '').trim();
-
+    final reAtual = _reCtrl.text.trim();
     final payload = <String, dynamic>{
-      're': _reCtrl.text.trim(),
+      're': reAtual,
       'os': _osCtrl.text.trim(),
       'partnumber': normalizeCode(_partCtrl.text),
       'operacao': normalizeCode(_opCtrl.text),
       'maquina': _maquinaSel,
       'itens': itens,
     };
-    if (checklistRe.isNotEmpty) {
-      payload['re_checklist'] = checklistRe;
-    }
 
     final body = jsonEncode(payload);
 
@@ -517,41 +512,41 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
     final reOk = _reCtrl.text.trim().isNotEmpty;
     final osOk = _osCtrl.text.trim().isNotEmpty;
     final categoriaValue =
-        (_categoriaSel != null && _categorias.contains(_categoriaSel))
+    (_categoriaSel != null && _categorias.contains(_categoriaSel))
         ? _categoriaSel
         : null;
     final maquinasDisponiveis = _maquinas
         .where((m) => m.categoria == categoriaValue)
         .toList();
     final maquinaValue =
-        (_maquinaSel != null &&
-            maquinasDisponiveis.any((m) => m.codigo == _maquinaSel))
+    (_maquinaSel != null &&
+        maquinasDisponiveis.any((m) => m.codigo == _maquinaSel))
         ? _maquinaSel
         : null;
     final maquinaOk = (maquinaValue ?? '').isNotEmpty;
     final formMatchesFlow =
         !flowLocked ||
-        flowState.matchesValues(
-          os: _osCtrl.text,
-          partNumber: _partCtrl.text,
-          operacao: _opCtrl.text,
-          categoria: categoriaValue,
-          maquina: maquinaValue,
-        );
+            flowState.matchesValues(
+              os: _osCtrl.text,
+              partNumber: _partCtrl.text,
+              operacao: _opCtrl.text,
+              categoria: categoriaValue,
+              maquina: maquinaValue,
+            );
     final todasOk =
         medidas.isNotEmpty &&
-        medidas.every(
-          (m) =>
+            medidas.every(
+                  (m) =>
               (m.medicao ?? '').isNotEmpty && m.status != StatusMedida.pendente,
-        );
+            );
     final podeRegistrar =
         formMatchesFlow &&
-        reOk &&
-        osOk &&
-        maquinaOk &&
-        todasOk &&
-        !_registrando &&
-        !_osLiberada;
+            reOk &&
+            osOk &&
+            maquinaOk &&
+            todasOk &&
+            !_registrando &&
+            !_osLiberada;
 
     return Scaffold(
       appBar: WindowBar(
@@ -661,7 +656,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                 builder: (context, constraints) {
                                   final isCompact =
                                       constraints.maxWidth <
-                                      _compactFormBreakpoint;
+                                          _compactFormBreakpoint;
                                   final reField = TextFormField(
                                     controller: _reCtrl,
                                     focusNode: _reFocusNode,
@@ -724,7 +719,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                   if (isCompact) {
                                     return Column(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
+                                      CrossAxisAlignment.stretch,
                                       children: [
                                         reField,
                                         const SizedBox(height: 12),
@@ -752,77 +747,77 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                 builder: (context, constraints) {
                                   final isCompact =
                                       constraints.maxWidth <
-                                      _compactFormBreakpoint;
+                                          _compactFormBreakpoint;
                                   final categoriaDropdown =
-                                      DropdownButtonFormField<String>(
-                                        value: categoriaValue,
-                                        decoration: const InputDecoration(
-                                          labelText: 'Grupo de máquina',
-                                          border: OutlineInputBorder(),
-                                        ),
-                                        items: _categorias
-                                            .map(
-                                              (c) => DropdownMenuItem(
-                                                value: c,
-                                                child: Text(c),
-                                              ),
-                                            )
-                                            .toList(),
-                                        onChanged: flowLocked
-                                            ? null
-                                            : (v) {
-                                                ref
-                                                    .read(
-                                                      sharedSearchFormProvider
-                                                          .notifier,
-                                                    )
-                                                    .setCategoria(v);
-                                                setState(() {
-                                                  _categoriaSel = v;
-                                                  _maquinaSel = null;
-                                                });
-                                              },
-                                        validator: (v) =>
-                                            (v == null || v.isEmpty)
-                                            ? 'Obrigatório'
-                                            : null,
-                                      );
+                                  DropdownButtonFormField<String>(
+                                    value: categoriaValue,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Grupo de máquina',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    items: _categorias
+                                        .map(
+                                          (c) => DropdownMenuItem(
+                                        value: c,
+                                        child: Text(c),
+                                      ),
+                                    )
+                                        .toList(),
+                                    onChanged: flowLocked
+                                        ? null
+                                        : (v) {
+                                      ref
+                                          .read(
+                                        sharedSearchFormProvider
+                                            .notifier,
+                                      )
+                                          .setCategoria(v);
+                                      setState(() {
+                                        _categoriaSel = v;
+                                        _maquinaSel = null;
+                                      });
+                                    },
+                                    validator: (v) =>
+                                    (v == null || v.isEmpty)
+                                        ? 'Obrigatório'
+                                        : null,
+                                  );
                                   final maquinaDropdown =
-                                      DropdownButtonFormField<String>(
-                                        value: maquinaValue,
-                                        decoration: const InputDecoration(
-                                          labelText: 'Código da máquina',
-                                          border: OutlineInputBorder(),
-                                        ),
-                                        items: maquinasDisponiveis
-                                            .map(
-                                              (m) => DropdownMenuItem(
-                                                value: m.codigo,
-                                                child: Text(m.codigo),
-                                              ),
-                                            )
-                                            .toList(),
-                                        onChanged: flowLocked
-                                            ? null
-                                            : (v) {
-                                                ref
-                                                    .read(
-                                                      sharedSearchFormProvider
-                                                          .notifier,
-                                                    )
-                                                    .setMaquina(v);
-                                                setState(() => _maquinaSel = v);
-                                              },
-                                        validator: (v) =>
-                                            (v == null || v.isEmpty)
-                                            ? 'Obrigatório'
-                                            : null,
-                                      );
+                                  DropdownButtonFormField<String>(
+                                    value: maquinaValue,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Código da máquina',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    items: maquinasDisponiveis
+                                        .map(
+                                          (m) => DropdownMenuItem(
+                                        value: m.codigo,
+                                        child: Text(m.codigo),
+                                      ),
+                                    )
+                                        .toList(),
+                                    onChanged: flowLocked
+                                        ? null
+                                        : (v) {
+                                      ref
+                                          .read(
+                                        sharedSearchFormProvider
+                                            .notifier,
+                                      )
+                                          .setMaquina(v);
+                                      setState(() => _maquinaSel = v);
+                                    },
+                                    validator: (v) =>
+                                    (v == null || v.isEmpty)
+                                        ? 'Obrigatório'
+                                        : null,
+                                  );
 
                                   if (isCompact) {
                                     return Column(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
+                                      CrossAxisAlignment.stretch,
                                       children: [
                                         categoriaDropdown,
                                         const SizedBox(height: 12),
@@ -847,7 +842,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                 builder: (context, constraints) {
                                   final isCompact =
                                       constraints.maxWidth <
-                                      _compactFormBreakpoint;
+                                          _compactFormBreakpoint;
                                   final partField = TextFormField(
                                     controller: _partCtrl,
                                     enabled: !flowLocked,
@@ -866,7 +861,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                       next: _opFocusNode,
                                     ),
                                     validator: (v) =>
-                                        (v == null || v.trim().isEmpty)
+                                    (v == null || v.trim().isEmpty)
                                         ? 'Obrigatório'
                                         : null,
                                   );
@@ -900,7 +895,7 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                   if (isCompact) {
                                     return Column(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
+                                      CrossAxisAlignment.stretch,
                                       children: [
                                         partField,
                                         const SizedBox(height: 12),
@@ -932,17 +927,17 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                       FocusScope.of(context).unfocus();
                                       await ref
                                           .read(
-                                            medidasPreparadorControllerProvider
-                                                .notifier,
-                                          )
+                                        medidasPreparadorControllerProvider
+                                            .notifier,
+                                      )
                                           .carregar(
-                                            partnumber: normalizeCode(
-                                              _partCtrl.text,
-                                            ),
-                                            operacao: normalizeCode(
-                                              _opCtrl.text,
-                                            ),
-                                          );
+                                        partnumber: normalizeCode(
+                                          _partCtrl.text,
+                                        ),
+                                        operacao: normalizeCode(
+                                          _opCtrl.text,
+                                        ),
+                                      );
                                       if (mounted) {
                                         setState(() => _mostrarResumo = true);
                                       }
@@ -981,12 +976,12 @@ class _PreparacaoPageState extends ConsumerState<PreparacaoPage> {
                                   : null,
                               icon: _registrando
                                   ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
                                   : const Icon(Icons.save_outlined),
                               label: const Text('Registrar resultado'),
                             ),

@@ -1879,7 +1879,7 @@ def operador_registrar():
                     jsonify(
                         {
                             "code": "checklist_obrigatorio",
-                            "error": "Checklist de liberação obrigatório antes de registrar amostragens.",
+                            "error": "Para continuar com este RE, encerre o turno e preencha o FOR31.",
                         }
                     ),
                     409,

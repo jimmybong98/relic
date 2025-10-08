@@ -11,6 +11,7 @@ import 'package:admin/features/export_relatorios/presentation/export_relatorios_
 import 'package:admin/features/export_relatorios/presentation/status_os_page.dart';
 import 'package:admin/features/export_relatorios/presentation/tempo_os_page.dart';
 import 'package:admin/features/export_relatorios/presentation/relatorios_insights_page.dart';
+import 'package:admin/features/export_relatorios/presentation/operator_report_comparison_page.dart';
 import 'package:admin/features/cadastro_maquinas/presentation/cadastro_maquinas_page.dart';
 import 'package:admin/features/login/login_page.dart';
 import 'package:admin/features/users/users_page.dart';
@@ -60,20 +61,20 @@ class SideMenu extends ConsumerWidget {
   }
 
   void _showFlowLockedMessage(
-    BuildContext context,
-    SharedSearchFormState shared,
-  ) {
+      BuildContext context,
+      SharedSearchFormState shared,
+      ) {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(_flowLockedMessage(shared))));
   }
 
   void _navigate(
-    BuildContext context,
-    WidgetRef ref,
-    Widget page, {
-    bool allowDuringActiveFlow = false,
-  }) {
+      BuildContext context,
+      WidgetRef ref,
+      Widget page, {
+        bool allowDuringActiveFlow = false,
+      }) {
     final navigator = Navigator.of(context, rootNavigator: true);
     final shared = ref.read(sharedSearchFormProvider);
     final hasActiveFlow = shared.isActive;
@@ -139,6 +140,12 @@ class SideMenu extends ConsumerWidget {
           title: 'Insights de relatórios',
           svgSrc: 'assets/icons/menu_doc.svg',
           press: () => _navigate(context, ref, const RelatoriosInsightsPage()),
+        ),
+        DrawerListTile(
+          title: 'Comparar amostragens',
+          svgSrc: 'assets/icons/menu_doc.svg',
+          press: () =>
+              _navigate(context, ref, const OperatorReportComparisonPage()),
         ),
       ]);
     }
