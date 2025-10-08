@@ -162,6 +162,19 @@ def _ensure_schema():
                   """
             )
             _ensure_column(c, "ordem_servico", "status", "VARCHAR(32) DEFAULT 'aberta'")
+            cur.execute(
+                """
+                  CREATE TABLE IF NOT EXISTS ordem_servico_maquina (
+                    os VARCHAR(64) NOT NULL,
+                    maquina VARCHAR(128) NOT NULL,
+                    status VARCHAR(32) NOT NULL DEFAULT 'aberta',
+                    atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (os, maquina),
+                    KEY idx_osm_status (status),
+                    CONSTRAINT fk_osm_os FOREIGN KEY (os) REFERENCES ordem_servico(os) ON UPDATE CASCADE
+                  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """
+            )
             # Operador (já estava)
 
             cur.execute(
@@ -928,6 +941,67 @@ def _outra_os_em_andamento(
     return (False, None)
 
 
+def _upsert_os_maquina_status(cur, os_num: str, maquina: str, status: str) -> None:
+    os_norm = _norm(os_num)
+    maq_norm = _norm(maquina)
+    status_norm = (_norm(status) or "aberta").lower()
+    if not os_norm or not maq_norm:
+        return
+    cur.execute(
+        """
+        INSERT INTO ordem_servico_maquina (os, maquina, status)
+        VALUES (%s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            status = VALUES(status),
+            atualizado_em = CURRENT_TIMESTAMP
+        """,
+        (os_norm, maq_norm, status_norm),
+    )
+
+
+def _consolidar_status_os(cur, os_num: str) -> Optional[str]:
+    os_norm = _norm(os_num)
+    if not os_norm:
+        return None
+
+    cur.execute(
+        "SELECT status FROM ordem_servico_maquina WHERE os=%s",
+        (os_norm,),
+    )
+    rows = cur.fetchall()
+    if not rows:
+        return None
+
+    status_set = {
+        (_norm(row.get("status")) or "").lower() for row in rows
+        if row.get("status") is not None
+    }
+    status_set.discard("")
+    if not status_set:
+        return None
+
+    if status_set <= {"encerrada"}:
+        novo_status = "encerrada"
+    elif "fim_prod" in status_set:
+        novo_status = "fim_prod" if status_set <= {"fim_prod"} else "parcial"
+    elif "encerrada" in status_set:
+        novo_status = "parcial"
+    elif "pausada" in status_set:
+        novo_status = "pausada"
+    elif "liberada" in status_set:
+        novo_status = "liberada"
+    elif "aberta" in status_set:
+        novo_status = "aberta"
+    else:
+        novo_status = next(iter(status_set))
+
+    cur.execute(
+        "UPDATE ordem_servico SET status=%s WHERE os=%s",
+        (novo_status, os_norm),
+    )
+    return novo_status
+
+
 def _maquina_liberada(
         conn, os_num: str, part: str, op: str, maquina: str
 ) -> Tuple[bool, str, str]:
@@ -1559,6 +1633,13 @@ def resultado_preparador():
                     "UPDATE ordem_servico SET status=%s WHERE os=%s",
                     (novo_status_os, os_num),
                 )
+                _upsert_os_maquina_status(
+                    cur,
+                    os_num,
+                    maquina,
+                    "liberada" if all_ok else "aberta",
+                )
+                _consolidar_status_os(cur, os_num)
 
                 if contexto_tipo == "troca_ferramenta":
                     cur.execute(
@@ -1681,24 +1762,47 @@ def preparador_finalizar_os():
                     )
 
                 cur.execute("SELECT status FROM ordem_servico WHERE os=%s", (os_num,))
-                st = (cur.fetchone() or {}).get("status", "").lower()
-                if st == "encerrada":
+                st_global = (cur.fetchone() or {}).get("status", "").lower()
+                cur.execute(
+                    "SELECT status FROM ordem_servico_maquina WHERE os=%s AND maquina=%s",
+                    (os_num, maquina),
+                )
+                st_maquina = (cur.fetchone() or {}).get("status", "").lower()
+                if st_maquina == "encerrada":
                     return (
                         jsonify(
-                            {"code": "ja_finalizada", "error": "OS já finalizada."}
+                            {"code": "ja_finalizada", "error": "OS já finalizada nesta máquina."}
                         ),
                         409,
                     )
-                if st != "fim_prod":
+                if st_maquina and st_maquina != "fim_prod":
                     return (
                         jsonify(
                             {
                                 "code": "producao_nao_encerrada",
-                                "error": "Produção não encerrada pelo operador.",
+                                "error": "Produção não encerrada pelo operador nesta máquina.",
                             }
                         ),
                         409,
                     )
+                if not st_maquina:
+                    if st_global == "encerrada":
+                        return (
+                            jsonify(
+                                {"code": "ja_finalizada", "error": "OS já finalizada."}
+                            ),
+                            409,
+                        )
+                    if st_global != "fim_prod":
+                        return (
+                            jsonify(
+                                {
+                                    "code": "producao_nao_encerrada",
+                                    "error": "Produção não encerrada pelo operador.",
+                                }
+                            ),
+                            409,
+                        )
 
                 cur.execute(
                     "INSERT IGNORE INTO ordem_servico (os) VALUES (%s)", (os_num,)
@@ -1758,10 +1862,8 @@ def preparador_finalizar_os():
                     for s in all_status
                 )
                 status_geral = "Liberada" if all_ok else "Pendente"
-                cur.execute(
-                    "UPDATE ordem_servico SET status='encerrada' WHERE os=%s",
-                    (os_num,),
-                )
+                _upsert_os_maquina_status(cur, os_num, maquina, "encerrada")
+                _consolidar_status_os(cur, os_num)
             c.commit()
 
         return jsonify(
@@ -2265,31 +2367,85 @@ def operador_troca_os():
 def operador_encerrar_producao():
     payload = request.get_json(silent=True) or {}
     os_num = _norm(payload.get("os"))
+    maquina = _norm(payload.get("maquina"))
     if not os_num:
         return jsonify({"error": "Campo 'os' é obrigatório"}), 400
     try:
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 filtro_contexto = _sql_operador_context_filter("operador_amostragem")
-                cur.execute(
-                    f"SELECT COUNT(*) AS cnt FROM operador_amostragem"
-                    " WHERE os=%s AND "
-                    f"{filtro_contexto}",
-                    (os_num,),
-                )
-                if cur.fetchone()["cnt"] == 0:
-                    return (
-                        jsonify({"error": "Nenhum registro de amostragem encontrado"}),
-                        400,
+                if not maquina:
+                    cur.execute(
+                        """
+                        SELECT DISTINCT maquina
+                          FROM preparador_liberacao
+                         WHERE os=%s AND maquina IS NOT NULL AND maquina <> ''
+                        """,
+                        (os_num,),
                     )
-                cur.execute(
-                    "UPDATE ordem_servico SET status='fim_prod' WHERE os=%s",
-                    (os_num,),
-                )
-                if cur.rowcount == 0:
-                    return jsonify({"error": "OS não encontrada"}), 404
+                    encontradas = [
+                        _norm(row.get("maquina"))
+                        for row in cur.fetchall()
+                        if _norm(row.get("maquina"))
+                    ]
+                    if len(encontradas) == 1:
+                        maquina = encontradas[0]
+
+                novo_status = None
+                if maquina:
+                    cur.execute("SELECT 1 FROM maquinas WHERE codigo=%s", (maquina,))
+                    if not cur.fetchone():
+                        return jsonify({"error": "Máquina não cadastrada"}), 400
+
+                    cur.execute(
+                        f"SELECT COUNT(*) AS cnt FROM operador_amostragem"
+                        " WHERE os=%s AND maquina=%s AND "
+                        f"{filtro_contexto}",
+                        (os_num, maquina),
+                    )
+                    if cur.fetchone()["cnt"] == 0:
+                        return (
+                            jsonify(
+                                {
+                                    "error": "Nenhum registro de amostragem encontrado para a máquina informada",
+                                    "code": "amostragem_nao_encontrada",
+                                }
+                            ),
+                            400,
+                        )
+
+                    cur.execute(
+                        "INSERT INTO ordem_servico (os) VALUES (%s)"
+                        " ON DUPLICATE KEY UPDATE os = VALUES(os)",
+                        (os_num,),
+                    )
+                    _upsert_os_maquina_status(cur, os_num, maquina, "fim_prod")
+                    novo_status = _consolidar_status_os(cur, os_num)
+                else:
+                    cur.execute(
+                        f"SELECT COUNT(*) AS cnt FROM operador_amostragem"
+                        " WHERE os=%s AND "
+                        f"{filtro_contexto}",
+                        (os_num,),
+                    )
+                    if cur.fetchone()["cnt"] == 0:
+                        return (
+                            jsonify({"error": "Nenhum registro de amostragem encontrado"}),
+                            400,
+                        )
+                    cur.execute(
+                        "UPDATE ordem_servico SET status='fim_prod' WHERE os=%s",
+                        (os_num,),
+                    )
+                    if cur.rowcount == 0:
+                        return jsonify({"error": "OS não encontrada"}), 404
             c.commit()
-        return jsonify({"status": "ok"})
+        resposta = {"status": "ok"}
+        if maquina:
+            resposta["maquina"] = maquina
+        if novo_status:
+            resposta["os_status"] = novo_status
+        return jsonify(resposta)
     except Exception as e:
         return jsonify({"error": f"Falha ao encerrar produção: {e}"}), 500
 
@@ -2648,6 +2804,10 @@ def relatorio_status_os():
         normalized = _normalize_text(raw_status or "")
         if normalized in {"encerrada", "finalizada", "finalizado"}:
             return "Finalizada"
+        if normalized in {"parcial", "parcialmente_encerrada", "parcialmente_finalizada"}:
+            return "Parcial"
+        if normalized in {"fim_prod", "fim_producao", "producao_encerrada"}:
+            return "Produção encerrada"
         return "Aberta"
 
     def _classificar_status(texto: str) -> Optional[str]:

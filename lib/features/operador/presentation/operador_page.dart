@@ -1050,9 +1050,22 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       return;
     }
 
+    if (!_maquinaSelecionadaValida()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecione a máquina responsável pela produção.'),
+        ),
+      );
+      return;
+    }
+
     if (!_ensureFlowConsistency()) return;
 
-    final body = jsonEncode({'os': _osCtrl.text.trim()});
+    final body = jsonEncode({
+      'os': _osCtrl.text.trim(),
+      'maquina': _maquinaSel,
+    });
     final uri = buildApiUri('/operador/encerrar_producao');
     try {
       final resp = await http
