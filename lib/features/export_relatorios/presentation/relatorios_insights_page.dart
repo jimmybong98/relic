@@ -421,7 +421,7 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
               width: 220,
               child: DropdownButtonFormField<String>(
                 key: ValueKey('grupo-$grupoValue'),
-                initialValue: grupoValue,
+                value: grupoValue,
                 items: grupoItems,
                 decoration: const InputDecoration(
                   labelText: 'Grupo de máquina',
@@ -450,7 +450,7 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
               width: 220,
               child: DropdownButtonFormField<String>(
                 key: ValueKey('maquina-${maquinaValue ?? 'nenhuma'}'),
-                initialValue: maquinaValue,
+                value: maquinaValue,
                 items: maquinaItems,
                 decoration: const InputDecoration(
                   labelText: 'Máquina',
