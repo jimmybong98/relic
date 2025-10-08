@@ -2371,9 +2371,14 @@ def operador_encerrar_producao():
     if not os_num:
         return jsonify({"error": "Campo 'os' é obrigatório"}), 400
     try:
+        novo_status = None
+        ja_finalizada = False
         with _conn_db(DB_NAME) as c:
             with c.cursor() as cur:
                 filtro_contexto = _sql_operador_context_filter("operador_amostragem")
+                cur.execute("SELECT status FROM ordem_servico WHERE os=%s", (os_num,))
+                status_row = cur.fetchone() or {}
+                status_global = (status_row.get("status") or "").strip().lower()
                 if not maquina:
                     cur.execute(
                         """
@@ -2391,7 +2396,6 @@ def operador_encerrar_producao():
                     if len(encontradas) == 1:
                         maquina = encontradas[0]
 
-                novo_status = None
                 if maquina:
                     cur.execute("SELECT 1 FROM maquinas WHERE codigo=%s", (maquina,))
                     if not cur.fetchone():
@@ -2415,12 +2419,29 @@ def operador_encerrar_producao():
                         )
 
                     cur.execute(
-                        "INSERT INTO ordem_servico (os) VALUES (%s)"
-                        " ON DUPLICATE KEY UPDATE os = VALUES(os)",
-                        (os_num,),
+                        "SELECT status FROM ordem_servico_maquina WHERE os=%s AND maquina=%s",
+                        (os_num, maquina),
                     )
-                    _upsert_os_maquina_status(cur, os_num, maquina, "fim_prod")
-                    novo_status = _consolidar_status_os(cur, os_num)
+                    status_maquina_row = cur.fetchone() or {}
+                    status_maquina = (status_maquina_row.get("status") or "").strip().lower()
+
+                    if status_maquina == "encerrada":
+                        ja_finalizada = True
+                        consolidado = _consolidar_status_os(cur, os_num)
+                        if consolidado:
+                            novo_status = consolidado
+                        elif status_global:
+                            novo_status = status_global
+                        else:
+                            novo_status = "encerrada"
+                    else:
+                        cur.execute(
+                            "INSERT INTO ordem_servico (os) VALUES (%s)"
+                            " ON DUPLICATE KEY UPDATE os = VALUES(os)",
+                            (os_num,),
+                        )
+                        _upsert_os_maquina_status(cur, os_num, maquina, "fim_prod")
+                        novo_status = _consolidar_status_os(cur, os_num)
                 else:
                     cur.execute(
                         f"SELECT COUNT(*) AS cnt FROM operador_amostragem"
@@ -2433,18 +2454,25 @@ def operador_encerrar_producao():
                             jsonify({"error": "Nenhum registro de amostragem encontrado"}),
                             400,
                         )
-                    cur.execute(
-                        "UPDATE ordem_servico SET status='fim_prod' WHERE os=%s",
-                        (os_num,),
-                    )
-                    if cur.rowcount == 0:
-                        return jsonify({"error": "OS não encontrada"}), 404
+                    if status_global == "encerrada":
+                        ja_finalizada = True
+                        novo_status = "encerrada"
+                    else:
+                        cur.execute(
+                            "UPDATE ordem_servico SET status='fim_prod' WHERE os=%s",
+                            (os_num,),
+                        )
+                        if cur.rowcount == 0:
+                            return jsonify({"error": "OS não encontrada"}), 404
+                        novo_status = "fim_prod"
             c.commit()
         resposta = {"status": "ok"}
         if maquina:
             resposta["maquina"] = maquina
         if novo_status:
             resposta["os_status"] = novo_status
+        if ja_finalizada and "os_status" not in resposta:
+            resposta["os_status"] = "encerrada"
         return jsonify(resposta)
     except Exception as e:
         return jsonify({"error": f"Falha ao encerrar produção: {e}"}), 500
