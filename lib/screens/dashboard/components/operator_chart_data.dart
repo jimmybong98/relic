@@ -147,10 +147,14 @@ class OperatorChartUtils {
         color: color,
         tooltipFormatter: (report) {
           final dt = DateTime.tryParse(report.createdAt);
-          if (dt != null) {
-            return formatter.format(dt.toLocal());
+          final timeLabel = dt != null
+              ? formatter.format(dt.toLocal())
+              : report.createdAt;
+          final machine = report.maquina.trim();
+          if (machine.isEmpty) {
+            return timeLabel;
           }
-          return report.createdAt;
+          return '$timeLabel\nMáquina: $machine';
         },
       );
     }).toList();
