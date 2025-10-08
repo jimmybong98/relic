@@ -38,11 +38,6 @@ class RelatoriosInsightsPage extends StatefulWidget {
 class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
   final _osController = TextEditingController();
   final _reController = TextEditingController();
-  final _grupoController = TextEditingController();
-  final _maquinaController = TextEditingController();
-  final FocusNode _grupoFocusNode = FocusNode();
-  final FocusNode _maquinaFocusNode = FocusNode();
-
   bool _loading = true;
   bool _loadingMaquinas = false;
   String? _grupoFiltro;
@@ -80,10 +75,6 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
     _reController
       ..removeListener(_onFiltroAtualizado)
       ..dispose();
-    _grupoController.dispose();
-    _maquinaController.dispose();
-    _grupoFocusNode.dispose();
-    _maquinaFocusNode.dispose();
     super.dispose();
   }
 
@@ -306,34 +297,11 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
     return relacionados;
   }
 
-  void _sincronizarFiltrosDependentes() {
-    if (!_grupoFocusNode.hasFocus) {
-      if (_grupoFiltro == null) {
-        if (_grupoController.text.isNotEmpty) {
-          _grupoController.text = '';
-        }
-      } else if (_grupoController.text != _grupoFiltro) {
-        _grupoController.text = _grupoFiltro!;
-      }
-    }
-    if (!_maquinaFocusNode.hasFocus) {
-      if (_maquinaFiltro == null) {
-        if (_maquinaController.text.isNotEmpty) {
-          _maquinaController.text = '';
-        }
-      } else if (_maquinaController.text != _maquinaFiltro) {
-        _maquinaController.text = _maquinaFiltro!;
-      }
-    }
-  }
-
   void _limparFiltros() {
     _osController.text = '';
     _reController.text = '';
     _grupoFiltro = null;
     _maquinaFiltro = null;
-    _grupoController.text = '';
-    _maquinaController.text = '';
     _onFiltroAtualizado();
   }
 
@@ -395,22 +363,29 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
   }
 
   Widget _buildFiltros(BuildContext context) {
-    _sincronizarFiltrosDependentes();
-    final grupoEntries = <DropdownMenuEntry<String>>[
-      const DropdownMenuEntry<String>(value: _grupoTodos, label: 'Todos'),
+    final grupoItems = <DropdownMenuItem<String>>[
+      const DropdownMenuItem<String>(value: _grupoTodos, child: Text('Todos')),
       ..._grupos.map(
-        (grupo) => DropdownMenuEntry<String>(value: grupo, label: grupo),
+        (grupo) => DropdownMenuItem<String>(value: grupo, child: Text(grupo)),
       ),
     ];
     final maquinasDisponiveis = _grupoFiltro == null
         ? const <String>[]
         : _maquinasPorGrupo[_grupoFiltro] ?? const <String>[];
-    final maquinaEntries = <DropdownMenuEntry<String>>[
-      const DropdownMenuEntry<String>(value: _maquinaTodas, label: 'Todas'),
+    final maquinaItems = <DropdownMenuItem<String>>[
+      const DropdownMenuItem<String>(
+        value: _maquinaTodas,
+        child: Text('Todas'),
+      ),
       ...maquinasDisponiveis.map(
-        (maquina) => DropdownMenuEntry<String>(value: maquina, label: maquina),
+        (maquina) =>
+            DropdownMenuItem<String>(value: maquina, child: Text(maquina)),
       ),
     ];
+    final grupoValue = _grupoFiltro ?? _grupoTodos;
+    final maquinaValue = _grupoFiltro == null
+        ? null
+        : _maquinaFiltro ?? _maquinaTodas;
 
     return Card(
       child: Padding(
@@ -444,74 +419,66 @@ class _RelatoriosInsightsPageState extends State<RelatoriosInsightsPage> {
             ),
             SizedBox(
               width: 220,
-              child: DropdownMenu<String>(
-                controller: _grupoController,
-                focusNode: _grupoFocusNode,
-                label: const Text('Grupo de máquina'),
-                hintText: 'Todos',
-                enableFilter: false,
-                dropdownMenuEntries: grupoEntries,
-                inputDecorationTheme: const InputDecorationTheme(
+              child: DropdownButtonFormField<String>(
+                key: ValueKey('grupo-$grupoValue'),
+                initialValue: grupoValue,
+                items: grupoItems,
+                decoration: const InputDecoration(
+                  labelText: 'Grupo de máquina',
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
-                onSelected: (value) {
-                  if (value == null || value == _grupoTodos) {
-                    _grupoFiltro = null;
-                    if (!_grupoFocusNode.hasFocus) {
-                      _grupoController.text = '';
+                onChanged: (value) {
+                  setState(() {
+                    if (value == null || value == _grupoTodos) {
+                      _grupoFiltro = null;
+                      _maquinaFiltro = null;
+                    } else {
+                      _grupoFiltro = value;
+                      final maquinasValidas =
+                          _maquinasPorGrupo[_grupoFiltro] ?? const <String>[];
+                      if (!maquinasValidas.contains(_maquinaFiltro)) {
+                        _maquinaFiltro = null;
+                      }
                     }
-                  } else {
-                    _grupoFiltro = value;
-                    if (_grupoController.text != value) {
-                      _grupoController.text = value;
-                    }
-                  }
-                  final maquinasValidas = _grupoFiltro == null
-                      ? const <String>[]
-                      : _maquinasPorGrupo[_grupoFiltro] ?? const <String>[];
-                  if (_maquinaFiltro != null &&
-                      !maquinasValidas.contains(_maquinaFiltro)) {
-                    _maquinaFiltro = null;
-                    if (!_maquinaFocusNode.hasFocus) {
-                      _maquinaController.text = '';
-                    }
-                  }
+                  });
                   _onFiltroAtualizado();
                 },
               ),
             ),
             SizedBox(
               width: 220,
-              child: DropdownMenu<String>(
-                controller: _maquinaController,
-                focusNode: _maquinaFocusNode,
-                label: const Text('Máquina'),
-                hintText: _loadingMaquinas
-                    ? 'Carregando...'
-                    : _grupoFiltro == null
-                    ? 'Selecione um grupo'
-                    : 'Todas',
-                enableFilter: false,
-                dropdownMenuEntries: maquinaEntries,
-                inputDecorationTheme: const InputDecorationTheme(
+              child: DropdownButtonFormField<String>(
+                key: ValueKey('maquina-${maquinaValue ?? 'nenhuma'}'),
+                initialValue: maquinaValue,
+                items: maquinaItems,
+                decoration: const InputDecoration(
+                  labelText: 'Máquina',
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
-                onSelected: (value) {
-                  if (value == null || value == _maquinaTodas) {
-                    _maquinaFiltro = null;
-                    if (!_maquinaFocusNode.hasFocus) {
-                      _maquinaController.text = '';
-                    }
-                  } else {
-                    _maquinaFiltro = value;
-                    if (_maquinaController.text != value) {
-                      _maquinaController.text = value;
-                    }
-                  }
-                  _onFiltroAtualizado();
-                },
+                hint: Text(
+                  _loadingMaquinas
+                      ? 'Carregando...'
+                      : _grupoFiltro == null
+                      ? 'Selecione um grupo'
+                      : 'Todas',
+                ),
+                disabledHint: Text(
+                  _loadingMaquinas ? 'Carregando...' : 'Selecione um grupo',
+                ),
+                onChanged: (_grupoFiltro == null || _loadingMaquinas)
+                    ? null
+                    : (value) {
+                        setState(() {
+                          if (value == null || value == _maquinaTodas) {
+                            _maquinaFiltro = null;
+                          } else {
+                            _maquinaFiltro = value;
+                          }
+                        });
+                        _onFiltroAtualizado();
+                      },
               ),
             ),
             if (_osController.text.isNotEmpty ||
