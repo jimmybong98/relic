@@ -1,3 +1,5 @@
+import java.util.Locale
+
 plugins {
     id "com.android.application"
     id "org.jetbrains.kotlin.android"
@@ -22,6 +24,10 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+def enableAbiSplits = gradle.startParameter.taskNames.any { taskName ->
+    taskName.toLowerCase(Locale.ROOT).contains('release')
+}
+
 android {
     compileSdkVersion 34
     namespace "com.example.admin"
@@ -38,6 +44,8 @@ android {
 
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+
+        vectorDrawables.useSupportLibrary = true
     }
 
     buildTypes {
@@ -45,6 +53,20 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig signingConfigs.debug
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    splits {
+        abi {
+            enable enableAbiSplits
+            if (enableAbiSplits) {
+                reset()
+                include 'armeabi-v7a', 'arm64-v8a'
+                universalApk false
+            }
         }
     }
 

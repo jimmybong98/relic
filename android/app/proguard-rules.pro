@@ -1,0 +1,4 @@
+-keep class io.flutter.embedding.** { *; }
+-keep class io.flutter.plugins.** { *; }
+-keep class com.google.gson.** { *; }
+-dontwarn javax.annotation.**
