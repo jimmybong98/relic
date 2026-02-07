@@ -410,20 +410,15 @@ class _FinalizarOsPageState extends ConsumerState<FinalizarOsPage> {
       });
     }
 
-    final sharedFlow = ref.read(sharedSearchFormProvider);
-    final checklistRe = (sharedFlow.checklistRe ?? '').trim();
-
+    final reAtual = _reCtrl.text.trim();
     final payload = <String, dynamic>{
-      're': _reCtrl.text.trim(),
+      're': reAtual,
       'os': _osCtrl.text.trim(),
       'partnumber': normalizeCode(_partCtrl.text),
       'operacao': normalizeCode(_opCtrl.text),
       'maquina': _maquinaSel,
       'itens': itens,
     };
-    if (checklistRe.isNotEmpty) {
-      payload['re_checklist'] = checklistRe;
-    }
 
     final body = jsonEncode(payload);
 

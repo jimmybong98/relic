@@ -941,7 +941,6 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
       return;
     }
 
-    final sharedFlow = ref.read(sharedSearchFormProvider);
     final sucesso = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => TrocaFerramentaPage(
@@ -950,7 +949,6 @@ class _OperadorPageState extends ConsumerState<OperadorPage> {
           partnumber: part,
           operacao: operacao,
           maquina: maquina,
-          checklistRe: sharedFlow.checklistRe,
         ),
       ),
     );
